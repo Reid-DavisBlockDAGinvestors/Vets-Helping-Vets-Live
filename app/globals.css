@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0b1f3b;
+  --fg: #f9fafb;
+}
+
+html, body, #__next {
+  height: 100%;
+}
+
+body {
+  @apply bg-patriotic-blue text-patriotic-white;
+}
+
+.container {
+  @apply mx-auto max-w-7xl px-4;
+}
