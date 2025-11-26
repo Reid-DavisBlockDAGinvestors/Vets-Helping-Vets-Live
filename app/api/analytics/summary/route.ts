@@ -30,7 +30,6 @@ export async function GET(_req: NextRequest) {
 
     return NextResponse.json({ fundsRaised, purchases, mints, milestones, donorRetention })
   } catch (e) {
-    console.error('analytics/summary error', e)
     // Safe fallback in dev or when Supabase is not configured
     return NextResponse.json({
       fundsRaised: 0,

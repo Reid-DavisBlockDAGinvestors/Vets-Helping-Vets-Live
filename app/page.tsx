@@ -1,18 +1,31 @@
 import Link from 'next/link'
 import NFTCard, { NFTItem } from '@/components/NFTCard'
 
-const highlights: NFTItem[] = [
-  { id: '1', title: 'Support a Veteran Family', image: 'https://picsum.photos/seed/vet/800/450', causeType: 'veteran', progress: 60, goal: 10000, raised: 6000, snippet: 'Combat loss recovery and mental health assistance.' },
-  { id: '2', title: 'Disaster Relief', image: 'https://picsum.photos/seed/disaster/800/450', causeType: 'general', progress: 20, goal: 20000, raised: 4000, snippet: 'Rapid response fund for natural disasters.' }
-]
+async function loadOnchain(limit = 12): Promise<NFTItem[]> {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/onchain/tokens?limit=${limit}`, { cache: 'no-store' })
+    const data = await res.json()
+    const mapped: NFTItem[] = (data?.items || []).map((t: any) => {
+      const meta = t.metadata || {}
+      const goal = Number(t.goal || meta.goal || 0)
+      const raised = Number(t.raised || meta.raised || 0)
+      const pct = goal > 0 ? Math.round((raised / goal) * 100) : 0
+      const title = meta.name || meta.title || `Token #${t.tokenId}`
+      const image = meta.image || meta.image_url || ''
+      const snippet = meta.description || ''
+      const cause: any = (t.category || meta.category || 'general')
+      return { id: String(t.tokenId), title, image, causeType: (cause === 'veteran' ? 'veteran' : 'general'), progress: pct, goal, raised, snippet }
+    })
+    return mapped
+  } catch {
+    return []
+  }
+}
 
-const successStories: NFTItem[] = [
-  { id: '3', title: 'PTSD Therapy Funded', image: 'https://picsum.photos/seed/ptsd/800/450', causeType: 'veteran', progress: 100, goal: 5000, raised: 5000, snippet: 'Therapy for 12 months fully covered.' },
-  { id: '4', title: 'Hurricane Relief Delivered', image: 'https://picsum.photos/seed/hurricane/800/450', causeType: 'general', progress: 100, goal: 15000, raised: 15000, snippet: 'Food, water, and shelter provided to 300 families.' },
-  { id: '5', title: 'Service Dog Trained', image: 'https://picsum.photos/seed/dog/800/450', causeType: 'veteran', progress: 100, goal: 8000, raised: 8000, snippet: 'Vet matched with trained service companion.' },
-]
-
-export default function HomePage() {
+export default async function HomePage() {
+  const all = await loadOnchain(24)
+  const highlights = all.slice(0, 6)
+  const successStories = all.filter(i => i.goal > 0 && i.raised >= i.goal).slice(0, 6)
   return (
     <div>
       <section className="container py-12">

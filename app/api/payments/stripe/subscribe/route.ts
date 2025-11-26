@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
       currency: 'usd',
       unit_amount: amount,
       recurring: { interval: 'month' },
-      product_data: { name: `PatriotPledge Recurring Donation${tokenId ? ` • Token ${tokenId}` : ''}` }
+      product_data: { name: `PatriotPledge Recurring Donation${tokenId ? ` • Token ${tokenId}` : ''}` },
+      metadata: { tokenId: tokenId || 'n/a', type: 'recurring-donation', nonprofitFeeCents: String(fee) }
     })
 
     // Create subscription in incomplete state (requires payment method attach on client)
@@ -34,11 +35,13 @@ export async function POST(req: NextRequest) {
       customer: customer.id,
       items: [{ price: price.id }],
       payment_behavior: 'default_incomplete',
+      metadata: { tokenId: tokenId || 'n/a', type: 'recurring-donation' },
       expand: ['latest_invoice.payment_intent']
     })
 
     return NextResponse.json({
       id: subscription.id,
+      mode: 'subscription',
       clientSecret: (subscription.latest_invoice as any)?.payment_intent?.client_secret || null,
       breakdown: { amount, nonprofitFeePct: 1, fee, toCreator }
     })

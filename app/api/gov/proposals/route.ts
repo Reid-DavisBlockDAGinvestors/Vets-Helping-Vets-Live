@@ -22,7 +22,6 @@ export async function GET() {
     }))
     return NextResponse.json({ items })
   } catch (e) {
-    console.warn('gov list fallback', e)
     return NextResponse.json({ items: [] })
   }
 }
@@ -40,7 +39,6 @@ export async function POST(req: NextRequest) {
     if (error) throw error
     return NextResponse.json({ id: data?.id })
   } catch (e) {
-    console.error('gov create error', e)
     return NextResponse.json({ error: 'CREATE_FAILED' }, { status: 500 })
   }
 }

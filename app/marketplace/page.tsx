@@ -1,47 +1,79 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Filters, { Filters as FiltersType } from '@/components/Filters'
 import NFTCard, { NFTItem } from '@/components/NFTCard'
 
-const MOCK: NFTItem[] = [
-  { id: '1', title: 'Support a Veteran Family', image: 'https://picsum.photos/seed/vet2/800/450', causeType: 'veteran', progress: 60, goal: 10000, raised: 6000, snippet: 'Combat loss recovery and mental health assistance.' },
-  { id: '2', title: 'Children Education', image: 'https://picsum.photos/seed/child/800/450', causeType: 'general', progress: 30, goal: 15000, raised: 4500, snippet: 'Scholarship fund for disaster-affected kids.' }
-]
-
 export default function MarketplacePage() {
   const [filters, setFilters] = useState<FiltersType>({ causeType: 'all', urgency: 'all' })
-  const [recommended, setRecommended] = useState<NFTItem[]>([])
-  const items = MOCK.filter(i => filters.causeType === 'all' || i.causeType === filters.causeType)
+  const [items, setItems] = useState<NFTItem[]>([])
+  const [cursor, setCursor] = useState<number | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState('')
 
-  useEffect(() => {
-    const run = async () => {
-      try {
-        const prefs: any = { causeType: filters.causeType || 'all', keywords: (filters.q || '').split(/\s+/).filter(Boolean) }
-        const res = await fetch('/api/recommendations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ history: [], items: MOCK, prefs }) })
-        const data = await res.json()
-        if (data?.items) setRecommended(data.items)
-      } catch {}
+  const load = async (reset = false) => {
+    try {
+      setLoading(true)
+      setErr('')
+      const qs = new URLSearchParams()
+      qs.set('limit', '12')
+      if (!reset && cursor != null) qs.set('cursor', String(cursor))
+      const res = await fetch(`/api/marketplace/fundraisers?${qs.toString()}`, { cache: 'no-store' })
+      const data = await res.json()
+      if (!res.ok) { setErr(data?.error || 'Failed to load'); return }
+      const mapped: NFTItem[] = (data?.items || []).map((f: any) => {
+        const goal = Number(f.goal || 0)
+        const raised = Number(f.raised || 0)
+        const pct = goal > 0 ? Math.round((raised / goal) * 100) : 0
+        const title = f.title || `Fundraiser #${f.tokenId}`
+        const image = f.image || ''
+        const snippet = f.story || ''
+        const cause: any = f.category || 'general'
+        return {
+          id: String(f.tokenId),
+          title,
+          image,
+          causeType: (cause === 'veteran' ? 'veteran' : 'general'),
+          progress: pct,
+          goal,
+          raised,
+          snippet,
+          sold: Number(f.sold || 0),
+          total: Number(f.total || 0),
+          remaining: Number(f.remaining || 0),
+        }
+      })
+      setItems(reset ? mapped : [...items, ...mapped])
+      if (data?.items?.length) {
+        const nextCursor = typeof data.nextCursor === 'number' ? data.nextCursor : null
+        setCursor(nextCursor)
+      }
+    } catch (e:any) {
+      setErr(e?.message || 'Failed to load')
+    } finally {
+      setLoading(false)
     }
-    run()
-  }, [filters])
+  }
+
+  useEffect(() => { load(true) }, [])
+
+  const filtered = useMemo(() => {
+    return items.filter(i => (filters.causeType === 'all' || i.causeType === filters.causeType) && (!filters.q || (i.title + ' ' + i.snippet).toLowerCase().includes(filters.q.toLowerCase())))
+  }, [items, filters])
+
   return (
     <div className="container py-8">
       <h1 className="text-2xl font-semibold">Marketplace</h1>
       <div className="mt-4">
         <Filters value={filters} onChange={setFilters} />
       </div>
+      {err && <div className="mt-3 text-xs opacity-80">{err}</div>}
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {items.map(i => <NFTCard key={i.id} item={i} />)}
+        {filtered.map(i => <NFTCard key={i.id} item={i} />)}
       </div>
-      {recommended.length > 0 && (
-        <div className="mt-10">
-          <h2 className="text-xl font-semibold">Recommended for you</h2>
-          <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {recommended.map(i => <NFTCard key={'rec-'+i.id} item={i} />)}
-          </div>
-        </div>
-      )}
+      <div className="mt-6">
+        <button className="rounded bg-white/10 px-3 py-2 text-sm" disabled={loading} onClick={()=>load(false)}>{loading ? 'Loading...' : 'Load more'}</button>
+      </div>
     </div>
   )
 }

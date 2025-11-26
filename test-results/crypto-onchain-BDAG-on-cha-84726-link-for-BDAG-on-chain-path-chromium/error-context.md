@@ -1,0 +1,172 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "PatriotPledge NFTs" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=e5]:
+        - link "Marketplace" [ref=e6] [cursor=pointer]:
+          - /url: /marketplace
+        - link "Submit Story" [ref=e7] [cursor=pointer]:
+          - /url: /submit
+        - link "Dashboard" [ref=e8] [cursor=pointer]:
+          - /url: /dashboard
+        - link "Governance" [ref=e9] [cursor=pointer]:
+          - /url: /governance
+        - link "Admin" [ref=e10] [cursor=pointer]:
+          - /url: /admin
+        - button "Connect Wallet" [ref=e11] [cursor=pointer]
+  - main [ref=e12]:
+    - generic [ref=e13]:
+      - link "← Back to marketplace" [ref=e14] [cursor=pointer]:
+        - /url: /marketplace
+      - 'heading "Story #1" [level=1] [ref=e15]'
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - img "story" [ref=e18]
+          - article [ref=e19]:
+            - paragraph [ref=e20]: Full story content goes here. Detailed, readable, and empathetic narrative with images/videos.
+        - complementary [ref=e21]:
+          - generic [ref=e22]: Progress and Milestones
+          - generic [ref=e23]:
+            - generic [ref=e24]:
+              - text: Amount (USD)
+              - spinbutton [ref=e25]: "5"
+            - generic [ref=e26]:
+              - generic [ref=e27]:
+                - generic [ref=e28]:
+                  - generic [ref=e29]: One-time Donation
+                  - generic [ref=e30]:
+                    - button "Connect Wallet" [ref=e31] [cursor=pointer]
+                    - button "Donate (Mock)" [ref=e32] [cursor=pointer]
+                - generic [ref=e33]:
+                  - textbox "Email for receipt (optional)" [ref=e34]
+                  - generic [ref=e35]:
+                    - generic [ref=e37]:
+                      - iframe [ref=e38]:
+                        - generic [ref=f1e1]:
+                          - generic: 0123456789０１２３４５６７８９
+                          - textbox [disabled]
+                          - generic [ref=f1e2]:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - img
+                                  - generic:
+                                    - img
+                            - generic [ref=f1e3]:
+                              - generic [ref=f1e4]:
+                                - generic: Number
+                                - generic [ref=f1e6]:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - img
+                                        - generic:
+                                          - img
+                                  - textbox "Credit or debit card number" [ref=f1e9]:
+                                    - /placeholder: Card number
+                              - generic [ref=f1e10]:
+                                - textbox "Credit or debit card expiration date" [ref=f1e14]:
+                                  - /placeholder: MM / YY
+                                - textbox "Credit or debit card CVC/CVV" [ref=f1e18]:
+                                  - /placeholder: CVC
+                          - textbox [disabled]
+                          - button
+                      - textbox [disabled]
+                    - button "Pay One‑Time" [ref=e39] [cursor=pointer]
+              - generic [ref=e40]:
+                - generic [ref=e41]: Recurring Donation (Stripe)
+                - generic [ref=e42]:
+                  - textbox "Your email (required)" [ref=e43]
+                  - generic [ref=e44]:
+                    - generic [ref=e46]:
+                      - iframe [ref=e47]:
+                        - generic [ref=f2e1]:
+                          - generic: 0123456789０１２３４５６７８９
+                          - textbox [disabled]
+                          - generic [ref=f2e2]:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - img
+                                  - generic:
+                                    - img
+                            - generic [ref=f2e3]:
+                              - generic [ref=f2e4]:
+                                - generic: Number
+                                - generic [ref=f2e6]:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - img
+                                        - generic:
+                                          - img
+                                  - textbox "Credit or debit card number" [ref=f2e9]:
+                                    - /placeholder: Card number
+                              - generic [ref=f2e10]:
+                                - textbox "Credit or debit card expiration date" [ref=f2e14]:
+                                  - /placeholder: MM / YY
+                                - textbox "Credit or debit card CVC/CVV" [ref=f2e18]:
+                                  - /placeholder: CVC
+                          - textbox [disabled]
+                          - button
+                      - textbox [disabled]
+                    - button "Start Monthly Subscription" [ref=e48] [cursor=pointer]
+            - generic [ref=e49]:
+              - generic [ref=e50]:
+                - generic [ref=e51]: Bridge (Crypto → BDAG)
+                - generic [ref=e52]: BDAG On‑chain Active
+              - generic [ref=e53]:
+                - generic [ref=e54]:
+                  - text: Asset
+                  - combobox [ref=e55]:
+                    - option "BDAG (native)" [selected]
+                    - option "ETH"
+                    - option "BTC"
+                    - option "SOL"
+                    - option "XRP"
+                - button "Get Quote" [ref=e56] [cursor=pointer]
+              - generic [ref=e57]:
+                - generic [ref=e58]:
+                  - text: Creator Wallet (optional override)
+                  - textbox "0x... / addr... (optional)" [ref=e59]
+                - button "Pay with BDAG (On‑chain)" [ref=e61] [cursor=pointer]
+                - generic [ref=e62]: MISSING_CAMPAIGN_ID
+            - generic [ref=e63]:
+              - generic [ref=e64]: Other Payment Options
+              - generic [ref=e65]:
+                - button "PayPal" [ref=e66] [cursor=pointer]
+                - button "Cash App" [ref=e67] [cursor=pointer]
+                - button "Venmo" [ref=e68] [cursor=pointer]
+              - paragraph [ref=e69]: If unavailable, use Stripe card above (fallback).
+          - generic [ref=e70]:
+            - heading "Share" [level=3] [ref=e71]
+            - generic [ref=e72]:
+              - button "Share on X" [ref=e73] [cursor=pointer]
+              - button "Share on Telegram" [ref=e74] [cursor=pointer]
+  - contentinfo [ref=e75]:
+    - generic [ref=e76]:
+      - generic [ref=e77]:
+        - paragraph [ref=e78]: © 2025 PatriotPledge NFTs · vetshelpingvets.life
+        - paragraph [ref=e79]: 1% nonprofit fee for operations · Transparent and auditable
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - link "BlockDAG Explorer" [ref=e82] [cursor=pointer]:
+            - /url: https://awakening.bdagscan.com
+          - link "Faucet" [ref=e83] [cursor=pointer]:
+            - /url: https://awakening.bdagscan.com/faucet
+          - link "RPC" [ref=e84] [cursor=pointer]:
+            - /url: https://rpc.awakening.bdagscan.com
+          - link "Alt RPC" [ref=e85] [cursor=pointer]:
+            - /url: https://nownodes.io/nodes/bdag-blockdag
+        - link "Join BlockDAG Buildathon Telegram" [ref=e86] [cursor=pointer]:
+          - /url: https://t.me/+bXthKkX7onU5ZmI1
+  - alert [ref=e87]
+```
