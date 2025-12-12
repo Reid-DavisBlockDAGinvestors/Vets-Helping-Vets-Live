@@ -3,22 +3,4 @@
   publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "18"
-
-# Next.js requires the Netlify Next.js runtime
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-# Headers for security
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-
-# Cache static assets
-[[headers]]
-  for = "/_next/static/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+  NODE_VERSION = "20"
