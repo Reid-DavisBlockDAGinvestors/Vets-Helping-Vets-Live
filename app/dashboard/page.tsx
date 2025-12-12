@@ -7,6 +7,9 @@ import { ipfsToHttp } from '@/lib/ipfs'
 import ContractStatus from '@/components/ContractStatus'
 import CampaignUpdateForm from '@/components/CampaignUpdateForm'
 
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
+const EXPLORER_URL = 'https://awakening.bdagscan.com'
+
 type OwnedNFT = {
   tokenId: number
   campaignId: number
@@ -242,7 +245,21 @@ export default function DashboardPage() {
                           {nft.title}
                         </h3>
                         <div className="mt-2 flex items-center justify-between text-sm">
-                          <span className="text-white/50">Token #{nft.tokenId}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white/50">Token #{nft.tokenId}</span>
+                            <a
+                              href={`${EXPLORER_URL}/address/${CONTRACT_ADDRESS}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-1 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
+                              title="View on blockchain"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                            </a>
+                          </div>
                           <span className={`px-2 py-0.5 rounded-full text-xs ${
                             nft.category === 'veteran'
                               ? 'bg-red-500/20 text-red-300'
@@ -330,7 +347,20 @@ export default function DashboardPage() {
                                   {campaign.status}
                                 </span>
                                 {campaign.campaignId && (
-                                  <span className="text-white/40">Campaign #{campaign.campaignId}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-white/40">Campaign #{campaign.campaignId}</span>
+                                    <a
+                                      href={`${EXPLORER_URL}/address/${CONTRACT_ADDRESS}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-1 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
+                                      title="View on blockchain"
+                                    >
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                      </svg>
+                                    </a>
+                                  </div>
                                 )}
                               </div>
                             </div>

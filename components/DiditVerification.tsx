@@ -67,7 +67,7 @@ export default function DiditVerification({
       if (submissionId) {
         console.log('[DiditVerification] Checking submission:', submissionId)
         const res = await fetch(`/api/submissions/${submissionId}/verification`)
-        const data = await res.json()
+        const data = await res.json().catch(() => ({ success: false, error: 'Invalid response' }))
         console.log('[DiditVerification] Submission response:', data)
         
         if (data.success) {
@@ -103,7 +103,7 @@ export default function DiditVerification({
         console.log('[DiditVerification] Checking Didit session directly:', sessionId)
         const res = await fetch(`/api/didit/session?sessionId=${sessionId}`)
         console.log('[DiditVerification] Didit response status:', res.status)
-        const data = await res.json()
+        const data = await res.json().catch(() => ({ success: false, error: 'Invalid response' }))
         
         console.log('[DiditVerification] Full session response:', JSON.stringify(data, null, 2))
         
@@ -170,7 +170,7 @@ export default function DiditVerification({
         }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({ error: 'Invalid response from server' }))
 
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Failed to create verification session')

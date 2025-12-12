@@ -104,21 +104,29 @@ export async function POST(req: NextRequest) {
     
     // V5: Create campaign on-chain
     // Convert goal/copies to numbers first (handles string values from Supabase)
-    const goalNum = Number(merged.goal) || 0
+    const goalUSD = Number(merged.goal) || 0  // Goal in USD
     const copiesNum = Number(merged.num_copies) || 0
     
-    // Price per NFT = Goal ÷ Copies (or explicit price if set)
-    const priceNum = merged.price_per_copy 
+    // Price per NFT = Goal ÷ Copies (or explicit price if set) - in USD
+    const priceUSD = merged.price_per_copy 
       ? Number(merged.price_per_copy)
-      : (goalNum > 0 && copiesNum > 0 ? goalNum / copiesNum : 0)
+      : (goalUSD > 0 && copiesNum > 0 ? goalUSD / copiesNum : 0)
     
-    // Convert to wei (assuming 18 decimals) - multiply by 10^18
-    const goalWei = BigInt(Math.floor(goalNum * 1e18))
-    const priceWei = BigInt(Math.floor(priceNum * 1e18))
+    // Convert USD to BDAG for on-chain storage
+    // BDAG_USD_RATE = 0.05 means 1 BDAG = $0.05, so 1 USD = 20 BDAG
+    const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
+    const USD_TO_BDAG = 1 / BDAG_USD_RATE  // 20 BDAG per 1 USD at current rate
+    
+    const goalBDAG = goalUSD * USD_TO_BDAG
+    const priceBDAG = priceUSD * USD_TO_BDAG
+    
+    // Convert to wei (18 decimals) - on-chain values are in BDAG
+    const goalWei = BigInt(Math.floor(goalBDAG * 1e18))
+    const priceWei = BigInt(Math.floor(priceBDAG * 1e18))
     const maxEditions = BigInt(copiesNum)
     const feeRateBps = 100n // 1% nonprofit fee
     
-    console.log(`[approve] Creating campaign: goal=$${goalNum} (${goalWei} wei), copies=${copiesNum}, price=$${priceNum} (${priceWei} wei)`)
+    console.log(`[approve] Creating campaign: goal=$${goalUSD} USD = ${goalBDAG} BDAG (${goalWei} wei), copies=${copiesNum}, price=$${priceUSD} USD = ${priceBDAG} BDAG (${priceWei} wei)`)
     console.log(`[approve] Creator wallet: ${creatorWallet}, metadata: ${uri.slice(0, 50)}...`)
 
     let campaignId: number | null = null

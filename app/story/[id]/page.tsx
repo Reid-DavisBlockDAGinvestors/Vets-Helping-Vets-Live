@@ -241,7 +241,20 @@ export default async function StoryViewer({ params }: { params: { id: string } }
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div className="flex-1">
               <h1 className="text-2xl md:text-3xl font-bold text-white">{title}</h1>
-              <p className="mt-1 text-white/50 text-sm">Token #{id} on BlockDAG</p>
+              <div className="mt-1 flex items-center gap-3 flex-wrap">
+                <p className="text-white/50 text-sm">Campaign #{id} on BlockDAG</p>
+                <a 
+                  href={`https://awakening.bdagscan.com/address/${process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium hover:bg-emerald-500/30 transition-colors border border-emerald-500/30"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  View on Chain
+                </a>
+              </div>
             </div>
             <div className="md:text-right">
               <div className="text-2xl font-bold text-white">${raised.toLocaleString()}</div>
@@ -315,6 +328,30 @@ export default async function StoryViewer({ params }: { params: { id: string } }
                 url={`https://patriotpledge.nft/story/${id}`} 
                 text={`Support "${title}" on PatriotPledge NFTs`} 
               />
+            </div>
+
+            {/* Blockchain Verification */}
+            <div className="rounded-2xl bg-gradient-to-br from-emerald-900/20 to-teal-900/20 border border-emerald-500/20 p-5">
+              <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                <span>⛓️</span> On-Chain Verified
+              </h3>
+              <p className="text-sm text-white/60 mb-4">
+                This campaign is recorded on the BlockDAG blockchain for full transparency.
+              </p>
+              <a 
+                href={`https://awakening.bdagscan.com/address/${process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                View Contract on Explorer
+              </a>
+              <p className="text-xs text-white/40 mt-2 text-center">
+                Campaign ID: {id}
+              </p>
             </div>
           </div>
         </div>

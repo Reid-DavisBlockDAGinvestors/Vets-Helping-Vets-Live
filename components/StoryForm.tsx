@@ -293,7 +293,7 @@ export default function StoryForm() {
         })
       })
       
-      const data = await res.json()
+      const data = await res.json().catch(() => ({ error: 'Invalid response from server' }))
       
       if (!res.ok) {
         throw new Error(data?.error || 'AI request failed')
