@@ -1,4 +1,4 @@
-import { BrowserProvider, JsonRpcProvider } from 'ethers'
+import { BrowserProvider, JsonRpcProvider, FetchRequest } from 'ethers'
 
 export function getBrowserProvider() {
   if (typeof window === 'undefined') return null
@@ -16,6 +16,15 @@ export function getRpcProvider() {
     'https://relay.awakening.bdagscan.com',
   ].filter(Boolean) as string[]
   const url = rpcs[0]
+  
+  // Check if using NowNodes and add API key header
+  const nowNodesKey = process.env.NOWNODES_API_KEY
+  if (url.includes('nownodes.io') && nowNodesKey) {
+    const fetchReq = new FetchRequest(url)
+    fetchReq.setHeader('api-key', nowNodesKey)
+    return new JsonRpcProvider(fetchReq, undefined, { staticNetwork: true })
+  }
+  
   return new JsonRpcProvider(url)
 }
 
@@ -27,6 +36,17 @@ export function getPrimaryRpcUrl() {
     process.env.RELAYER_RPC ||
     'https://rpc.awakening.bdagscan.com'
   )
+}
+
+// Create a provider for a given RPC URL with NowNodes API key support
+export function createProvider(rpcUrl: string): JsonRpcProvider {
+  const nowNodesKey = process.env.NOWNODES_API_KEY
+  if (rpcUrl.includes('nownodes.io') && nowNodesKey) {
+    const fetchReq = new FetchRequest(rpcUrl)
+    fetchReq.setHeader('api-key', nowNodesKey)
+    return new JsonRpcProvider(fetchReq, undefined, { staticNetwork: true })
+  }
+  return new JsonRpcProvider(rpcUrl)
 }
 
 // Placeholder explorer links for various chains

@@ -1,7 +1,7 @@
 export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getExplorerUrl, getUsdPrice as getPrice, getRpcProvider } from '@/lib/ethers'
+import { getExplorerUrl, getUsdPrice as getPrice, getRpcProvider, createProvider } from '@/lib/ethers'
 import { Contract, Wallet, parseUnits, formatUnits } from 'ethers'
 
 export async function POST(req: NextRequest) {
@@ -51,9 +51,9 @@ export async function POST(req: NextRequest) {
           }
           return NextResponse.json({ error: 'RELAYER_NOT_CONFIGURED', missing }, { status: 500 })
         }
-        const primaryRpc = process.env.BLOCKDAG_RELAYER_RPC || process.env.RELAYER_RPC || process.env.BLOCKDAG_RPC || process.env.BLOCKDAG_RPC_FALLBACK
-        const fallbackRpc = process.env.BLOCKDAG_RPC || process.env.BLOCKDAG_RPC_FALLBACK || undefined
-        let provider = primaryRpc ? new (await import('ethers')).JsonRpcProvider(primaryRpc) : getRpcProvider()
+        const primaryRpc = process.env.BLOCKDAG_RPC || process.env.BLOCKDAG_RPC_FALLBACK || process.env.BLOCKDAG_RELAYER_RPC || process.env.RELAYER_RPC
+        const fallbackRpc = process.env.BLOCKDAG_RPC_FALLBACK || undefined
+        let provider = primaryRpc ? createProvider(primaryRpc) : getRpcProvider()
         let wallet = new Wallet(pk, provider)
 
         // Read campaign or derive from tokenId; then get price

@@ -9,14 +9,17 @@ module.exports = {
       optimizer: {
         enabled: true,
         runs: 200
-      }
+      },
+      viaIR: true  // Enable IR-based compilation to handle stack depth
     }
   },
   networks: {
     blockdag: {
-      url: process.env.BLOCKDAG_RELAYER_RPC || "https://relay.awakening.bdagscan.com",
-      accounts: [process.env.BDAG_RELAYER_KEY],   // now it will see your key
-      chainId: 2025
+      url: process.env.BLOCKDAG_RPC || process.env.BLOCKDAG_RELAYER_RPC || "https://rpc.awakening.bdagscan.com",
+      accounts: [process.env.BDAG_RELAYER_KEY],
+      chainId: 1043,
+      // NowNodes requires API key in headers
+      httpHeaders: process.env.NOWNODES_API_KEY ? { 'api-key': process.env.NOWNODES_API_KEY } : {}
     }
   }
 };

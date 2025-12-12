@@ -1,11 +1,54 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useWallet } from '@/hooks/useWallet'
+import { ipfsToHttp } from '@/lib/ipfs'
 import ContractStatus from '@/components/ContractStatus'
+import CampaignUpdateForm from '@/components/CampaignUpdateForm'
+
+type OwnedNFT = {
+  tokenId: number
+  campaignId: number
+  editionNumber: number
+  totalEditions: number
+  title: string
+  image: string
+  category: string
+  goal: number
+  raised: number
+  isCreator: boolean
+}
+
+type CreatedCampaign = {
+  id: string
+  campaignId: number | null
+  title: string
+  story: string
+  category: string
+  goal: number
+  imageUri: string
+  status: string
+  raised: number
+  editionsMinted: number
+  maxEditions: number
+  pendingUpdates: number
+  canUpdate: boolean
+  latestUpdate: any | null
+}
 
 export default function DashboardPage() {
+  const { address, isConnected, connect, balance, isOnBlockDAG } = useWallet()
   const [summary, setSummary] = useState<any>(null)
+  const [ownedNfts, setOwnedNfts] = useState<OwnedNFT[]>([])
+  const [createdCampaigns, setCreatedCampaigns] = useState<CreatedCampaign[]>([])
+  const [loadingNfts, setLoadingNfts] = useState(false)
+  const [loadingCampaigns, setLoadingCampaigns] = useState(false)
+  const [activeTab, setActiveTab] = useState<'owned' | 'created'>('owned')
+  const [selectedCampaign, setSelectedCampaign] = useState<CreatedCampaign | null>(null)
+  const [showUpdateForm, setShowUpdateForm] = useState(false)
 
+  // Fetch platform summary
   useEffect(() => {
     const run = async () => {
       try {
@@ -16,23 +59,404 @@ export default function DashboardPage() {
     run()
   }, [])
 
+  // Fetch owned NFTs when wallet connected
+  useEffect(() => {
+    if (!address) {
+      setOwnedNfts([])
+      return
+    }
+    const fetchOwned = async () => {
+      setLoadingNfts(true)
+      try {
+        const res = await fetch(`/api/wallet/nfts?address=${address}`)
+        if (res.ok) {
+          const data = await res.json()
+          setOwnedNfts(data.nfts || [])
+        }
+      } catch (e) {
+        console.error('Failed to fetch owned NFTs:', e)
+      } finally {
+        setLoadingNfts(false)
+      }
+    }
+    fetchOwned()
+  }, [address])
+
+  // Fetch created campaigns when wallet connected
+  useEffect(() => {
+    if (!address) {
+      setCreatedCampaigns([])
+      return
+    }
+    const fetchCreated = async () => {
+      setLoadingCampaigns(true)
+      try {
+        const res = await fetch(`/api/wallet/campaigns?address=${address}`)
+        if (res.ok) {
+          const data = await res.json()
+          setCreatedCampaigns(data.campaigns || [])
+        }
+      } catch (e) {
+        console.error('Failed to fetch created campaigns:', e)
+      } finally {
+        setLoadingCampaigns(false)
+      }
+    }
+    fetchCreated()
+  }, [address])
+
+  const handleUpdateClick = (campaign: CreatedCampaign) => {
+    setSelectedCampaign(campaign)
+    setShowUpdateForm(true)
+  }
+
+  const handleUpdateSubmitted = () => {
+    setShowUpdateForm(false)
+    setSelectedCampaign(null)
+    // Refresh campaigns
+    if (address) {
+      fetch(`/api/wallet/campaigns?address=${address}`)
+        .then(res => res.json())
+        .then(data => setCreatedCampaigns(data.campaigns || []))
+    }
+  }
+
   return (
     <div className="container py-8">
-      <h1 className="text-2xl font-semibold">Your Dashboard</h1>
-      <p className="mt-2 text-white/80">Track your owned NFTs, fundraiser status, wallet balance, and updates.</p>
-      <div className="mt-6 rounded border border-white/10 p-4">Placeholder: NFT holdings, fundraiser progress, edit tools.</div>
-      <div className="mt-6 rounded border border-white/10 p-4">
-        <h2 className="font-semibold">Platform Impact</h2>
-        <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded bg-white/5 p-3">{`Funds Raised: $${summary?.fundsRaised?.toLocaleString?.() || 0}`}</div>
-          <div className="rounded bg-white/5 p-3">{`Purchases: ${summary?.purchases != null ? Number(summary.purchases).toLocaleString() : 0}`}</div>
-          <div className="rounded bg-white/5 p-3">{`Mints: ${summary?.mints != null ? Number(summary.mints).toLocaleString() : 0}`}</div>
-          <div className="rounded bg-white/5 p-3">{`Milestones: ${summary?.milestones != null ? Number(summary.milestones).toLocaleString() : 0}`}</div>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Your Dashboard</h1>
+          <p className="mt-1 text-white/60">Track your NFTs, manage your fundraisers, and submit updates.</p>
+        </div>
+        
+        {!isConnected ? (
+          <button
+            onClick={connect}
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-500/20"
+          >
+            Connect Wallet
+          </button>
+        ) : (
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="text-sm text-white/50">Connected</div>
+              <div className="font-mono text-white/80 text-sm">
+                {address?.slice(0, 6)}...{address?.slice(-4)}
+              </div>
+              {balance && (
+                <div className="text-xs text-white/40">
+                  {Number(balance).toFixed(2)} BDAG
+                </div>
+              )}
+            </div>
+            <div className={`w-3 h-3 rounded-full ${isOnBlockDAG ? 'bg-green-500' : 'bg-yellow-500'}`} />
+          </div>
+        )}
+      </div>
+
+      {/* Not connected state */}
+      {!isConnected && (
+        <div className="rounded-2xl bg-white/5 border border-white/10 p-12 text-center">
+          <div className="text-5xl mb-4">🔐</div>
+          <h2 className="text-xl font-semibold text-white mb-2">Connect Your Wallet</h2>
+          <p className="text-white/60 max-w-md mx-auto">
+            Connect your wallet to view your NFT collection, manage your fundraisers, and submit updates to your campaigns.
+          </p>
+        </div>
+      )}
+
+      {/* Connected state */}
+      {isConnected && (
+        <>
+          {/* Tab Navigation */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setActiveTab('owned')}
+              className={`px-5 py-2.5 rounded-xl font-medium transition-all ${
+                activeTab === 'owned'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                  : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              NFTs I Own ({ownedNfts.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('created')}
+              className={`px-5 py-2.5 rounded-xl font-medium transition-all ${
+                activeTab === 'created'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                  : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              My Fundraisers ({createdCampaigns.length})
+            </button>
+          </div>
+
+          {/* NFTs I Own Tab */}
+          {activeTab === 'owned' && (
+            <div className="space-y-6">
+              {loadingNfts ? (
+                <div className="rounded-2xl bg-white/5 border border-white/10 p-8 text-center">
+                  <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
+                  <p className="text-white/60">Loading your NFTs...</p>
+                </div>
+              ) : ownedNfts.length === 0 ? (
+                <div className="rounded-2xl bg-white/5 border border-white/10 p-12 text-center">
+                  <div className="text-5xl mb-4">🎨</div>
+                  <h2 className="text-xl font-semibold text-white mb-2">No NFTs Yet</h2>
+                  <p className="text-white/60 mb-6">You haven't purchased any fundraiser NFTs yet.</p>
+                  <Link
+                    href="/marketplace"
+                    className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+                  >
+                    Browse Marketplace
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {ownedNfts.map((nft) => (
+                    <Link
+                      key={nft.tokenId}
+                      href={`/story/${nft.campaignId}`}
+                      className="group block rounded-2xl bg-white/5 border border-white/10 overflow-hidden hover:border-white/20 hover:bg-white/10 transition-all"
+                    >
+                      <div className="relative h-48 overflow-hidden">
+                        {nft.image ? (
+                          <img
+                            src={ipfsToHttp(nft.image)}
+                            alt={nft.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-blue-900/50 to-purple-900/50 flex items-center justify-center">
+                            <span className="text-4xl opacity-30">🎖️</span>
+                          </div>
+                        )}
+                        <div className="absolute top-3 right-3 px-2 py-1 rounded-full bg-black/50 backdrop-blur text-xs text-white">
+                          Edition {nft.editionNumber}/{nft.totalEditions || '∞'}
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-semibold text-white group-hover:text-blue-300 transition-colors line-clamp-1">
+                          {nft.title}
+                        </h3>
+                        <div className="mt-2 flex items-center justify-between text-sm">
+                          <span className="text-white/50">Token #{nft.tokenId}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${
+                            nft.category === 'veteran'
+                              ? 'bg-red-500/20 text-red-300'
+                              : 'bg-blue-500/20 text-blue-300'
+                          }`}>
+                            {nft.category}
+                          </span>
+                        </div>
+                        <div className="mt-3">
+                          <div className="flex justify-between text-xs text-white/60 mb-1">
+                            <span>${nft.raised.toFixed(0)} raised</span>
+                            <span>{Math.round((nft.raised / Math.max(1, nft.goal)) * 100)}%</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400"
+                              style={{ width: `${Math.min(100, (nft.raised / Math.max(1, nft.goal)) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* My Fundraisers Tab */}
+          {activeTab === 'created' && (
+            <div className="space-y-6">
+              {loadingCampaigns ? (
+                <div className="rounded-2xl bg-white/5 border border-white/10 p-8 text-center">
+                  <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
+                  <p className="text-white/60">Loading your fundraisers...</p>
+                </div>
+              ) : createdCampaigns.length === 0 ? (
+                <div className="rounded-2xl bg-white/5 border border-white/10 p-12 text-center">
+                  <div className="text-5xl mb-4">📝</div>
+                  <h2 className="text-xl font-semibold text-white mb-2">No Fundraisers Yet</h2>
+                  <p className="text-white/60 mb-6">You haven't created any fundraiser campaigns.</p>
+                  <Link
+                    href="/submit"
+                    className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+                  >
+                    Start a Fundraiser
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {createdCampaigns.map((campaign) => (
+                    <div
+                      key={campaign.id}
+                      className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden"
+                    >
+                      <div className="flex flex-col md:flex-row">
+                        {/* Image */}
+                        <div className="md:w-48 h-32 md:h-auto flex-shrink-0">
+                          {campaign.imageUri ? (
+                            <img
+                              src={ipfsToHttp(campaign.imageUri)}
+                              alt={campaign.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-blue-900/50 to-purple-900/50 flex items-center justify-center">
+                              <span className="text-3xl opacity-30">🎖️</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 p-5">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <h3 className="font-semibold text-lg text-white">{campaign.title}</h3>
+                              <div className="mt-1 flex items-center gap-3 text-sm">
+                                <span className={`px-2 py-0.5 rounded-full text-xs ${
+                                  campaign.status === 'approved'
+                                    ? 'bg-green-500/20 text-green-300'
+                                    : campaign.status === 'pending'
+                                    ? 'bg-yellow-500/20 text-yellow-300'
+                                    : 'bg-red-500/20 text-red-300'
+                                }`}>
+                                  {campaign.status}
+                                </span>
+                                {campaign.campaignId && (
+                                  <span className="text-white/40">Campaign #{campaign.campaignId}</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-2">
+                              {campaign.campaignId && (
+                                <Link
+                                  href={`/story/${campaign.campaignId}`}
+                                  className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-sm rounded-lg transition-colors"
+                                >
+                                  View
+                                </Link>
+                              )}
+                              {campaign.canUpdate && (
+                                <button
+                                  onClick={() => handleUpdateClick(campaign)}
+                                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors"
+                                >
+                                  Update Story
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Stats */}
+                          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                              <div className="text-xs text-white/40">Raised</div>
+                              <div className="font-semibold text-white">${campaign.raised.toFixed(0)}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-white/40">Goal</div>
+                              <div className="font-semibold text-white">${campaign.goal?.toLocaleString() || 0}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-white/40">NFTs Sold</div>
+                              <div className="font-semibold text-white">
+                                {campaign.editionsMinted}/{campaign.maxEditions || '∞'}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-white/40">Progress</div>
+                              <div className="font-semibold text-white">
+                                {campaign.goal ? Math.round((campaign.raised / campaign.goal) * 100) : 0}%
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Progress bar */}
+                          <div className="mt-3">
+                            <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400"
+                                style={{ width: `${Math.min(100, campaign.goal ? (campaign.raised / campaign.goal) * 100 : 0)}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Pending updates notice */}
+                          {campaign.pendingUpdates > 0 && (
+                            <div className="mt-3 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-sm text-yellow-300">
+                              {campaign.pendingUpdates} update{campaign.pendingUpdates > 1 ? 's' : ''} pending review
+                            </div>
+                          )}
+
+                          {/* Latest approved update */}
+                          {campaign.latestUpdate && (
+                            <div className="mt-3 px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm">
+                              <div className="text-blue-300 font-medium">Latest Update</div>
+                              <div className="text-white/60 text-xs mt-1 line-clamp-2">
+                                {campaign.latestUpdate.story_update || campaign.latestUpdate.funds_utilization}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Platform Stats */}
+      <div className="mt-12 rounded-2xl bg-white/5 border border-white/10 p-6">
+        <h2 className="font-semibold text-white mb-4">Platform Impact</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="rounded-xl bg-white/5 p-4">
+            <div className="text-2xl font-bold text-white">${summary?.fundsRaised?.toLocaleString?.() || 0}</div>
+            <div className="text-sm text-white/50">Funds Raised</div>
+          </div>
+          <div className="rounded-xl bg-white/5 p-4">
+            <div className="text-2xl font-bold text-white">{summary?.purchases?.toLocaleString?.() || 0}</div>
+            <div className="text-sm text-white/50">Purchases</div>
+          </div>
+          <div className="rounded-xl bg-white/5 p-4">
+            <div className="text-2xl font-bold text-white">{summary?.mints?.toLocaleString?.() || 0}</div>
+            <div className="text-sm text-white/50">NFTs Minted</div>
+          </div>
+          <div className="rounded-xl bg-white/5 p-4">
+            <div className="text-2xl font-bold text-white">{summary?.milestones?.toLocaleString?.() || 0}</div>
+            <div className="text-sm text-white/50">Milestones</div>
+          </div>
         </div>
       </div>
+
+      {/* Contract Status */}
       <div className="mt-6">
         <ContractStatus />
       </div>
+
+      {/* Update Form Modal */}
+      {showUpdateForm && selectedCampaign && (
+        <CampaignUpdateForm
+          campaign={selectedCampaign}
+          walletAddress={address || ''}
+          onClose={() => {
+            setShowUpdateForm(false)
+            setSelectedCampaign(null)
+          }}
+          onSubmitted={handleUpdateSubmitted}
+        />
+      )}
     </div>
   )
 }

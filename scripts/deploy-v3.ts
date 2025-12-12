@@ -9,11 +9,20 @@ import * as path from 'path'
 // Requires: BLOCKDAG_RELAYER_RPC (or BLOCKDAG_RPC) and BDAG_RELAYER_KEY
 
 async function main() {
-  const rpc = process.env.BLOCKDAG_RELAYER_RPC || process.env.BLOCKDAG_RPC
+  const rpc = process.env.BLOCKDAG_RPC || process.env.BLOCKDAG_RELAYER_RPC || process.env.BLOCKDAG_RPC_FALLBACK
   const pk = process.env.BDAG_RELAYER_KEY
-  if (!rpc || !pk) throw new Error('Missing BLOCKDAG_RELAYER_RPC/BLOCKDAG_RPC or BDAG_RELAYER_KEY')
+  const nowNodesKey = process.env.NOWNODES_API_KEY
+  if (!rpc || !pk) throw new Error('Missing BLOCKDAG_RPC or BDAG_RELAYER_KEY')
 
-  const provider = new ethers.JsonRpcProvider(rpc)
+  // Use NowNodes API key if available
+  let provider: ethers.JsonRpcProvider
+  if (rpc.includes('nownodes.io') && nowNodesKey) {
+    const fetchReq = new ethers.FetchRequest(rpc)
+    fetchReq.setHeader('api-key', nowNodesKey)
+    provider = new ethers.JsonRpcProvider(fetchReq, undefined, { staticNetwork: true })
+  } else {
+    provider = new ethers.JsonRpcProvider(rpc)
+  }
   const wallet = new ethers.Wallet(pk, provider)
 
   // Load ABI + bytecode (Hardhat artifacts)

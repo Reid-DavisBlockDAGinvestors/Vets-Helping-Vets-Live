@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import Filters, { Filters as FiltersType } from '@/components/Filters'
+import Filters, { FilterValues } from '@/components/Filters'
 import NFTCard, { NFTItem } from '@/components/NFTCard'
 
 export default function MarketplacePage() {
-  const [filters, setFilters] = useState<FiltersType>({ causeType: 'all', urgency: 'all' })
+  const [filters, setFilters] = useState<FilterValues>({ causeType: 'all', urgency: 'all' })
   const [items, setItems] = useState<NFTItem[]>([])
-  const [cursor, setCursor] = useState<number | null>(null)
+  const [cursor, setCursor] = useState<number | null>(0)
+  const [hasMore, setHasMore] = useState(true)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
 
@@ -25,12 +26,13 @@ export default function MarketplacePage() {
         const goal = Number(f.goal || 0)
         const raised = Number(f.raised || 0)
         const pct = goal > 0 ? Math.round((raised / goal) * 100) : 0
-        const title = f.title || `Fundraiser #${f.tokenId}`
+        const title = f.title || `Fundraiser #${f.campaignId}`
         const image = f.image || ''
         const snippet = f.story || ''
         const cause: any = f.category || 'general'
         return {
-          id: String(f.tokenId),
+          id: f.id || String(f.campaignId), // Use submission UUID, fallback to campaignId
+          campaignId: Number(f.campaignId), // V5: campaign ID for linking
           title,
           image,
           causeType: (cause === 'veteran' ? 'veteran' : 'general'),
@@ -38,16 +40,27 @@ export default function MarketplacePage() {
           goal,
           raised,
           snippet,
-          sold: Number(f.sold || 0),
-          total: Number(f.total || 0),
-          remaining: Number(f.remaining || 0),
+          sold: Number(f.editionsMinted || 0),
+          total: Number(f.maxEditions || 0),
+          remaining: f.remaining != null ? Number(f.remaining) : null,
+          // Living NFT update info
+          updateCount: f.updateCount || 0,
+          lastUpdated: f.lastUpdated || null,
+          hasRecentUpdate: f.hasRecentUpdate || false,
         }
       })
-      setItems(reset ? mapped : [...items, ...mapped])
-      if (data?.items?.length) {
-        const nextCursor = typeof data.nextCursor === 'number' ? data.nextCursor : null
-        setCursor(nextCursor)
-      }
+      // De-duplicate by id when appending
+      const newItems = reset ? mapped : [...items, ...mapped]
+      const seen = new Set<string>()
+      const deduplicated = newItems.filter((item) => {
+        if (seen.has(item.id)) return false
+        seen.add(item.id)
+        return true
+      })
+      setItems(deduplicated)
+      const nextCursor = typeof data.nextCursor === 'number' ? data.nextCursor : null
+      setCursor(nextCursor)
+      setHasMore(nextCursor !== null)
     } catch (e:any) {
       setErr(e?.message || 'Failed to load')
     } finally {
@@ -62,17 +75,67 @@ export default function MarketplacePage() {
   }, [items, filters])
 
   return (
-    <div className="container py-8">
-      <h1 className="text-2xl font-semibold">Marketplace</h1>
-      <div className="mt-4">
-        <Filters value={filters} onChange={setFilters} />
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-purple-900/20 to-transparent" />
+        <div className="container py-16 relative">
+          <h1 className="text-4xl md:text-5xl font-bold text-white">
+            Support a Cause
+          </h1>
+          <p className="mt-4 text-lg text-white/70 max-w-2xl">
+            Browse verified fundraisers and make a difference. Every donation is transparent and tracked on-chain.
+          </p>
+        </div>
       </div>
-      {err && <div className="mt-3 text-xs opacity-80">{err}</div>}
-      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filtered.map(i => <NFTCard key={i.id} item={i} />)}
-      </div>
-      <div className="mt-6">
-        <button className="rounded bg-white/10 px-3 py-2 text-sm" disabled={loading} onClick={()=>load(false)}>{loading ? 'Loading...' : 'Load more'}</button>
+
+      <div className="container pb-16 -mt-4">
+        {/* Filters */}
+        <div className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-4 mb-8">
+          <Filters value={filters} onChange={setFilters} />
+        </div>
+
+        {/* Error State */}
+        {err && (
+          <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-4 mb-6 text-red-400">
+            {err}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && filtered.length === 0 && (
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4 opacity-30">🔍</div>
+            <h3 className="text-xl font-semibold text-white/70">No fundraisers found</h3>
+            <p className="mt-2 text-white/50">Try adjusting your filters or check back later.</p>
+          </div>
+        )}
+
+        {/* Grid */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filtered.map(i => <NFTCard key={i.id} item={i} />)}
+        </div>
+
+        {/* Load More */}
+        {filtered.length > 0 && hasMore && (
+          <div className="mt-10 text-center">
+            <button 
+              className="rounded-full bg-white/10 hover:bg-white/20 border border-white/10 px-8 py-3 font-medium text-white transition-all disabled:opacity-50" 
+              disabled={loading || !hasMore} 
+              onClick={() => load(false)}
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                  </svg>
+                  Loading...
+                </span>
+              ) : 'Load More Fundraisers'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

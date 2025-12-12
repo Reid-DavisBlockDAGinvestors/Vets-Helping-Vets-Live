@@ -18,3 +18,93 @@ body {
 .container {
   @apply mx-auto max-w-7xl px-4;
 }
+
+/* Dropdown/Select styling for dark theme */
+select {
+  background-color: rgba(30, 41, 59, 0.95) !important; /* Dark slate background */
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.2);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+select:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Style the dropdown options - MUST use !important to override browser defaults */
+select option {
+  background-color: #1e293b !important; /* Dark slate */
+  color: #ffffff !important;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+select option:hover,
+select option:focus {
+  background-color: #3b82f6 !important; /* Blue */
+  color: #ffffff !important;
+}
+
+select option:checked {
+  background-color: #2563eb !important; /* Darker blue */
+  color: #ffffff !important;
+}
+
+select option:disabled {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Firefox specific - needs different approach */
+@supports (-moz-appearance: none) {
+  select {
+    background-color: #1e293b !important;
+  }
+  select option {
+    background-color: #1e293b !important;
+    color: #ffffff !important;
+  }
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+select::-webkit-scrollbar {
+  width: 8px;
+}
+
+select::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+select::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 4px;
+}
+
+select::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Input and textarea styling for consistency */
+input, textarea {
+  color-scheme: dark;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+  @apply accent-blue-500;
+}

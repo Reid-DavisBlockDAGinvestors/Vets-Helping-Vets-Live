@@ -1,6 +1,6 @@
 export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
-import { getUsdPrice as getPrice } from '@/lib/ethers'
+import { getUsdPrice as getPrice, createProvider } from '@/lib/ethers'
 import { Wallet, formatUnits } from 'ethers'
 
 export async function POST(req: NextRequest) {
@@ -20,15 +20,13 @@ export async function POST(req: NextRequest) {
     if (!price) return NextResponse.json({ error: 'PRICE_UNAVAILABLE' }, { status: 500 })
 
     const pk = process.env.BDAG_RELAYER_KEY
-    const primaryRpc = process.env.BLOCKDAG_RELAYER_RPC || process.env.RELAYER_RPC || process.env.BLOCKDAG_RPC || process.env.BLOCKDAG_RPC_FALLBACK
-    const rpc = primaryRpc || process.env.BLOCKDAG_RPC || process.env.BLOCKDAG_RPC_FALLBACK
+    const rpc = process.env.BLOCKDAG_RPC || process.env.BLOCKDAG_RPC_FALLBACK || process.env.BLOCKDAG_RELAYER_RPC || process.env.RELAYER_RPC
     if (!pk || !rpc) {
       return NextResponse.json({ maxUsdAllowed: null, maxAssetAllowed: null, notice: 'RELAYER_NOT_CONFIGURED' })
     }
 
     try {
-      const { JsonRpcProvider } = await import('ethers')
-      const provider = new JsonRpcProvider(rpc)
+      const provider = createProvider(rpc)
       const wallet = new Wallet(pk, provider)
       const bal = await provider.getBalance(wallet.address)
       const maxAssetFloat = parseFloat(formatUnits(bal, 18))

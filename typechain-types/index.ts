@@ -58,3 +58,7 @@ export type { PatriotPledgeNFTV2 } from "./contracts/PatriotPledgeNFTV2";
 export { PatriotPledgeNFTV2__factory } from "./factories/contracts/PatriotPledgeNFTV2__factory";
 export type { PatriotPledgeNFTV3 } from "./contracts/PatriotPledgeNFTV3";
 export { PatriotPledgeNFTV3__factory } from "./factories/contracts/PatriotPledgeNFTV3__factory";
+export type { PatriotPledgeNFTV4 } from "./contracts/PatriotPledgeNFTV4";
+export { PatriotPledgeNFTV4__factory } from "./factories/contracts/PatriotPledgeNFTV4__factory";
+export type { PatriotPledgeNFTV5 } from "./contracts/PatriotPledgeNFTV5";
+export { PatriotPledgeNFTV5__factory } from "./factories/contracts/PatriotPledgeNFTV5__factory";

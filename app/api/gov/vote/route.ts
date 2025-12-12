@@ -3,10 +3,60 @@ import { supabase } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
   try {
-    const { id, support } = await req.json()
-    if (!id || typeof support !== 'boolean') return NextResponse.json({ error: 'INVALID_INPUT' }, { status: 400 })
+    const { 
+      id, 
+      support, 
+      voter_wallet, 
+      voter_email, 
+      voter_name,
+      nfts_owned,
+      campaigns_created,
+      total_donated
+    } = await req.json()
+    
+    if (!id || typeof support !== 'boolean') {
+      return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
+    }
+    if (!voter_wallet) {
+      return NextResponse.json({ error: 'Wallet address required to vote' }, { status: 400 })
+    }
 
-    // Increment yes/no vote tallies. In production, verify voter weight with ERC20 on-chain proofs.
+    // Check if user already voted on this proposal
+    const { data: existingVote } = await supabase
+      .from('proposal_votes')
+      .select('id')
+      .eq('proposal_id', id)
+      .eq('voter_wallet', voter_wallet.toLowerCase())
+      .single()
+    
+    if (existingVote) {
+      return NextResponse.json({ error: 'You have already voted on this proposal' }, { status: 400 })
+    }
+
+    // Record the vote with voter info
+    const { error: voteError } = await supabase
+      .from('proposal_votes')
+      .insert({
+        proposal_id: id,
+        voter_wallet: voter_wallet.toLowerCase(),
+        voter_email,
+        voter_name,
+        support,
+        nfts_owned: nfts_owned || 0,
+        campaigns_created: campaigns_created || 0,
+        total_donated: total_donated || 0
+      })
+    
+    if (voteError) {
+      console.error('[Vote] Insert error:', voteError)
+      // If unique constraint violation, user already voted
+      if (voteError.code === '23505') {
+        return NextResponse.json({ error: 'You have already voted on this proposal' }, { status: 400 })
+      }
+      throw voteError
+    }
+
+    // Increment yes/no vote tallies
     const column = support ? 'yes_votes' : 'no_votes'
     const { error } = await supabase.rpc('increment_proposal_votes', { p_id: id, p_column: column })
 
@@ -20,9 +70,10 @@ export async function POST(req: NextRequest) {
       if (e2) throw e2
     }
 
+    console.log(`[Vote] ${voter_wallet} voted ${support ? 'YES' : 'NO'} on proposal ${id}`)
     return NextResponse.json({ ok: true })
-  } catch (e) {
-    console.error('gov vote error', e)
-    return NextResponse.json({ error: 'VOTE_FAILED' }, { status: 500 })
+  } catch (e: any) {
+    console.error('[Vote] Error:', e)
+    return NextResponse.json({ error: e?.message || 'Vote failed' }, { status: 500 })
   }
 }

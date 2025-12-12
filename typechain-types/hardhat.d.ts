@@ -117,6 +117,14 @@ declare module "hardhat/types/runtime" {
       name: "PatriotPledgeNFTV3",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.PatriotPledgeNFTV3__factory>;
+    getContractFactory(
+      name: "PatriotPledgeNFTV4",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.PatriotPledgeNFTV4__factory>;
+    getContractFactory(
+      name: "PatriotPledgeNFTV5",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.PatriotPledgeNFTV5__factory>;
 
     getContractAt(
       name: "Ownable",
@@ -248,6 +256,16 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.PatriotPledgeNFTV3>;
+    getContractAt(
+      name: "PatriotPledgeNFTV4",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.PatriotPledgeNFTV4>;
+    getContractAt(
+      name: "PatriotPledgeNFTV5",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.PatriotPledgeNFTV5>;
 
     deployContract(
       name: "Ownable",
@@ -353,6 +371,14 @@ declare module "hardhat/types/runtime" {
       name: "PatriotPledgeNFTV3",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.PatriotPledgeNFTV3>;
+    deployContract(
+      name: "PatriotPledgeNFTV4",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.PatriotPledgeNFTV4>;
+    deployContract(
+      name: "PatriotPledgeNFTV5",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.PatriotPledgeNFTV5>;
 
     deployContract(
       name: "Ownable",
@@ -484,6 +510,16 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.PatriotPledgeNFTV3>;
+    deployContract(
+      name: "PatriotPledgeNFTV4",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.PatriotPledgeNFTV4>;
+    deployContract(
+      name: "PatriotPledgeNFTV5",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.PatriotPledgeNFTV5>;
 
     // default types
     getContractFactory(

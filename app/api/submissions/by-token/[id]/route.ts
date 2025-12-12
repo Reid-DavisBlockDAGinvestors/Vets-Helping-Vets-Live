@@ -1,22 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
-export async function GET(_req: NextRequest, context: { params: { id: string } }) {
+export async function GET(req: NextRequest, context: { params: { id: string } }) {
   try {
-    const tokenId = Number(context.params.id)
-    if (!Number.isFinite(tokenId)) {
-      return NextResponse.json({ error: 'INVALID_TOKEN_ID' }, { status: 400 })
+    const id = Number(context.params.id)
+    if (!Number.isFinite(id) || id < 0) {
+      return NextResponse.json({ error: 'INVALID_ID' }, { status: 400 })
     }
 
-    const { data, error } = await supabaseAdmin
+    const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim().toLowerCase()
+
+    // V5: Look up by campaign_id first, then fall back to token_id for legacy
+    const { data: rows, error } = await supabaseAdmin
       .from('submissions')
       .select('*')
-      .eq('token_id', tokenId)
-      .maybeSingle()
+      .eq('status', 'minted')
+      .or(`campaign_id.eq.${id},token_id.eq.${id}`)
+      .order('created_at', { ascending: false })
 
     if (error) {
       return NextResponse.json({ error: 'SUBMISSION_LOOKUP_FAILED', details: error.message }, { status: 500 })
     }
+
+    // Prefer submission that matches the active contract address
+    let data = null
+    if (rows && rows.length > 0) {
+      data = rows.find((r: any) => 
+        r.contract_address && r.contract_address.toLowerCase() === contractAddress
+      ) || rows[0]
+    }
+
     if (!data) {
       return NextResponse.json({ error: 'SUBMISSION_NOT_FOUND' }, { status: 404 })
     }

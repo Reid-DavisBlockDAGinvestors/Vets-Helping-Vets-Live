@@ -6,3 +6,5 @@ export type { PatriotPledgeGovernance } from "./PatriotPledgeGovernance";
 export type { PatriotPledgeNFT } from "./PatriotPledgeNFT";
 export type { PatriotPledgeNFTV2 } from "./PatriotPledgeNFTV2";
 export type { PatriotPledgeNFTV3 } from "./PatriotPledgeNFTV3";
+export type { PatriotPledgeNFTV4 } from "./PatriotPledgeNFTV4";
+export type { PatriotPledgeNFTV5 } from "./PatriotPledgeNFTV5";

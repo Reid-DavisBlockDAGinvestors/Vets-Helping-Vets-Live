@@ -3,365 +3,643 @@
 import { useEffect, useState } from 'react'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
-import WalletConnectButton from './WalletConnectButton'
+import { useWallet } from '@/hooks/useWallet'
+import { BrowserProvider, Contract, parseEther, formatEther } from 'ethers'
 
-export default function PurchasePanel({ tokenId }: { tokenId: string }) {
-  const [amount, setAmount] = useState<number>(5)
+type PaymentTab = 'card' | 'crypto' | 'other'
+
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
+const BDAG_USD_PRICE = 0.05 // Fixed test price: 1 BDAG = $0.05 USD
+
+// V5 ABI for client-side edition minting
+const MINT_EDITION_ABI = [
+  'function mintWithBDAG(uint256 campaignId) external payable returns (uint256)',
+  'function mintWithBDAGAndTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
+]
+
+type PurchasePanelProps = {
+  campaignId: string  // V5: campaign ID instead of token ID
+  tokenId?: string    // Legacy support
+  pricePerNft?: number | null
+  remainingCopies?: number | null
+}
+
+export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remainingCopies }: PurchasePanelProps) {
+  // V5: Use campaignId, fall back to tokenId for backwards compat
+  const targetId = campaignId || tokenId || '0'
+  const hasNftPrice = pricePerNft && pricePerNft > 0
+  const [quantity, setQuantity] = useState<number>(1)
+  const [tipAmount, setTipAmount] = useState<number>(0)
+  const [customAmount, setCustomAmount] = useState<number>(hasNftPrice ? pricePerNft : 25)
   const [email, setEmail] = useState('')
-  const [recurring, setRecurring] = useState(false)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState<PaymentTab>('card')
+  const [isMonthly, setIsMonthly] = useState(false)
   const [asset, setAsset] = useState<'BDAG'|'ETH'|'BTC'|'SOL'|'XRP'>('BDAG')
-  const [bridge, setBridge] = useState<any>(null)
-  const [toAddress, setToAddress] = useState('')
-  const isOnchain = process.env.NEXT_PUBLIC_BDAG_ONCHAIN === 'true'
-  const onchainActive = isOnchain && asset === 'BDAG'
   const [cryptoMsg, setCryptoMsg] = useState<string>('')
   const [maxUsdAllowed, setMaxUsdAllowed] = useState<number | null>(null)
-  const [maxAssetAllowed, setMaxAssetAllowed] = useState<number | null>(null)
-  const [preflightMsg, setPreflightMsg] = useState<string>('')
+  const [txHash, setTxHash] = useState<string | null>(null)
+  const isOnchain = process.env.NEXT_PUBLIC_BDAG_ONCHAIN === 'true'
+  
+  // Wallet connection
+  const wallet = useWallet()
+  
+  // Calculate total based on whether this is an NFT purchase or donation
+  const nftSubtotal = hasNftPrice ? pricePerNft * quantity : 0
+  const totalAmount = hasNftPrice ? nftSubtotal + tipAmount : customAmount
+  
+  // Check if sold out
+  const isSoldOut = remainingCopies !== null && remainingCopies !== undefined && remainingCopies <= 0
+  const maxQuantity = remainingCopies !== null && remainingCopies !== undefined ? remainingCopies : 10
 
   useEffect(() => {
+    if (activeTab !== 'crypto' || !isOnchain) return
     let cancelled = false
     async function run() {
-      setPreflightMsg('')
-      setMaxUsdAllowed(null)
-      setMaxAssetAllowed(null)
-      if (!onchainActive) return
       try {
         const res = await fetch('/api/purchase/preflight', {
-          method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ asset })
         })
-        const data = await res.json().catch(()=>({ error: 'INVALID_JSON_RESPONSE' }))
-        if (!res.ok) {
-          setPreflightMsg(data?.error || 'Preflight failed')
-          return
+        const data = await res.json().catch(() => ({}))
+        if (!cancelled && res.ok) {
+          setMaxUsdAllowed(data?.maxUsdAllowed ?? null)
         }
-        if (!cancelled) {
-          setMaxUsdAllowed(typeof data?.maxUsdAllowed === 'number' ? data.maxUsdAllowed : null)
-          setMaxAssetAllowed(typeof data?.maxAssetAllowed === 'number' ? data.maxAssetAllowed : null)
-        }
-      } catch (e:any) {
-        if (!cancelled) setPreflightMsg(e?.message || 'Preflight failed')
-      }
+      } catch {}
     }
     run()
     return () => { cancelled = true }
-  }, [asset, onchainActive])
+  }, [asset, activeTab, isOnchain])
 
   const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
 
-  const purchase = async () => {
+  const presetAmounts = [10, 25, 50, 100, 250]
+
+  // Convert USD to BDAG
+  const usdToBdag = (usd: number) => {
+    return usd / BDAG_USD_PRICE
+  }
+  
+  const bdagAmount = usdToBdag(totalAmount)
+  const bdagTipAmount = tipAmount > 0 ? usdToBdag(tipAmount) : 0
+
+  // Purchase with connected wallet (direct on-chain)
+  const purchaseWithWallet = async () => {
+    if (!wallet.isConnected || !wallet.address) {
+      setCryptoMsg('Please connect your wallet first')
+      return
+    }
+    
+    if (!wallet.isOnBlockDAG) {
+      setCryptoMsg('Please switch to BlockDAG network')
+      await wallet.switchToBlockDAG()
+      return
+    }
+
+    if (!CONTRACT_ADDRESS) {
+      setCryptoMsg('Contract not configured')
+      return
+    }
+
     try {
       setLoading(true)
-      setResult(null)
-      const res = await fetch('/api/purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, tokenId })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'PURCHASE_FAILED')
-      setResult(data)
+      setCryptoMsg('Preparing transaction...')
+      setTxHash(null)
+
+      const ethereum = (window as any).ethereum
+      const provider = new BrowserProvider(ethereum)
+      const signer = await provider.getSigner()
+      const contract = new Contract(CONTRACT_ADDRESS, MINT_EDITION_ABI, signer)
+
+      // Convert USD amounts to BDAG (wei)
+      const totalBdagWei = parseEther(bdagAmount.toFixed(18))
+      const tipBdagWei = bdagTipAmount > 0 ? parseEther(bdagTipAmount.toFixed(18)) : 0n
+
+      console.log(`[PurchasePanel] Minting edition for campaign ${targetId}`)
+      console.log(`[PurchasePanel] Total BDAG: ${bdagAmount} (${totalBdagWei} wei)`)
+      console.log(`[PurchasePanel] Tip BDAG: ${bdagTipAmount} (${tipBdagWei} wei)`)
+      console.log(`[PurchasePanel] Contract: ${CONTRACT_ADDRESS}`)
+      
+      setCryptoMsg('Please confirm the transaction in your wallet...')
+
+      let tx
+      if (tipBdagWei > 0n) {
+        // V5: Mint edition with tip - donor receives NFT
+        tx = await contract.mintWithBDAGAndTip(BigInt(targetId), tipBdagWei, {
+          value: totalBdagWei,
+        })
+      } else {
+        // V5: Mint edition - donor receives NFT
+        tx = await contract.mintWithBDAG(BigInt(targetId), {
+          value: totalBdagWei,
+        })
+      }
+
+      setCryptoMsg('Transaction submitted! Waiting for confirmation...')
+      setTxHash(tx.hash)
+      console.log(`[PurchasePanel] Tx submitted: ${tx.hash}`)
+
+      // Wait for confirmation with timeout (5 minutes max for slow chains)
+      let receipt
+      try {
+        // Use Promise.race to add timeout
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('CONFIRMATION_TIMEOUT')), 300000)
+        )
+        receipt = await Promise.race([tx.wait(1), timeoutPromise]) as any
+        console.log(`[PurchasePanel] Tx confirmed:`, receipt?.hash || tx.hash)
+      } catch (waitErr: any) {
+        if (waitErr?.message === 'CONFIRMATION_TIMEOUT') {
+          // Transaction was submitted but confirmation timed out
+          // The tx is likely still pending or already confirmed
+          console.log('[PurchasePanel] Confirmation timeout - tx may still be processing')
+          setCryptoMsg('Transaction submitted! Check your wallet for confirmation.')
+          setResult({ success: true, txHash: tx.hash })
+          return
+        }
+        throw waitErr
+      }
+      
+      // Use receipt hash if available, fallback to tx hash
+      const confirmedHash = receipt?.hash || tx.hash
+      
+      // Record the purchase in our backend
+      try {
+        await fetch('/api/purchase/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            campaignId: targetId,
+            txHash: confirmedHash,
+            amountUSD: totalAmount,
+            tipUSD: tipAmount,
+            amountBDAG: bdagAmount,
+            tipBDAG: bdagTipAmount,
+            walletAddress: wallet.address,
+            editionMinted: true, // V5: Donor received an edition NFT
+          })
+        })
+        console.log(`[PurchasePanel] Purchase recorded for campaign ${targetId}`)
+      } catch (e) {
+        // Non-critical - tx is already on-chain
+        console.warn('Failed to record purchase:', e)
+      }
+
+      setResult({ success: true, txHash: confirmedHash })
+      setCryptoMsg('🎉 Transaction confirmed! Your NFT has been minted.')
+      wallet.updateBalance()
     } catch (e: any) {
-      alert(e?.message || 'Purchase failed')
+      console.error('BDAG purchase error:', e)
+      console.error('Error details:', JSON.stringify({
+        code: e?.code,
+        reason: e?.reason,
+        data: e?.data,
+        message: e?.message,
+        info: e?.info,
+      }, null, 2))
+      if (e?.code === 'ACTION_REJECTED' || e?.code === 4001) {
+        setCryptoMsg('Transaction cancelled')
+      } else {
+        // Try to extract revert reason
+        const reason = e?.reason || e?.data?.message || e?.info?.error?.message || e?.message || 'Transaction failed'
+        setCryptoMsg(reason.slice(0, 150))
+      }
     } finally {
       setLoading(false)
     }
-
   }
 
-  const createPayPal = async () => {
-    try {
-      const res = await fetch('/api/payments/paypal/create', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: Math.round(amount * 100), tokenId, email: email || undefined })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'PAYPAL_FAILED')
-      setResult(data)
-      if (data.approvalUrl) window.open(data.approvalUrl, '_blank')
-    } catch (e:any) { alert(e?.message || 'PayPal init failed') }
-  }
-
-  const createCashApp = async () => {
-    try {
-      const res = await fetch('/api/payments/cashapp', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: Math.round(amount * 100), tokenId })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'CASHAPP_FAILED')
-      setResult(data)
-      if (data.deepLink) window.open(data.deepLink, '_blank')
-    } catch (e:any) { alert(e?.message || 'Cash App init failed') }
-  }
-
-  const createVenmo = async () => {
-    try {
-      const res = await fetch('/api/payments/venmo', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: Math.round(amount * 100), tokenId })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'VENMO_FAILED')
-      setResult(data)
-      if (data.deepLink) window.open(data.deepLink, '_blank')
-    } catch (e:any) { alert(e?.message || 'Venmo init failed') }
-  }
-
-  const subscribe = async () => {
-    try {
-      if (!email) return alert('Email required for Stripe subscription')
-      setLoading(true)
-      setResult(null)
-      const res = await fetch('/api/payments/stripe/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: Math.round(amount * 100), customerEmail: email, tokenId })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'SUBSCRIBE_FAILED')
-      setResult(data)
-      // Client confirmation will be handled by Elements form below
-    } catch (e:any) {
-      alert(e?.message || 'Subscription failed')
-    } finally { setLoading(false) }
-  }
-
-  const quoteBridge = async () => {
-    try {
-      setBridge(null)
-      const res = await fetch('/api/bridges/quote', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ asset, amount })
-      })
-      const data = await res.json()
-      if (res.ok) setBridge(data)
-    } catch {}
-  }
-
+  // Legacy API-based crypto purchase (for non-BDAG or fallback)
   const purchaseCrypto = async () => {
     try {
       setLoading(true)
-      setResult(null)
       setCryptoMsg('')
-      let res = await fetch('/api/purchase', {
-        method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify({ amountUSD: amount, asset, tokenId, toAddress: toAddress || undefined })
+      const res = await fetch('/api/purchase', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amountUSD: totalAmount, asset, tokenId, quantity: hasNftPrice ? quantity : undefined })
       })
-      // Simple retry on network error
-      if (!res.ok && res.status >= 500) {
-        await new Promise(r=>setTimeout(r, 500))
-        res = await fetch('/api/purchase', {
-          method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' },
-          body: JSON.stringify({ amountUSD: amount, asset, tokenId, toAddress: toAddress || undefined })
-        })
-      }
-      const data = await res.json().catch(()=>({ error: 'INVALID_JSON_RESPONSE' }))
+      const data = await res.json().catch(() => ({ error: 'Failed' }))
       if (!res.ok) {
-        const msg = [data?.error, data?.details].filter(Boolean).join(': ')
-        setCryptoMsg(msg || 'CRYPTO_PURCHASE_FAILED')
+        setCryptoMsg(data?.error || 'Payment failed')
         return
       }
       setResult(data)
-      setCryptoMsg('On-chain transfer complete.')
-    } catch (e:any) {
-      const msg = e?.message || 'Crypto purchase failed'
-      setCryptoMsg(msg)
+      setCryptoMsg('Payment successful!')
+    } catch (e: any) {
+      setCryptoMsg(e?.message || 'Payment failed')
     } finally { setLoading(false) }
   }
 
-  const OneTimeForm = () => {
+  const CardPaymentForm = () => {
     const stripe = useStripe()
     const elements = useElements()
     const [submitting, setSubmitting] = useState(false)
+    const [cardError, setCardError] = useState('')
 
-    const onPay = async () => {
+    const handlePayment = async () => {
       if (!stripe || !elements) return
       setSubmitting(true)
+      setCardError('')
       try {
-        const res = await fetch('/api/payments/stripe/intent', {
+        const endpoint = isMonthly ? '/api/payments/stripe/subscribe' : '/api/payments/stripe/intent'
+        const res = await fetch(endpoint, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: Math.round(amount * 100), tokenId, customerEmail: email || undefined })
+          body: JSON.stringify({ 
+            amount: Math.round(totalAmount * 100), 
+            tokenId, 
+            customerEmail: email || undefined 
+          })
         })
         const data = await res.json()
-        if (!res.ok) throw new Error(data?.error || 'INTENT_FAILED')
-        setResult(data)
+        if (!res.ok) throw new Error(data?.error || 'Payment failed')
+        
         if (data.clientSecret) {
           const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
             payment_method: { card: elements.getElement(CardElement)! },
             receipt_email: email || undefined
           })
           if (error) throw error
-          if (paymentIntent?.status === 'succeeded') alert('Payment successful! Receipt will be emailed if provided.')
+          if (paymentIntent?.status === 'succeeded') {
+            setResult({ success: true })
+          }
         }
-      } catch (e:any) {
-        alert(e?.message || 'Payment failed')
+      } catch (e: any) {
+        setCardError(e?.message || 'Payment failed')
       } finally { setSubmitting(false) }
     }
 
     return (
-      <div className="space-y-2">
-        <CardElement options={{ hidePostalCode: true }} />
-        <button onClick={onPay} disabled={submitting} className="rounded bg-patriotic-red px-3 py-1 text-sm">{submitting ? 'Processing…' : 'Pay One‑Time'}</button>
-      </div>
-    )
-  }
-
-  const SubscriptionForm = () => {
-    const stripe = useStripe()
-    const elements = useElements()
-    const [submitting, setSubmitting] = useState(false)
-
-    const onSubscribe = async () => {
-      if (!stripe || !elements) return
-      if (!email) return alert('Email required for subscription')
-      setSubmitting(true)
-      try {
-        const res = await fetch('/api/payments/stripe/subscribe', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: Math.round(amount * 100), customerEmail: email, tokenId })
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data?.error || 'SUBSCRIBE_FAILED')
-        setResult(data)
-        if (data.clientSecret) {
-          const { error } = await stripe.confirmCardPayment(data.clientSecret, {
-            payment_method: { card: elements.getElement(CardElement)! },
-            receipt_email: email
-          })
-          if (error) throw error
-          alert('Subscription started. Next invoices will be charged automatically.')
-        }
-      } catch (e:any) {
-        alert(e?.message || 'Subscription failed')
-      } finally { setSubmitting(false) }
-    }
-
-    return (
-      <div className="space-y-2">
-        <CardElement options={{ hidePostalCode: true }} />
-        <button onClick={onSubscribe} disabled={submitting} className="rounded bg-white/10 px-3 py-1 text-sm">{submitting ? 'Creating…' : 'Start Monthly Subscription'}</button>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-white/80 mb-2">Email (for receipt)</label>
+          <input 
+            type="email"
+            className="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-white/40 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+            placeholder="your@email.com"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-white/80 mb-2">Card Details</label>
+          <div className="rounded-lg bg-white/5 border border-white/10 px-4 py-3">
+            <CardElement 
+              options={{ 
+                hidePostalCode: true,
+                style: {
+                  base: {
+                    fontSize: '16px',
+                    color: '#ffffff',
+                    '::placeholder': { color: 'rgba(255,255,255,0.4)' }
+                  }
+                }
+              }} 
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsMonthly(!isMonthly)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isMonthly ? 'bg-blue-600' : 'bg-white/20'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isMonthly ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+          <span className="text-sm text-white/70">Make this a monthly donation</span>
+        </div>
+        {cardError && <p className="text-red-400 text-sm">{cardError}</p>}
+        <button
+          onClick={handlePayment}
+          disabled={submitting || !stripe}
+          className="w-full rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 px-6 py-4 font-semibold text-white shadow-lg shadow-red-900/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {submitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+              Processing...
+            </span>
+          ) : (
+            hasNftPrice 
+              ? `Purchase ${quantity} NFT${quantity > 1 ? 's' : ''} - $${totalAmount}${isMonthly ? '/month' : ''}`
+              : `Donate $${totalAmount}${isMonthly ? '/month' : ''}`
+          )}
+        </button>
       </div>
     )
   }
 
   return (
-    <div className="space-y-3">
-      <div>
-        <label className="text-sm">Amount (USD)</label>
-        <input type="number" min={1} className="w-full rounded bg-white/10 p-2" value={amount} onChange={e=>setAmount(Number(e.target.value))} />
-      </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div className="rounded border border-white/10 p-3">
-          <div className="relative flex items-center justify-between">
-            <div className="font-semibold">One-time Donation</div>
-            <div className="flex items-center gap-2">
-              <WalletConnectButton />
-              <button onClick={purchase} disabled={loading} className="relative z-10 rounded bg-patriotic-red px-3 py-1 text-sm">{loading ? 'Processing…' : 'Donate (Mock)'}</button>
+    <div className="space-y-5">
+      {/* NFT Purchase Mode */}
+      {hasNftPrice ? (
+        <div className="space-y-4">
+          {/* Quantity Selector */}
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">Quantity</label>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                disabled={isSoldOut || quantity <= 1}
+                className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold disabled:opacity-50"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                min={1}
+                max={maxQuantity}
+                value={quantity}
+                onChange={e => setQuantity(Math.min(maxQuantity, Math.max(1, Number(e.target.value))))}
+                disabled={isSoldOut}
+                className="w-20 text-center rounded-lg bg-white/5 border border-white/10 py-2 text-lg text-white"
+              />
+              <button
+                onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))}
+                disabled={isSoldOut || quantity >= maxQuantity}
+                className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold disabled:opacity-50"
+              >
+                +
+              </button>
+              <span className="text-white/50 text-sm">× ${pricePerNft} = ${nftSubtotal}</span>
             </div>
           </div>
-          {result?.breakdown && (
-            <div className="mt-3 rounded border border-white/10 p-3 text-sm">
-              <p>{`Amount: $${Number(result.breakdown.amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</p>
-              <p>{`Nonprofit fee (${result.breakdown.nonprofitFeePct ?? 1}%): $${Number(result.breakdown.fee ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</p>
-              <p>{`Creator receives: $${Number(result.breakdown.toCreator ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</p>
-            </div>
-          )}
-          <div className="mt-3 space-y-2">
-            <input className="w-full rounded bg-white/10 p-2" placeholder="Email for receipt (optional)" value={email} onChange={e=>setEmail(e.target.value)} />
-            <Elements stripe={stripePromise}><OneTimeForm /></Elements>
-          </div>
-        </div>
-        <div className="rounded border border-white/10 p-3">
-          <div className="font-semibold">Recurring Donation (Stripe)</div>
-          <div className="mt-2 space-y-2">
-            <input className="w-full rounded bg-white/10 p-2" placeholder="Your email (required)" value={email} onChange={e=>setEmail(e.target.value)} />
-            <Elements stripe={stripePromise}><SubscriptionForm /></Elements>
-          </div>
-        </div>
-      </div>
 
-      <div className="rounded border border-white/10 p-3">
-        <div className="flex items-center gap-2">
-          <div className="font-semibold">Bridge (Crypto → BDAG)</div>
-          {isOnchain && (
-            <span className="rounded bg-green-600/20 px-2 py-0.5 text-xs text-green-300">BDAG On‑chain Active</span>
-          )}
+          {/* Optional Tip */}
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">Add a tip (optional)</label>
+            <div className="grid grid-cols-5 gap-2 mb-2">
+              {[0, 5, 10, 25, 50].map(tip => (
+                <button
+                  key={tip}
+                  onClick={() => setTipAmount(tip)}
+                  className={`rounded-lg py-2 text-sm font-medium transition-all ${
+                    tipAmount === tip 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                  }`}
+                >
+                  {tip === 0 ? 'None' : `$${tip}`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Total */}
+          <div className="flex justify-between items-center pt-2 border-t border-white/10">
+            <span className="text-white/70">Total</span>
+            <span className="text-xl font-bold text-white">${totalAmount}</span>
+          </div>
         </div>
-        <div className="mt-2 flex items-end gap-2">
-          <div className="flex-1">
-            <label className="text-xs opacity-70">Asset</label>
-            <select className="w-full rounded bg-white/10 p-2" value={asset} onChange={e=>setAsset(e.target.value as any)}>
-              <option value="BDAG">BDAG (native)</option>
-              <option value="ETH">ETH</option>
-              <option value="BTC">BTC</option>
-              <option value="SOL">SOL</option>
-              <option value="XRP">XRP</option>
-            </select>
+      ) : (
+        /* Donation Mode - No fixed NFT price */
+        <div>
+          <label className="block text-sm font-medium text-white/80 mb-3">Select Amount</label>
+          <div className="grid grid-cols-5 gap-2 mb-3">
+            {presetAmounts.map(preset => (
+              <button
+                key={preset}
+                onClick={() => setCustomAmount(preset)}
+                className={`rounded-lg py-2 text-sm font-medium transition-all ${
+                  customAmount === preset 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/30' 
+                    : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                }`}
+              >
+                ${preset}
+              </button>
+            ))}
           </div>
-          <button onClick={quoteBridge} className="rounded bg-white/10 px-3 py-2 text-sm">Get Quote</button>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-lg">$</span>
+            <input
+              type="number"
+              min={1}
+              value={customAmount}
+              onChange={e => setCustomAmount(Number(e.target.value))}
+              className="w-full rounded-lg bg-white/5 border border-white/10 pl-8 pr-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+            />
+          </div>
         </div>
-        {bridge && (
-          <div className="mt-2 text-sm opacity-90">
-            <p>Bridge Fee ({'{'}bridge.bridgeFeePct{'}'}%): {bridge.bridgeFee}</p>
-            <p>Estimated Received: {bridge.estimatedReceived} {asset}</p>
-            <p className="opacity-70">{bridge.notice}</p>
-          </div>
-        )}
-        <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
-          <div className="md:col-span-2">
-            <label className="text-xs opacity-70">Creator Wallet (optional override)</label>
-            <input data-testid="creator-wallet-input" className="w-full rounded bg-white/10 p-2" placeholder={'0x... / addr... (optional)'} value={toAddress} onChange={e=>setToAddress(e.target.value)} />
-          </div>
-          <div className="flex items-end">
-            <button data-testid="pay-crypto" onClick={purchaseCrypto} disabled={loading || (!!maxUsdAllowed && amount > maxUsdAllowed)} className="w-full rounded bg-white/10 px-3 py-2 text-sm">{loading ? 'Processing…' : (onchainActive ? 'Pay with BDAG (On‑chain)' : 'Pay with Crypto (Mock)')}
+      )}
+
+      {/* Payment Method Tabs */}
+      <div>
+        <div className="flex rounded-lg bg-white/5 p-1 mb-4">
+          {[
+            { id: 'card' as const, label: 'Card', icon: '💳' },
+            { id: 'crypto' as const, label: 'Crypto', icon: '⛓️' },
+            { id: 'other' as const, label: 'Other', icon: '📱' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 rounded-md py-2.5 text-sm font-medium transition-all ${
+                activeTab === tab.id 
+                  ? 'bg-white/10 text-white shadow-sm' 
+                  : 'text-white/50 hover:text-white/70'
+              }`}
+            >
+              <span className="mr-1.5">{tab.icon}</span>
+              {tab.label}
             </button>
-          </div>
-          {(onchainActive && typeof maxUsdAllowed === 'number') && (
-            <div className="md:col-span-3 text-xs opacity-80 mt-1">{`Max available: $${maxUsdAllowed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${maxAssetAllowed? ` (~${maxAssetAllowed.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} BDAG)` : ''}`}</div>
-          )}
-          {preflightMsg && (
-            <div className="md:col-span-3 text-xs opacity-80 mt-1">{preflightMsg}</div>
-          )}
-          {cryptoMsg && (
-            <div className="md:col-span-3 text-xs opacity-80 mt-2 break-all">{cryptoMsg}</div>
-          )}
+          ))}
         </div>
-        {result?.explorerUrl && (
-          <div className="mt-2 text-sm">
-            <p>Txn Hash: <span className="break-all">{result.txHash}</span></p>
-            <a href={result.explorerUrl} target="_blank" className="text-blue-300 underline">View on Explorer</a>
-            {result.feeExplorerUrl && (
-              <div className="mt-1">
-                <p>Fee Txn Hash: <span className="break-all">{result.feeTxHash}</span></p>
-                <a href={result.feeExplorerUrl} target="_blank" className="text-blue-300 underline">View Fee on Explorer</a>
+
+        {/* Card Tab */}
+        {activeTab === 'card' && (
+          <Elements stripe={stripePromise}>
+            <CardPaymentForm />
+          </Elements>
+        )}
+
+        {/* Crypto Tab */}
+        {activeTab === 'crypto' && (
+          <div className="space-y-4">
+            {/* Wallet Connection */}
+            {!wallet.isConnected ? (
+              <div className="space-y-3">
+                <p className="text-sm text-white/70">Connect your wallet to pay with BDAG directly on-chain</p>
+                <button
+                  onClick={wallet.connect}
+                  disabled={wallet.isConnecting}
+                  className="w-full rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 px-6 py-4 font-semibold text-white shadow-lg shadow-orange-900/30 transition-all disabled:opacity-50"
+                >
+                  {wallet.isConnecting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                      Connecting...
+                    </span>
+                  ) : (
+                    '🦊 Connect Wallet'
+                  )}
+                </button>
+                {wallet.error && (
+                  <p className="text-sm text-red-400">{wallet.error}</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Connected Wallet Info */}
+                <div className="rounded-lg bg-white/5 border border-white/10 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                      <span className="text-sm text-white/70">Connected</span>
+                    </div>
+                    <button
+                      onClick={wallet.disconnect}
+                      className="text-xs text-white/50 hover:text-white/70"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                  <p className="text-white font-mono text-sm mt-1">
+                    {wallet.address?.slice(0, 6)}...{wallet.address?.slice(-4)}
+                  </p>
+                  {wallet.balance && (
+                    <p className="text-white/50 text-xs mt-1">
+                      Balance: {parseFloat(wallet.balance).toFixed(4)} BDAG
+                    </p>
+                  )}
+                  {!wallet.isOnBlockDAG && (
+                    <button
+                      onClick={wallet.switchToBlockDAG}
+                      className="mt-2 text-xs text-amber-400 hover:text-amber-300"
+                    >
+                      ⚠️ Switch to BlockDAG Network
+                    </button>
+                  )}
+                </div>
+
+                {/* BDAG Amount Display */}
+                <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/70 text-sm">Amount in BDAG</span>
+                    <span className="text-white font-bold">{bdagAmount.toLocaleString()} BDAG</span>
+                  </div>
+                  <p className="text-xs text-white/40 mt-1">≈ ${totalAmount} USD</p>
+                </div>
+
+                {/* Pay Button */}
+                {cryptoMsg && (
+                  <p className={`text-sm ${cryptoMsg.includes('🎉') || cryptoMsg.includes('confirmed') ? 'text-green-400' : cryptoMsg.includes('cancelled') ? 'text-yellow-400' : 'text-white/70'}`}>
+                    {cryptoMsg}
+                  </p>
+                )}
+                <button
+                  onClick={purchaseWithWallet}
+                  disabled={loading || !wallet.isOnBlockDAG}
+                  className="w-full rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 px-6 py-4 font-semibold text-white shadow-lg shadow-purple-900/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                      Processing...
+                    </span>
+                  ) : (
+                    `Pay ${bdagAmount.toLocaleString()} BDAG`
+                  )}
+                </button>
+
+                {/* Transaction Hash */}
+                {txHash && (
+                  <a 
+                    href={`https://awakening.bdagscan.com/tx/${txHash}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block text-center text-sm text-blue-400 hover:underline"
+                  >
+                    View transaction on explorer →
+                  </a>
+                )}
               </div>
             )}
-            {result.conversion && (
-              <p className="opacity-80">{`USD→${asset}: $${result.conversion.usdPrice} per ${asset}, sending ≈ ${result.conversion.amountAsset} ${asset}`}</p>
-            )}
+
+            {/* Divider */}
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/10"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-[#0a1628] text-white/40">or pay with other crypto</span>
+              </div>
+            </div>
+
+            {/* Other Crypto Options */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Select Asset</label>
+              <select
+                value={asset}
+                onChange={e => setAsset(e.target.value as any)}
+                className="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+              >
+                <option value="ETH">ETH (Ethereum)</option>
+                <option value="BTC">BTC (Bitcoin)</option>
+                <option value="SOL">SOL (Solana)</option>
+              </select>
+            </div>
+            <button
+              onClick={purchaseCrypto}
+              disabled={loading}
+              className="w-full rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 px-6 py-3 font-medium text-white transition-all disabled:opacity-50"
+            >
+              {loading ? 'Processing...' : `Pay $${totalAmount} with ${asset}`}
+            </button>
+          </div>
+        )}
+
+        {/* Other Payment Methods Tab */}
+        {activeTab === 'other' && (
+          <div className="space-y-3">
+            <p className="text-sm text-white/50 mb-4">Choose an alternative payment method:</p>
+            {[
+              { name: 'PayPal', color: 'from-blue-600 to-blue-700', endpoint: '/api/payments/paypal/create' },
+              { name: 'Cash App', color: 'from-green-600 to-green-700', endpoint: '/api/payments/cashapp' },
+              { name: 'Venmo', color: 'from-cyan-600 to-blue-600', endpoint: '/api/payments/venmo' },
+            ].map(method => (
+              <button
+                key={method.name}
+                onClick={async () => {
+                  try {
+                    setLoading(true)
+                    const res = await fetch(method.endpoint, {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ amount: Math.round(totalAmount * 100), tokenId, email })
+                    })
+                    const data = await res.json()
+                    if (!res.ok) throw new Error(data?.error)
+                    if (data.approvalUrl) window.open(data.approvalUrl, '_blank')
+                    if (data.deepLink) window.open(data.deepLink, '_blank')
+                  } catch (e: any) {
+                    alert(e?.message || `${method.name} failed`)
+                  } finally { setLoading(false) }
+                }}
+                disabled={loading}
+                className={`w-full rounded-lg bg-gradient-to-r ${method.color} px-6 py-4 font-semibold text-white shadow-lg transition-all hover:opacity-90 disabled:opacity-50`}
+              >
+                Pay with {method.name}
+              </button>
+            ))}
           </div>
         )}
       </div>
 
-      <div className="rounded border border-white/10 p-3">
-        <div className="font-semibold">Other Payment Options</div>
-        <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-3">
-          <button onClick={createPayPal} className="rounded bg-white/10 px-3 py-2 text-sm">PayPal</button>
-          <button onClick={createCashApp} className="rounded bg-white/10 px-3 py-2 text-sm">Cash App</button>
-          <button onClick={createVenmo} className="rounded bg-white/10 px-3 py-2 text-sm">Venmo</button>
+      {/* Success Message */}
+      {result?.success && (
+        <div className="rounded-lg bg-green-500/20 border border-green-500/30 p-4 text-center">
+          <p className="text-green-400 font-semibold">Thank you for your donation!</p>
+          <p className="text-sm text-green-400/70 mt-1">Your support makes a difference.</p>
         </div>
-        {result?.breakdown && (
-          <div className="mt-2 text-sm opacity-90">
-            <p>{`Amount: $${(result.breakdown.amount/100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</p>
-            <p>{`Nonprofit fee: $${(result.breakdown.fee/100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</p>
-            <p>{`Creator receives: $${(result.breakdown.toCreator/100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</p>
-            {result.notice && <p className="opacity-70">{result.notice}</p>}
-          </div>
-        )}
-        <p className="mt-2 text-xs opacity-70">If unavailable, use Stripe card above (fallback).</p>
+      )}
+
+      {/* Trust Badges */}
+      <div className="flex items-center justify-center gap-2 pt-4 pb-2 text-xs text-white/40 flex-wrap">
+        <span>🔒 Secure</span>
+        <span>•</span>
+        <span>📧 Receipt</span>
+        <span>•</span>
+        <span>💯 Tax Deductible</span>
       </div>
     </div>
   )

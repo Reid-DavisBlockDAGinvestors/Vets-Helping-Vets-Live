@@ -10,13 +10,22 @@ import * as path from 'path'
 // Reads CONTRACT_ADDRESS from env and prints basic on-chain state
 
 async function main() {
-  const rpc = process.env.BLOCKDAG_RPC || process.env.BLOCKDAG_RELAYER_RPC
+  const rpc = process.env.BLOCKDAG_RPC || process.env.BLOCKDAG_RELAYER_RPC || process.env.BLOCKDAG_RPC_FALLBACK
   const addr = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS
+  const nowNodesKey = process.env.NOWNODES_API_KEY
 
-  if (!rpc) throw new Error('Missing BLOCKDAG_RPC/BLOCKDAG_RELAYER_RPC in env')
+  if (!rpc) throw new Error('Missing BLOCKDAG_RPC in env')
   if (!addr) throw new Error('Missing CONTRACT_ADDRESS/NEXT_PUBLIC_CONTRACT_ADDRESS in env')
 
-  const provider = new ethers.JsonRpcProvider(rpc)
+  // Use NowNodes API key if available
+  let provider: ethers.JsonRpcProvider
+  if (rpc.includes('nownodes.io') && nowNodesKey) {
+    const fetchReq = new ethers.FetchRequest(rpc)
+    fetchReq.setHeader('api-key', nowNodesKey)
+    provider = new ethers.JsonRpcProvider(fetchReq, undefined, { staticNetwork: true })
+  } else {
+    provider = new ethers.JsonRpcProvider(rpc)
+  }
 
   // Load ABI from Hardhat artifact
   const candidates = [

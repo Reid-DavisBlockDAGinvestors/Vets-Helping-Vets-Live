@@ -13,8 +13,9 @@ export async function GET(_req: NextRequest, { params }: { params: { tokenId: st
     const contractAddr = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS
     if (!contractAddr) return NextResponse.json({ error: 'CONTRACT_NOT_CONFIGURED' }, { status: 500 })
 
-    const rpc = process.env.BLOCKDAG_RELAYER_RPC || process.env.RELAYER_RPC || process.env.BLOCKDAG_RPC || process.env.BLOCKDAG_RPC_FALLBACK
-    const provider = rpc ? new (await import('ethers')).JsonRpcProvider(rpc) : getRpcProvider()
+    const rpc = process.env.BLOCKDAG_RPC || process.env.BLOCKDAG_RPC_FALLBACK || process.env.BLOCKDAG_RELAYER_RPC || process.env.RELAYER_RPC
+    const { createProvider } = await import('@/lib/ethers')
+    const provider = rpc ? createProvider(rpc) : getRpcProvider()
 
     const ABI = [
       'function tokenCampaign(uint256) view returns (uint256)',

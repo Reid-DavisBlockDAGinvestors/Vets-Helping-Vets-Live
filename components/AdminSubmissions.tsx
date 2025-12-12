@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { ipfsToHttp } from '@/lib/ipfs'
 
 type Submission = {
   id: string
@@ -16,6 +17,7 @@ type Submission = {
   status: 'pending'|'approved'|'rejected'|'minted'
   reviewer_notes?: string
   token_id?: number
+  campaign_id?: number  // V5: campaign ID for editions
   tx_hash?: string
   price_per_copy?: number | null
   num_copies?: number | null
@@ -95,7 +97,7 @@ export default function AdminSubmissions() {
 
   useEffect(()=>{ refresh() },[])
   useEffect(()=>{
-    const id = setInterval(()=>{ refresh() }, 10000)
+    const id = setInterval(()=>{ refresh() }, 30000) // Poll every 30 seconds
     return ()=>clearInterval(id)
   }, [])
   useEffect(()=>{
@@ -317,11 +319,12 @@ export default function AdminSubmissions() {
                         {s.story.length > 120 ? s.story.slice(0,120) + '…' : s.story}
                       </div>
                     )}
-                    {(s.contract_address || s.token_id != null) && (
+                    {(s.contract_address || s.campaign_id != null || s.token_id != null) && (
                       <div className="text-[11px] opacity-70 mt-0.5">
                         {s.contract_address && <span>{s.contract_address.slice(0,6)}…{s.contract_address.slice(-4)}</span>}
-                        {s.contract_address && s.token_id != null && <span> · </span>}
-                        {s.token_id != null && <span>token #{s.token_id}</span>}
+                        {s.contract_address && (s.campaign_id != null || s.token_id != null) && <span> · </span>}
+                        {s.campaign_id != null && <span>campaign #{s.campaign_id}</span>}
+                        {s.campaign_id == null && s.token_id != null && <span>token #{s.token_id}</span>}
                       </div>
                     )}
                   </div>
@@ -362,11 +365,12 @@ export default function AdminSubmissions() {
                         {s.story.length > 120 ? s.story.slice(0,120) + '…' : s.story}
                       </div>
                     )}
-                    {(s.contract_address || s.token_id != null) && (
+                    {(s.contract_address || s.campaign_id != null || s.token_id != null) && (
                       <div className="text-[11px] opacity-70 mt-0.5">
                         {s.contract_address && <span>{s.contract_address.slice(0,6)}…{s.contract_address.slice(-4)}</span>}
-                        {s.contract_address && s.token_id != null && <span> · </span>}
-                        {s.token_id != null && <span>token #{s.token_id}</span>}
+                        {s.contract_address && (s.campaign_id != null || s.token_id != null) && <span> · </span>}
+                        {s.campaign_id != null && <span>campaign #{s.campaign_id}</span>}
+                        {s.campaign_id == null && s.token_id != null && <span>token #{s.token_id}</span>}
                         {s.visible_on_marketplace === false && <span> · hidden</span>}
                       </div>
                     )}
@@ -452,7 +456,7 @@ export default function AdminSubmissions() {
                   <input className="w-full rounded bg-white/10 p-2" value={selected.creator_email} onChange={e=>setSelected({ ...selected, creator_email: e.target.value })} />
                 </div>
               </div>
-              <div className="grid md:grid-cols-3 gap-3 items-end">
+              <div className="grid md:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs opacity-70">Contract Address</label>
                   <input
@@ -462,15 +466,36 @@ export default function AdminSubmissions() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs opacity-70">Token ID</label>
+                  <label className="text-xs opacity-70">Campaign ID (V5)</label>
                   <input
                     type="number"
                     className="w-full rounded bg-white/10 p-2 text-xs"
-                    value={selected.token_id ?? ''}
-                    onChange={e=>setSelected({ ...selected, token_id: e.target.value === '' ? undefined : Number(e.target.value) })}
+                    value={selected.campaign_id ?? ''}
+                    readOnly
                   />
                 </div>
-                <div className="flex items-center gap-2">
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs opacity-70">Transaction Hash</label>
+                  <div className="flex gap-2">
+                    <input
+                      className="w-full rounded bg-white/10 p-2 text-xs"
+                      value={selected.tx_hash || ''}
+                      readOnly
+                    />
+                    {selected.tx_hash && (
+                      <a 
+                        href={`${process.env.NEXT_PUBLIC_EXPLORER_BASE || 'https://explorer.blockdag.network'}/tx/${selected.tx_hash}`}
+                        target="_blank"
+                        className="rounded bg-white/10 px-2 py-2 text-xs whitespace-nowrap"
+                      >
+                        View
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 pt-5">
                   <input
                     id="visible-marketplace"
                     type="checkbox"
@@ -497,7 +522,7 @@ export default function AdminSubmissions() {
               {selected.image_uri && (
                 <div className="mt-3">
                   <div className="text-xs opacity-70 mb-1">Media</div>
-                  <img src={selected.image_uri} className="max-h-64 rounded" />
+                  <img src={ipfsToHttp(selected.image_uri)} alt="Submission media" className="max-h-64 rounded" />
                 </div>
               )}
             </div>

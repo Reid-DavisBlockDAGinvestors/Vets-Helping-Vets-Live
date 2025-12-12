@@ -1,13 +1,13 @@
 'use client'
 
-export type Filters = {
+export type FilterValues = {
   q?: string
   causeType?: 'veteran' | 'general' | 'all'
   urgency?: 'low' | 'medium' | 'high' | 'all'
   location?: string
 }
 
-export default function Filters({ value, onChange }: { value: Filters, onChange: (f: Filters) => void }) {
+export default function Filters({ value, onChange }: { value: FilterValues, onChange: (f: FilterValues) => void }) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-white/10 bg-patriotic-navy/40 p-3 md:flex-row md:items-end">
       <div className="flex-1">

@@ -5,6 +5,9 @@ import { ethers } from 'ethers'
 
 export const dynamic = 'force-dynamic'
 
+// BDAG to USD conversion rate (configurable via env)
+const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
+
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url)
@@ -92,6 +95,25 @@ export async function GET(req: NextRequest) {
         }
         seen.add(key)
 
+        // Try to get goal from Supabase (source of truth) instead of on-chain
+        let displayGoal = camp.goal?.toString?.() || String(camp.goal)
+        try {
+          const { data: subRow } = await supabaseAdmin
+            .from('submissions')
+            .select('goal')
+            .eq('token_id', tokenIdNum)
+            .eq('contract_address', addr)
+            .maybeSingle()
+          if (subRow?.goal) {
+            displayGoal = String(subRow.goal)
+          }
+        } catch {}
+
+        // Convert raised from wei to BDAG then to USD
+        const netRaisedWei = BigInt(camp.netRaised ?? 0n)
+        const netRaisedBDAG = Number(netRaisedWei) / 1e18
+        const raisedValue = netRaisedBDAG * BDAG_USD_RATE
+        
         items.push({
           contractAddress: addr,
           tokenId: tokenIdNum,
@@ -99,8 +121,8 @@ export async function GET(req: NextRequest) {
           uri,
           metadata,
           category: camp.category,
-          goal: camp.goal?.toString?.() || String(camp.goal),
-          raised: camp.raised?.toString?.() || String(camp.raised),
+          goal: displayGoal,
+          raised: raisedValue.toString(),
         })
         remaining--
         if (remaining <= 0) break
