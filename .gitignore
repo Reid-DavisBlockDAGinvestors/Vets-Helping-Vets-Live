@@ -9,6 +9,10 @@ out
 .env
 .env.local
 .env.*.local
+env.local.txt
+
+# Test results
+test-results/
 
 # Logs
 npm-debug.log*
