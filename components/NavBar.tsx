@@ -32,6 +32,7 @@ export default function NavBar() {
     balance,
     error,
     connect, 
+    connectWalletConnect,
     disconnect, 
     switchToBlockDAG 
   } = useWallet()
@@ -403,18 +404,22 @@ export default function NavBar() {
             </div>
           </button>
 
-          {/* WalletConnect coming soon */}
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl opacity-50">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                <span className="text-2xl">🔵</span>
-              </div>
-              <div className="text-left">
-                <div className="font-semibold text-white">WalletConnect</div>
-                <div className="text-xs text-white/50">Coming soon - Stay in your browser</div>
-              </div>
+          {/* WalletConnect - Stay in browser */}
+          <button
+            onClick={() => {
+              setWalletModalOpen(false)
+              connectWalletConnect()
+            }}
+            className="w-full flex items-center gap-4 p-4 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-xl transition-colors"
+          >
+            <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">🔗</span>
             </div>
-          </div>
+            <div className="text-left">
+              <div className="font-semibold text-white">WalletConnect</div>
+              <div className="text-xs text-white/50">Stay in your browser ✨</div>
+            </div>
+          </button>
         </div>
 
         <p className="text-center text-xs text-white/40 mt-4">

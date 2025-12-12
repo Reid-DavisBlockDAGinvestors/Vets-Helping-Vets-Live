@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { BrowserProvider, formatEther, parseEther } from 'ethers'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { BrowserProvider, formatEther } from 'ethers'
+import EthereumProvider from '@walletconnect/ethereum-provider'
 
 type WalletState = {
   address: string | null
@@ -10,6 +11,7 @@ type WalletState = {
   isConnected: boolean
   isConnecting: boolean
   error: string | null
+  connectionType: 'injected' | 'walletconnect' | null
 }
 
 const BLOCKDAG_CHAIN_ID = 1043 // BlockDAG Awakening Testnet
@@ -25,6 +27,8 @@ const BLOCKDAG_CHAIN_CONFIG = {
   blockExplorerUrls: ['https://awakening.bdagscan.com'],
 }
 
+const WALLETCONNECT_PROJECT_ID = 'a86a6a0afc0849fdb0832b5ec288b5a2'
+
 export function useWallet() {
   const [state, setState] = useState<WalletState>({
     address: null,
@@ -33,10 +37,20 @@ export function useWallet() {
     isConnected: false,
     isConnecting: false,
     error: null,
+    connectionType: null,
   })
+  
+  const wcProviderRef = useRef<EthereumProvider | null>(null)
 
   const getProvider = useCallback(() => {
     if (typeof window === 'undefined') return null
+    
+    // Use WalletConnect provider if available
+    if (wcProviderRef.current) {
+      return new BrowserProvider(wcProviderRef.current)
+    }
+    
+    // Otherwise use injected provider
     const ethereum = (window as any).ethereum
     if (!ethereum) return null
     return new BrowserProvider(ethereum)
@@ -102,6 +116,7 @@ export function useWallet() {
         isConnected: true,
         isConnecting: false,
         error: null,
+        connectionType: 'injected',
       }))
 
       await updateBalance(address)
@@ -115,7 +130,90 @@ export function useWallet() {
     }
   }, [updateBalance])
 
-  const disconnect = useCallback(() => {
+  // Connect via WalletConnect (for mobile browsers without injected wallet)
+  const connectWalletConnect = useCallback(async () => {
+    setState(prev => ({ ...prev, isConnecting: true, error: null }))
+
+    try {
+      // Create WalletConnect provider
+      const provider = await EthereumProvider.init({
+        projectId: WALLETCONNECT_PROJECT_ID,
+        chains: [BLOCKDAG_CHAIN_ID],
+        optionalChains: [1, 137], // Ethereum mainnet and Polygon as fallbacks
+        showQrModal: true,
+        metadata: {
+          name: 'PatriotPledge NFTs',
+          description: 'Support veterans through blockchain-powered fundraising',
+          url: typeof window !== 'undefined' ? window.location.origin : 'https://patriotpledgenfts.com',
+          icons: ['https://patriotpledgenfts.netlify.app/favicon.ico'],
+        },
+        rpcMap: {
+          [BLOCKDAG_CHAIN_ID]: 'https://rpc.awakening.bdagscan.com',
+        },
+      })
+
+      // Store provider ref
+      wcProviderRef.current = provider
+
+      // Connect
+      await provider.connect()
+
+      // Get accounts and chain
+      const accounts = await provider.request({ method: 'eth_accounts' }) as string[]
+      const chainIdHex = await provider.request({ method: 'eth_chainId' }) as string
+      const chainId = parseInt(chainIdHex, 16)
+      const address = accounts[0]
+
+      setState(prev => ({
+        ...prev,
+        address,
+        chainId,
+        isConnected: true,
+        isConnecting: false,
+        error: null,
+        connectionType: 'walletconnect',
+      }))
+
+      // Get balance
+      const ethersProvider = new BrowserProvider(provider)
+      const balance = await ethersProvider.getBalance(address)
+      setState(prev => ({ ...prev, balance: formatEther(balance) }))
+
+      // Listen for disconnect
+      provider.on('disconnect', () => {
+        disconnect()
+      })
+
+      provider.on('accountsChanged', (accs: string[]) => {
+        if (accs.length === 0) {
+          disconnect()
+        } else {
+          setState(prev => ({ ...prev, address: accs[0] }))
+        }
+      })
+
+    } catch (e: any) {
+      console.error('WalletConnect error:', e)
+      wcProviderRef.current = null
+      setState(prev => ({
+        ...prev,
+        isConnecting: false,
+        error: e?.message || 'Failed to connect via WalletConnect',
+      }))
+    }
+  }, [])
+
+  const disconnect = useCallback(async () => {
+    // Disconnect WalletConnect if active
+    if (wcProviderRef.current) {
+      try {
+        await wcProviderRef.current.disconnect()
+      } catch (e) {
+        console.error('WC disconnect error:', e)
+      }
+      wcProviderRef.current = null
+    }
+    
     setState({
       address: null,
       chainId: null,
@@ -123,6 +221,7 @@ export function useWallet() {
       isConnected: false,
       isConnecting: false,
       error: null,
+      connectionType: null,
     })
   }, [])
 
@@ -192,6 +291,7 @@ export function useWallet() {
             address: accounts[0],
             chainId,
             isConnected: true,
+            connectionType: 'injected',
           }))
           await updateBalance(accounts[0])
         }
@@ -209,6 +309,7 @@ export function useWallet() {
     ...state,
     isOnBlockDAG,
     connect,
+    connectWalletConnect,
     disconnect,
     switchToBlockDAG,
     updateBalance: () => state.address && updateBalance(state.address),
