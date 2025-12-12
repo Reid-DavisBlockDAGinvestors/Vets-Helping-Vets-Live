@@ -25,7 +25,21 @@ export default {
           red: '#b91c1c',
           white: '#f9fafb'
         }
-      }
+      },
+      animation: {
+        'slide-in-right': 'slideInRight 0.2s ease-out',
+        'fade-in': 'fadeIn 0.2s ease-out',
+      },
+      keyframes: {
+        slideInRight: {
+          '0%': { transform: 'translateX(100%)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+      },
     }
   },
   plugins: []

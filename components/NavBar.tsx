@@ -33,29 +33,24 @@ export default function NavBar() {
     switchToBlockDAG 
   } = useWallet()
 
-  // Close dropdowns when clicking outside
+  // Close wallet dropdown when clicking outside (desktop only, simpler logic)
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       const target = event.target as Node
       
       // Close wallet dropdown if clicking outside
       if (walletDropdownRef.current && !walletDropdownRef.current.contains(target)) {
         setWalletDropdownOpen(false)
       }
-      
-      // Close mobile menu if clicking outside (but not on hamburger button)
-      if (mobileMenuOpen && 
-          mobileMenuRef.current && 
-          !mobileMenuRef.current.contains(target) &&
-          hamburgerButtonRef.current &&
-          !hamburgerButtonRef.current.contains(target)) {
-        setMobileMenuOpen(false)
-      }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [mobileMenuOpen])
+    document.addEventListener('touchstart', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+    }
+  }, [])
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -230,19 +225,21 @@ export default function NavBar() {
               )}
             </div>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - larger touch target */}
             <button
               ref={hamburgerButtonRef}
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              className="lg:hidden p-3 -mr-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 active:bg-white/20 transition-colors touch-manipulation select-none"
               aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
+              type="button"
             >
               {mobileMenuOpen ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               )}
@@ -253,17 +250,19 @@ export default function NavBar() {
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 top-14 sm:top-16 z-40">
-          {/* Backdrop */}
+        <div className="lg:hidden fixed inset-0 top-14 sm:top-16 z-40" role="dialog" aria-modal="true">
+          {/* Backdrop - tap to close */}
           <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm cursor-pointer"
             onClick={() => setMobileMenuOpen(false)}
+            onTouchStart={() => setMobileMenuOpen(false)}
+            aria-label="Close menu"
           ></div>
           
-          {/* Menu Panel */}
+          {/* Menu Panel - slides in from right */}
           <div 
             ref={mobileMenuRef}
-            className="absolute right-0 top-0 h-full w-72 max-w-[80vw] bg-gray-900 border-l border-white/10 shadow-2xl overflow-y-auto"
+            className="absolute right-0 top-0 h-full w-72 max-w-[80vw] bg-gray-900 border-l border-white/10 shadow-2xl overflow-y-auto animate-slide-in-right"
           >
             <nav className="p-4 space-y-1">
               {NAV_LINKS.map(link => (
