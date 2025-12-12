@@ -158,7 +158,10 @@ export async function GET(req: NextRequest) {
       } catch {}
 
       const remaining = maxEditions > 0 ? Math.max(0, maxEditions - editionsMinted) : null // null = unlimited
-      const progress = goal > 0 ? Math.round((raised / goal) * 100) : 0
+      // Use edition-based progress when available (more accurate), otherwise fall back to raised/goal
+      const progress = maxEditions > 0 
+        ? Math.round((editionsMinted / maxEditions) * 100)
+        : (goal > 0 ? Math.round((raised / goal) * 100) : 0)
 
       // Get update info for this submission
       const updateCount = updateCountMap[sub.id] || 0
@@ -180,6 +183,8 @@ export async function GET(req: NextRequest) {
         maxEditions,
         pricePerEdition,
         remaining,
+        sold: editionsMinted, // Alias for NFTCard compatibility
+        total: maxEditions,   // Alias for NFTCard compatibility
         // Living NFT update info
         updateCount,
         lastUpdated,
