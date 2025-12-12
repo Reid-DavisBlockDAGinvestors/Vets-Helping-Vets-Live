@@ -130,34 +130,34 @@ export default async function HomePage() {
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
         
-        <div className="container relative py-20 md:py-32">
-          <div className="max-w-4xl mx-auto text-center">
+        <div className="container relative py-12 sm:py-20 md:py-32">
+          <div className="max-w-4xl mx-auto text-center px-2">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm mb-8">
+            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs sm:text-sm mb-6 sm:mb-8">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               <span className="text-white/70">Powered by BlockDAG Blockchain</span>
             </div>
             
             {/* Main headline */}
-            <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-white via-white to-white/70 bg-clip-text text-transparent leading-tight mb-6">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-white via-white to-white/70 bg-clip-text text-transparent leading-tight mb-4 sm:mb-6">
               Empowering Veterans Through <span className="bg-gradient-to-r from-red-400 via-white to-blue-400 bg-clip-text">Transparent</span> Giving
             </h1>
             
-            <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-10">
+            <p className="text-base sm:text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-8 sm:mb-10 px-2">
               The most advanced fundraising platform ever built. Direct support, full transparency, and dynamic NFTs that evolve as campaigns progress.
             </p>
             
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 sm:px-0">
               <Link 
                 href="/submit" 
-                className="px-8 py-4 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-semibold text-lg hover:from-red-500 hover:to-red-400 transition-all shadow-lg shadow-red-500/25 hover:shadow-red-500/40"
+                className="px-6 sm:px-8 py-3 sm:py-4 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-semibold text-base sm:text-lg hover:from-red-500 hover:to-red-400 transition-all shadow-lg shadow-red-500/25 hover:shadow-red-500/40 active:scale-[0.98]"
               >
                 Submit Your Story
               </Link>
               <Link 
                 href="/marketplace" 
-                className="px-8 py-4 rounded-xl bg-white/5 border border-white/10 text-white font-semibold text-lg hover:bg-white/10 transition-all"
+                className="px-6 sm:px-8 py-3 sm:py-4 rounded-xl bg-white/5 border border-white/10 text-white font-semibold text-base sm:text-lg hover:bg-white/10 transition-all active:scale-[0.98]"
               >
                 Browse Campaigns
               </Link>
