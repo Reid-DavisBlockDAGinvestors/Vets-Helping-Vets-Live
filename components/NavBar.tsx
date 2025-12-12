@@ -17,6 +17,7 @@ const NAV_LINKS = [
 export default function NavBar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [walletDropdownOpen, setWalletDropdownOpen] = useState(false)
+  const [walletModalOpen, setWalletModalOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
   const walletDropdownRef = useRef<HTMLDivElement>(null)
@@ -75,25 +76,21 @@ export default function NavBar() {
   }, [mobileMenuOpen])
 
   const handleConnect = async () => {
-    // Check for mobile browser without wallet
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
     const hasWallet = typeof window !== 'undefined' && (window as any).ethereum
     
-    if (isMobile && !hasWallet) {
-      // On mobile without wallet, open MetaMask deep link
-      const dappUrl = window.location.href
-      const metamaskDeepLink = `https://metamask.app.link/dapp/${dappUrl.replace(/^https?:\/\//, '')}`
-      window.open(metamaskDeepLink, '_blank')
-      return
-    }
-    
     if (!hasWallet) {
-      // Desktop without wallet
-      window.open('https://metamask.io/download/', '_blank')
+      // No wallet found - show options modal
+      setWalletModalOpen(true)
       return
     }
     
     await connect()
+  }
+
+  const openInMetaMaskBrowser = () => {
+    const dappUrl = window.location.href
+    const metamaskDeepLink = `https://metamask.app.link/dapp/${dappUrl.replace(/^https?:\/\//, '')}`
+    window.location.href = metamaskDeepLink
   }
 
   const formatBalance = (bal: string | null) => {
@@ -343,10 +340,96 @@ export default function NavBar() {
     document.body
   ) : null
 
+  // Wallet Options Modal - shown when no wallet is detected
+  const walletModal = mounted && walletModalOpen ? createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={() => setWalletModalOpen(false)}
+      />
+      
+      {/* Modal */}
+      <div className="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <button
+          onClick={() => setWalletModalOpen(false)}
+          className="absolute top-4 right-4 text-white/50 hover:text-white"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-3">🔗</div>
+          <h2 className="text-xl font-bold text-white">Connect Your Wallet</h2>
+          <p className="text-white/60 text-sm mt-2">
+            Choose how you'd like to connect
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {/* Option 1: MetaMask Browser */}
+          <button
+            onClick={() => {
+              setWalletModalOpen(false)
+              openInMetaMaskBrowser()
+            }}
+            className="w-full flex items-center gap-4 p-4 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-xl transition-colors"
+          >
+            <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">🦊</span>
+            </div>
+            <div className="text-left">
+              <div className="font-semibold text-white">Open in MetaMask</div>
+              <div className="text-xs text-white/50">Use MetaMask's built-in browser</div>
+            </div>
+          </button>
+
+          {/* Option 2: Install MetaMask */}
+          <button
+            onClick={() => {
+              setWalletModalOpen(false)
+              window.open('https://metamask.io/download/', '_blank')
+            }}
+            className="w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors"
+          >
+            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">📲</span>
+            </div>
+            <div className="text-left">
+              <div className="font-semibold text-white">Install MetaMask</div>
+              <div className="text-xs text-white/50">Download the MetaMask app</div>
+            </div>
+          </button>
+
+          {/* WalletConnect coming soon */}
+          <div className="p-4 bg-white/5 border border-white/10 rounded-xl opacity-50">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                <span className="text-2xl">🔵</span>
+              </div>
+              <div className="text-left">
+                <div className="font-semibold text-white">WalletConnect</div>
+                <div className="text-xs text-white/50">Coming soon - Stay in your browser</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-white/40 mt-4">
+          MetaMask is the recommended wallet for PatriotPledge NFTs
+        </p>
+      </div>
+    </div>,
+    document.body
+  ) : null
+
   return (
     <>
       {headerContent}
       {mobileMenu}
+      {walletModal}
     </>
   )
 }
