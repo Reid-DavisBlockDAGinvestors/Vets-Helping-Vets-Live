@@ -143,10 +143,6 @@ export async function GET(req: NextRequest) {
         const contract = getContractForAddress(subContractAddr)
         // V5 getCampaign returns: category, baseURI, goal, grossRaised, netRaised, editionsMinted, maxEditions, pricePerEdition, active, closed
         const camp = await (contract as any).getCampaign(BigInt(campaignId))
-        // Convert netRaised from wei (10^18) to BDAG, then to USD
-        const netRaisedWei = BigInt(camp.netRaised ?? 0n)
-        const netRaisedBDAG = Number(netRaisedWei) / 1e18
-        raised = netRaisedBDAG * BDAG_USD_RATE // Convert BDAG to USD
         editionsMinted = Number(camp.editionsMinted ?? 0n)
         // Use on-chain maxEditions if available
         if (camp.maxEditions) maxEditions = Number(camp.maxEditions)
@@ -155,6 +151,13 @@ export async function GET(req: NextRequest) {
           const priceBDAG = Number(BigInt(camp.pricePerEdition)) / 1e18
           pricePerEdition = priceBDAG * BDAG_USD_RATE
         }
+        
+        // Calculate raised from edition sales (more accurate than on-chain netRaised which may have BDAG conversion issues)
+        // Use the price from Supabase (USD) if available, otherwise use converted on-chain price
+        const actualPriceUSD = sub.nft_price ? Number(sub.nft_price) : 
+          (sub.price_per_copy ? Number(sub.price_per_copy) : 
+          (goal > 0 && maxEditions > 0 ? goal / maxEditions : pricePerEdition))
+        raised = editionsMinted * actualPriceUSD
       } catch {}
 
       const remaining = maxEditions > 0 ? Math.max(0, maxEditions - editionsMinted) : null // null = unlimited

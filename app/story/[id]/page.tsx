@@ -115,7 +115,6 @@ export default async function StoryViewer({ params }: { params: { id: string } }
   
   const category = submission?.category || onchain?.category || 'general'
   const goalUsd = submission?.goal ? Number(submission.goal) : null
-  const raised = onchain ? Number(onchain.raised || 0) : 0
   const benchmarks: string[] = Array.isArray(submission?.benchmarks) ? submission.benchmarks : []
   
   // V5 Edition NFT pricing info
@@ -127,14 +126,7 @@ export default async function StoryViewer({ params }: { params: { id: string } }
       : (onchain?.maxEditions ? Number(onchain.maxEditions) : 0))
   
   const editionsMinted = onchain?.editionsMinted ? Number(onchain.editionsMinted) : 0
-  
-  // Calculate progress percentage based on editions sold (most accurate for V5 model)
-  // If maxEditions > 0, use edition-based progress; otherwise fall back to raised/goal
-  const goalForProgress = goalUsd ?? (onchain ? Number(onchain.goal || 0) : 0)
-  const pct = maxEditions > 0 
-    ? Math.min(100, Math.round((editionsMinted / maxEditions) * 100))
-    : (goalForProgress > 0 ? Math.min(100, Math.round((raised / goalForProgress) * 100)) : 0)
-  const goal = goalUsd ?? goalForProgress
+  const goal = goalUsd ?? (onchain ? Number(onchain.goal || 0) : 0)
   
   // Calculate price: check nft_price first (admin set in USD), then price_per_copy, then calculate from goal/copies
   let pricePerCopy: number | null = null
@@ -146,6 +138,16 @@ export default async function StoryViewer({ params }: { params: { id: string } }
   } else if (goal > 0 && maxEditions > 0) {
     pricePerCopy = goal / maxEditions
   }
+  
+  // Calculate raised from edition sales (more accurate than on-chain which may have BDAG conversion issues)
+  const raised = (pricePerCopy && editionsMinted > 0) 
+    ? editionsMinted * pricePerCopy 
+    : (onchain ? Number(onchain.raised || 0) : 0)
+  
+  // Calculate progress percentage based on editions sold (most accurate for V5 model)
+  const pct = maxEditions > 0 
+    ? Math.min(100, Math.round((editionsMinted / maxEditions) * 100))
+    : (goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0)
   
   console.log('[StoryPage] NFT Pricing Debug:', {
     submissionNftPrice: submission?.nft_price,
