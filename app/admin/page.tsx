@@ -21,6 +21,29 @@ export default function AdminPage() {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [backfillMsg, setBackfillMsg] = useState('')
   const [backfillAddr, setBackfillAddr] = useState('')
+  const [checkingSession, setCheckingSession] = useState(true)
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: session } = await supabase.auth.getSession()
+        const token = session?.session?.access_token
+        if (token) {
+          const res = await fetch('/api/admin/me', { headers: { authorization: `Bearer ${token}` } })
+          const data = await res.json().catch(() => ({}))
+          if (res.ok && data?.role === 'admin') {
+            setAuthed(true)
+          }
+        }
+      } catch (e) {
+        console.error('Session check error:', e)
+      } finally {
+        setCheckingSession(false)
+      }
+    }
+    checkSession()
+  }, [])
 
   const login = async () => {
     setAuthMsg('')
@@ -92,15 +115,30 @@ export default function AdminPage() {
     run()
   }, [authed])
 
+  // Loading screen while checking session
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <svg className="animate-spin h-8 w-8 text-blue-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p className="text-white/50">Checking session...</p>
+        </div>
+      </div>
+    )
+  }
+
   // Login screen
   if (!authed) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-full max-w-md">
-          <div className="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-8">
-            <div className="text-center mb-8">
+        <div className="w-full max-w-md px-4">
+          <div className="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 sm:p-8">
+            <div className="text-center mb-6 sm:mb-8">
               <div className="text-4xl mb-3">🔐</div>
-              <h1 className="text-2xl font-bold text-white">Admin Login</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-white">Admin Login</h1>
               <p className="mt-2 text-white/50 text-sm">Sign in to access the admin dashboard</p>
             </div>
             <div className="space-y-4">

@@ -19,6 +19,7 @@ export default function NavBar() {
   const pathname = usePathname()
   const walletDropdownRef = useRef<HTMLDivElement>(null)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const hamburgerButtonRef = useRef<HTMLButtonElement>(null)
   
   const { 
     address, 
@@ -35,17 +36,26 @@ export default function NavBar() {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (walletDropdownRef.current && !walletDropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      
+      // Close wallet dropdown if clicking outside
+      if (walletDropdownRef.current && !walletDropdownRef.current.contains(target)) {
         setWalletDropdownOpen(false)
       }
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+      
+      // Close mobile menu if clicking outside (but not on hamburger button)
+      if (mobileMenuOpen && 
+          mobileMenuRef.current && 
+          !mobileMenuRef.current.contains(target) &&
+          hamburgerButtonRef.current &&
+          !hamburgerButtonRef.current.contains(target)) {
         setMobileMenuOpen(false)
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [mobileMenuOpen])
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -222,6 +232,7 @@ export default function NavBar() {
 
             {/* Mobile Menu Button */}
             <button
+              ref={hamburgerButtonRef}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
               aria-label="Toggle menu"
