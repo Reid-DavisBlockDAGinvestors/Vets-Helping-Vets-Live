@@ -99,6 +99,9 @@ export default function AdminCampaignHub() {
   const [rejectionReason, setRejectionReason] = useState('')
   const [rejecting, setRejecting] = useState(false)
   
+  // Update delete state
+  const [deletingUpdateId, setDeletingUpdateId] = useState<string | null>(null)
+  
   // Approval confirmation modal state
   const [approvingCampaign, setApprovingCampaign] = useState<Campaign | null>(null)
   const [approvalForm, setApprovalForm] = useState<{
@@ -456,6 +459,47 @@ export default function AdminCampaignHub() {
       setError(e?.message || 'Rejection failed')
     } finally {
       setRejecting(false)
+    }
+  }
+
+  // Delete campaign update
+  const deleteUpdate = async (updateId: string, campaignId: string) => {
+    if (!confirm('Are you sure you want to delete this update? This cannot be undone.')) {
+      return
+    }
+    
+    setDeletingUpdateId(updateId)
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) throw new Error('Not authenticated')
+
+      const res = await fetch(`/api/campaign-updates/${updateId}`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}` }
+      })
+      
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Delete failed')
+      
+      // Update local state - remove the update from the campaign
+      setCampaigns(prev => prev.map(c => {
+        if (c.id === campaignId) {
+          const newUpdates = c.updates.filter(u => u.id !== updateId)
+          return {
+            ...c,
+            updates: newUpdates,
+            pendingUpdates: newUpdates.filter(u => u.status === 'pending').length,
+            approvedUpdates: newUpdates.filter(u => u.status === 'approved').length
+          }
+        }
+        return c
+      }))
+    } catch (e: any) {
+      setError(e?.message || 'Delete failed')
+      alert(`Delete failed: ${e?.message}`)
+    } finally {
+      setDeletingUpdateId(null)
     }
   }
 
@@ -1186,7 +1230,16 @@ export default function AdminCampaignHub() {
                                 </p>
                               </div>
                             </div>
-                            {getUpdateStatusBadge(update.status)}
+                            <div className="flex items-center gap-2">
+                              {getUpdateStatusBadge(update.status)}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteUpdate(update.id, campaign.id); }}
+                                disabled={deletingUpdateId === update.id}
+                                className="px-2 py-1 rounded text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 transition-colors disabled:opacity-50"
+                              >
+                                {deletingUpdateId === update.id ? '...' : '🗑️'}
+                              </button>
+                            </div>
                           </div>
 
                           {/* Update Content Preview */}
