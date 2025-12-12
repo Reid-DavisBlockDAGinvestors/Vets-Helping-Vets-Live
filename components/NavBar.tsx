@@ -248,21 +248,22 @@ export default function NavBar() {
         </div>
       </div>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu Overlay - rendered inside header for proper stacking */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 top-14 sm:top-16 z-40" role="dialog" aria-modal="true">
-          {/* Backdrop - tap to close */}
+        <>
+          {/* Backdrop - full screen, tap to close */}
           <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm cursor-pointer"
+            className="lg:hidden fixed left-0 right-0 bottom-0 bg-black/70 z-[100]"
+            style={{ top: '56px' }}
             onClick={() => setMobileMenuOpen(false)}
-            onTouchStart={() => setMobileMenuOpen(false)}
             aria-label="Close menu"
-          ></div>
+          />
           
           {/* Menu Panel - slides in from right */}
           <div 
             ref={mobileMenuRef}
-            className="absolute right-0 top-0 h-full w-72 max-w-[80vw] bg-gray-900 border-l border-white/10 shadow-2xl overflow-y-auto animate-slide-in-right"
+            className="lg:hidden fixed right-0 bottom-0 w-72 max-w-[85vw] bg-gray-900 border-l border-white/10 shadow-2xl overflow-y-auto z-[101]"
+            style={{ top: '56px' }}
           >
             <nav className="p-4 space-y-1">
               {NAV_LINKS.map(link => (
@@ -328,7 +329,7 @@ export default function NavBar() {
               </div>
             )}
           </div>
-        </div>
+        </>
       )}
     </header>
   )
