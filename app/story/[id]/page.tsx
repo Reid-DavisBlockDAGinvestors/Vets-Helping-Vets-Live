@@ -20,12 +20,15 @@ type OnchainItem = {
   closed?: boolean
 }
 
-// For server-side fetches, use localhost with the correct port
+// For server-side fetches, use the correct base URL
 function getBaseUrl() {
-  // In production, use the Vercel URL
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-  // In development, always use localhost:3000 (the actual Next.js dev server port)
-  // NEXT_PUBLIC_BASE_URL may be set to a different port for webhooks, so we ignore it for internal fetches
+  // Check for various production environment URLs
+  if (process.env.URL) return process.env.URL // Netlify
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}` // Vercel
+  if (process.env.NEXT_PUBLIC_BASE_URL && !process.env.NEXT_PUBLIC_BASE_URL.includes('localhost')) {
+    return process.env.NEXT_PUBLIC_BASE_URL
+  }
+  // In development, use localhost
   return 'http://localhost:3000'
 }
 
