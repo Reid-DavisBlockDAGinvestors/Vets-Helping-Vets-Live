@@ -262,3 +262,54 @@ export async function PATCH(req: NextRequest, context: { params: { id: string } 
     return NextResponse.json({ error: 'PROCESS_FAILED', details: e?.message || String(e) }, { status: 500 })
   }
 }
+
+/**
+ * DELETE /api/campaign-updates/[id]
+ * Admin: Delete a campaign update
+ */
+export async function DELETE(req: NextRequest, context: { params: { id: string } }) {
+  try {
+    const { id } = context.params
+    if (!id) {
+      return NextResponse.json({ error: 'MISSING_ID' }, { status: 400 })
+    }
+
+    // Admin auth check
+    const secretHdr = req.headers.get('x-admin-secret')
+    const isSecretOk = !!secretHdr && process.env.ADMIN_SECRET && secretHdr === process.env.ADMIN_SECRET
+
+    if (!isSecretOk) {
+      const auth = req.headers.get('authorization') || ''
+      const token = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7) : ''
+      if (token) {
+        const { data: userData } = await supabaseAdmin.auth.getUser(token)
+        const adminUid = userData?.user?.id || null
+        if (adminUid) {
+          const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', adminUid).single()
+          if (profile?.role !== 'admin') {
+            return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
+          }
+        } else {
+          return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
+        }
+      } else {
+        return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
+      }
+    }
+
+    // Delete the update
+    const { error: deleteError } = await supabaseAdmin
+      .from('campaign_updates')
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) {
+      return NextResponse.json({ error: 'DELETE_FAILED', details: deleteError.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true, deleted: id })
+  } catch (e: any) {
+    console.error('Campaign update DELETE error:', e)
+    return NextResponse.json({ error: 'DELETE_FAILED', details: e?.message || String(e) }, { status: 500 })
+  }
+}

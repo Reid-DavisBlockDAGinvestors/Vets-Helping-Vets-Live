@@ -122,6 +122,44 @@ export default function AdminCampaignUpdates() {
     }
   }
 
+  const handleDelete = async (updateId: string) => {
+    if (!confirm('Are you sure you want to permanently delete this update? This cannot be undone.')) {
+      return
+    }
+    
+    setProcessingId(updateId)
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) {
+        alert('Not authenticated')
+        return
+      }
+
+      const res = await fetch(`/api/campaign-updates/${updateId}`, {
+        method: 'DELETE',
+        headers: {
+          authorization: `Bearer ${token}`
+        }
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        alert(data?.error || data?.details || 'Delete failed')
+        return
+      }
+
+      // Remove from list
+      setUpdates(prev => prev.filter(u => u.id !== updateId))
+      alert('Update deleted successfully')
+    } catch (e: any) {
+      alert(e?.message || 'Delete failed')
+    } finally {
+      setProcessingId(null)
+    }
+  }
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
       month: 'short',
@@ -351,6 +389,29 @@ export default function AdminCampaignUpdates() {
                       <div className="text-sm text-white/60">{update.reviewer_notes}</div>
                     </div>
                   )}
+
+                  {/* Delete Button - always show */}
+                  <div className="pt-2 border-t border-white/10 mt-4">
+                    <button
+                      onClick={() => handleDelete(update.id)}
+                      disabled={processingId === update.id}
+                      className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {processingId === update.id ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Delete Update
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
