@@ -59,8 +59,17 @@ export default function NFTCard({ item }: { item: NFTItem }) {
           
           {/* Top Badges Row */}
           <div className="absolute top-3 left-3 right-3 flex justify-between items-start">
-            {/* Living NFT Badge - Left Side */}
+            {/* Series Badge - Left Side */}
             <div className="flex flex-col gap-1.5">
+              {/* Edition/Series counter */}
+              <span className="rounded-full px-2.5 py-1 text-xs font-semibold backdrop-blur-sm bg-black/50 text-white border border-white/20">
+                {item.sold !== undefined && item.total && item.total > 0 
+                  ? `${item.sold}/${item.total} sold`
+                  : item.sold !== undefined 
+                    ? `${item.sold} sold`
+                    : '0 sold'
+                }
+              </span>
               {item.updateCount && item.updateCount > 0 && (
                 <span className={`rounded-full px-2.5 py-1 text-xs font-medium backdrop-blur-sm flex items-center gap-1 ${
                   item.hasRecentUpdate 
