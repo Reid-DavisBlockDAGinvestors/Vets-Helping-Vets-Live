@@ -74,23 +74,30 @@ export async function GET(req: NextRequest) {
         const onchainGoalBDAG = Number(onchainGoalWei) / 1e18
         const onchainGoalUSD = onchainGoalBDAG * BDAG_USD_RATE
         
-        const goalUSD = submission?.goal ? Number(submission.goal) : onchainGoalUSD
+        // Goal from Supabase is in dollars
+        const goalUSD = submission?.goal ? Number(submission.goal) : (onchainGoalUSD > 0 ? onchainGoalUSD : 100)
         const numEditions = Number(submission?.num_copies || submission?.nft_editions || maxEditions || 100)
         
-        // Price calculation: nft_price > price_per_copy > goal/editions
-        // For V5 model: Goal = Editions × Price, so Price = Goal / Editions
-        let pricePerEditionUSD = 1 // Default to $1 if nothing else works
-        if (submission?.nft_price && Number(submission.nft_price) > 0) {
+        // Price calculation priority:
+        // 1. Explicit nft_price from Supabase (in dollars)
+        // 2. Explicit price_per_copy from Supabase (in dollars)
+        // 3. Goal / Editions
+        // 4. Default to $1 minimum
+        let pricePerEditionUSD = 1
+        if (submission?.nft_price && Number(submission.nft_price) >= 1) {
           pricePerEditionUSD = Number(submission.nft_price)
-        } else if (submission?.price_per_copy && Number(submission.price_per_copy) > 0) {
+        } else if (submission?.price_per_copy && Number(submission.price_per_copy) >= 1) {
           pricePerEditionUSD = Number(submission.price_per_copy)
         } else if (goalUSD > 0 && numEditions > 0) {
-          pricePerEditionUSD = goalUSD / numEditions
+          const calculatedPrice = goalUSD / numEditions
+          // Ensure minimum $1 per NFT unless goal is very low
+          pricePerEditionUSD = Math.max(1, calculatedPrice)
         }
         
-        // Calculate NFT sales revenue = editions sold × price per edition (cap at gross raised)
-        const calculatedNftSales = editionsMinted * pricePerEditionUSD
-        const nftSalesUSD = Math.min(calculatedNftSales, grossRaisedUSD) // Can't exceed total raised
+        // Calculate NFT sales revenue = editions sold × price per edition
+        const nftSalesUSD = editionsMinted * pricePerEditionUSD
+        
+        console.log(`[CampaignStats] Campaign #${campaignId}: goal=$${goalUSD}, editions=${numEditions}, minted=${editionsMinted}, price=$${pricePerEditionUSD.toFixed(2)}, nftSales=$${nftSalesUSD.toFixed(2)}, grossRaised=$${grossRaisedUSD.toFixed(2)}`)
         
         // Tips = gross raised - NFT sales (anything paid above NFT price)
         const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)

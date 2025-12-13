@@ -28,6 +28,8 @@ export async function GET(_req: NextRequest) {
       .map(s => s.campaign_id)
       .filter((id): id is number => id != null)
 
+    console.log(`[Analytics] Found ${campaignIds.length} minted campaigns: ${campaignIds.join(', ')}`)
+
     let totalRaisedUSD = 0
     let totalNftsMinted = 0
     let totalCampaigns = campaignIds.length
@@ -43,14 +45,23 @@ export async function GET(_req: NextRequest) {
             const camp = await contract.getCampaign(BigInt(campaignId))
             const grossRaisedWei = BigInt(camp.grossRaised ?? camp[3] ?? 0n)
             const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
-            totalRaisedUSD += grossRaisedBDAG * BDAG_USD_RATE
-            totalNftsMinted += Number(camp.editionsMinted ?? camp[5] ?? 0)
-          } catch {}
+            const raisedUSD = grossRaisedBDAG * BDAG_USD_RATE
+            const minted = Number(camp.editionsMinted ?? camp[5] ?? 0)
+            
+            totalRaisedUSD += raisedUSD
+            totalNftsMinted += minted
+            
+            console.log(`[Analytics] Campaign #${campaignId}: raised=$${raisedUSD.toFixed(2)}, minted=${minted}`)
+          } catch (e: any) {
+            console.error(`[Analytics] Error fetching campaign ${campaignId}:`, e?.message)
+          }
         }
       } catch (e) {
-        console.error('Analytics contract error:', e)
+        console.error('[Analytics] Contract error:', e)
       }
     }
+    
+    console.log(`[Analytics] TOTALS: raised=$${totalRaisedUSD.toFixed(2)}, nfts=${totalNftsMinted}, campaigns=${totalCampaigns}`)
 
     // Get milestone count (approved campaign updates)
     const { count: milestones } = await supabase
