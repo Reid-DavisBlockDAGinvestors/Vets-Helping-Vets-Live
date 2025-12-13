@@ -1,43 +1,79 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
+import { ethers } from 'ethers'
+
+export const dynamic = 'force-dynamic'
+
+const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
 
 export async function GET(_req: NextRequest) {
   try {
-    // Pull recent events and compute simple metrics
-    const { data, error } = await supabase
-      .from('events')
-      .select('type, amount, token_id, created_at')
-      .order('created_at', { ascending: false })
-      .limit(500)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+      { auth: { persistSession: false } }
+    )
 
-    if (error) throw error
+    const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
+    
+    // Get minted campaigns from Supabase
+    const { data: submissions } = await supabase
+      .from('submissions')
+      .select('campaign_id, goal, num_copies, nft_editions')
+      .eq('status', 'minted')
+      .not('campaign_id', 'is', null)
 
-    let fundsRaised = 0
-    let purchases = 0
-    let mints = 0
-    let milestones = 0
+    const campaignIds = (submissions || [])
+      .map(s => s.campaign_id)
+      .filter((id): id is number => id != null)
 
-    for (const e of data || []) {
-      if (e.type === 'purchase') {
-        purchases++
-        fundsRaised += Number(e.amount || 0)
+    let totalRaisedUSD = 0
+    let totalNftsMinted = 0
+    let totalCampaigns = campaignIds.length
+
+    // Get on-chain data for each campaign
+    if (contractAddress && campaignIds.length > 0) {
+      try {
+        const provider = getProvider()
+        const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
+
+        for (const campaignId of campaignIds) {
+          try {
+            const camp = await contract.getCampaign(BigInt(campaignId))
+            const grossRaisedWei = BigInt(camp.grossRaised ?? camp[3] ?? 0n)
+            const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
+            totalRaisedUSD += grossRaisedBDAG * BDAG_USD_RATE
+            totalNftsMinted += Number(camp.editionsMinted ?? camp[5] ?? 0)
+          } catch {}
+        }
+      } catch (e) {
+        console.error('Analytics contract error:', e)
       }
-      if (e.type === 'mint') mints++
-      if (e.type === 'milestone') milestones++
     }
 
-    const donorRetention = 0 // placeholder; compute via distinct user counts across time windows
+    // Get milestone count (approved campaign updates)
+    const { count: milestones } = await supabase
+      .from('campaign_updates')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'approved')
 
-    return NextResponse.json({ fundsRaised, purchases, mints, milestones, donorRetention })
-  } catch (e) {
-    // Safe fallback in dev or when Supabase is not configured
+    return NextResponse.json({
+      fundsRaised: totalRaisedUSD,
+      purchases: totalNftsMinted, // NFTs sold = purchases
+      mints: totalCampaigns, // Campaigns minted
+      milestones: milestones || 0,
+      donorRetention: 0 // Placeholder
+    })
+  } catch (e: any) {
+    console.error('Analytics error:', e)
     return NextResponse.json({
       fundsRaised: 0,
       purchases: 0,
       mints: 0,
       milestones: 0,
       donorRetention: 0,
-      notice: 'Analytics fallback: configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY for live metrics.'
+      error: e?.message
     })
   }
 }

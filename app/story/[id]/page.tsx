@@ -12,6 +12,7 @@ type OnchainItem = {
   category: string
   goal: string
   raised: string
+  grossRaised?: string
   // V5 edition fields
   editionsMinted?: number
   maxEditions?: number
@@ -146,8 +147,19 @@ export default async function StoryViewer({ params }: { params: { id: string } }
     pricePerCopy = goal / 100
   }
   
-  // Get raised amount from on-chain
-  const raised = onchain ? Number(onchain.raised || 0) : 0
+  // Get raised amounts from on-chain
+  const grossRaisedUSD = onchain ? Number(onchain.grossRaised || 0) : 0
+  
+  // Calculate NFT sales = editions sold × price per edition
+  const nftSalesUSD = (editionsMinted > 0 && pricePerCopy && pricePerCopy > 0) 
+    ? editionsMinted * pricePerCopy 
+    : 0
+  
+  // Tips = gross raised - NFT sales (extra amounts above NFT price)
+  const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
+  
+  // Total raised = gross raised from blockchain
+  const raised = grossRaisedUSD
   
   // Calculate progress percentage based on editions sold (most accurate for V5 model)
   const pct = maxEditions > 0 
@@ -268,10 +280,16 @@ export default async function StoryViewer({ params }: { params: { id: string } }
               </div>
             </div>
             <div className="md:text-right">
-              <div className="text-2xl font-bold text-white">${raised.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-white">${raised.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
               <div className="text-sm text-white/50">
                 {goalUsd ? `raised of $${Number(goalUsd).toLocaleString()} goal` : 'raised'}
               </div>
+              {raised > 0 && (
+                <div className="flex gap-3 justify-end mt-1 text-xs">
+                  <span className="text-emerald-400">NFT: ${nftSalesUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                  <span className="text-purple-400">Tips: ${tipsUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                </div>
+              )}
             </div>
           </div>
           
@@ -283,7 +301,10 @@ export default async function StoryViewer({ params }: { params: { id: string } }
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <div className="mt-2 text-sm text-white/60">{pct}% complete</div>
+            <div className="flex justify-between mt-2 text-sm text-white/60">
+              <span>{pct}% complete</span>
+              <span>{editionsMinted} / {maxEditions || '∞'} NFTs sold</span>
+            </div>
           </div>
         </div>
 

@@ -15,11 +15,14 @@ type OwnedNFT = {
   campaignId: number
   editionNumber: number
   totalEditions: number
+  editionsMinted: number
   title: string
   image: string
   category: string
   goal: number
   raised: number
+  nftSalesUSD: number
+  tipsUSD: number
   isCreator: boolean
 }
 
@@ -270,15 +273,24 @@ export default function DashboardPage() {
                         </div>
                         <div className="mt-3">
                           <div className="flex justify-between text-xs text-white/60 mb-1">
-                            <span>${nft.raised.toFixed(0)} raised</span>
-                            <span>{Math.round((nft.raised / Math.max(1, nft.goal)) * 100)}%</span>
+                            <div className="flex flex-col">
+                              <span>${nft.raised.toFixed(0)} raised</span>
+                              {nft.raised > 0 && (
+                                <div className="flex gap-2 text-[10px]">
+                                  <span className="text-emerald-400">NFT: ${(nft.nftSalesUSD || 0).toFixed(0)}</span>
+                                  <span className="text-purple-400">Tips: ${(nft.tipsUSD || 0).toFixed(0)}</span>
+                                </div>
+                              )}
+                            </div>
+                            <span>{nft.totalEditions > 0 ? Math.round((nft.editionsMinted / nft.totalEditions) * 100) : 0}%</span>
                           </div>
                           <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
                             <div
                               className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400"
-                              style={{ width: `${Math.min(100, (nft.raised / Math.max(1, nft.goal)) * 100)}%` }}
+                              style={{ width: `${nft.totalEditions > 0 ? Math.min(100, (nft.editionsMinted / nft.totalEditions) * 100) : 0}%` }}
                             />
                           </div>
+                          <div className="text-[10px] text-white/40 mt-1">{nft.editionsMinted} / {nft.totalEditions} sold</div>
                         </div>
                       </div>
                     </Link>

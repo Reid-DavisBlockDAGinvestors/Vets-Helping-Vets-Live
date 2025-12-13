@@ -63,22 +63,37 @@ export async function GET(req: NextRequest) {
         try {
           const { data } = await supabaseAdmin
             .from('submissions')
-            .select('id, title, story, goal, creator_wallet, image_uri')
+            .select('id, title, story, goal, creator_wallet, image_uri, nft_price, num_copies, nft_editions')
             .eq('campaign_id', campaignId)
             .maybeSingle()
           submission = data
         } catch {}
 
-        // Convert raised to USD
-        const netRaisedWei = BigInt(camp.netRaised ?? camp[4] ?? 0n)
-        const netRaisedBDAG = Number(netRaisedWei) / 1e18
-        const raisedUSD = netRaisedBDAG * BDAG_USD_RATE
+        // Get goal and editions from Supabase
+        const goalUSD = submission?.goal ? Number(submission.goal) : (Number(camp.goal ?? camp[2]) / 1e18 * BDAG_USD_RATE)
+        const maxEditions = Number(submission?.num_copies || submission?.nft_editions || (camp.maxEditions ?? camp[6]) || 100)
+        const editionsMinted = Number((camp.editionsMinted ?? camp[5]) || 0)
+        
+        // Price = goal / editions
+        const pricePerEditionUSD = goalUSD > 0 && maxEditions > 0 ? goalUSD / maxEditions : 1
+        
+        // Convert gross raised to USD
+        const grossRaisedWei = BigInt(camp.grossRaised ?? camp[3] ?? 0n)
+        const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
+        const grossRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
+        
+        // Calculate NFT sales = editions × price
+        const nftSalesUSD = editionsMinted * pricePerEditionUSD
+        
+        // Tips = gross raised - NFT sales
+        const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
 
         nfts.push({
           tokenId: tokenIdNum,
           campaignId,
           editionNumber,
-          totalEditions,
+          totalEditions: maxEditions,
+          editionsMinted,
           contractAddress,
           uri,
           metadata,
@@ -86,8 +101,10 @@ export async function GET(req: NextRequest) {
           image: submission?.image_uri || metadata?.image || '',
           story: submission?.story || metadata?.description || '',
           category: camp.category ?? camp[0],
-          goal: submission?.goal || Number(camp.goal ?? camp[2]) / 1e18 * BDAG_USD_RATE,
-          raised: raisedUSD,
+          goal: goalUSD,
+          raised: grossRaisedUSD,
+          nftSalesUSD,
+          tipsUSD,
           active: camp.active ?? camp[8] ?? true,
           closed: camp.closed ?? camp[9] ?? false,
           submissionId: submission?.id || null,
