@@ -9,12 +9,21 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const includePosts = searchParams.get('posts') !== 'false'
     const includeStats = searchParams.get('stats') !== 'false'
 
-    // Get campaign by ID, slug, or short_code
-    const { data: campaign, error: campaignErr } = await supabaseAdmin
-      .from('submissions')
-      .select('*')
-      .or(`id.eq.${campaignId},slug.eq.${campaignId},short_code.eq.${campaignId}`)
-      .single()
+    // Get campaign by ID, campaign_id, slug, or short_code
+    // campaign_id is the numeric ID (e.g., 13), id is the UUID
+    const isNumeric = /^\d+$/.test(campaignId)
+    
+    let campaignQuery = supabaseAdmin.from('submissions').select('*')
+    
+    if (isNumeric) {
+      // If numeric, check campaign_id first
+      campaignQuery = campaignQuery.or(`campaign_id.eq.${campaignId},slug.eq.${campaignId},short_code.eq.${campaignId}`)
+    } else {
+      // If not numeric, check UUID id, slug, or short_code
+      campaignQuery = campaignQuery.or(`id.eq.${campaignId},slug.eq.${campaignId},short_code.eq.${campaignId}`)
+    }
+    
+    const { data: campaign, error: campaignErr } = await campaignQuery.single()
 
     if (campaignErr || !campaign) {
       return NextResponse.json({ error: 'CAMPAIGN_NOT_FOUND' }, { status: 404 })
