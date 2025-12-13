@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useWallet } from '@/hooks/useWallet'
+import UserAccountPortal from './UserAccountPortal'
 
 const NAV_LINKS = [
   { href: '/marketplace', label: 'Marketplace' },
@@ -135,8 +136,11 @@ export default function NavBar() {
             ))}
           </nav>
 
-          {/* Right Side - Wallet & Mobile Menu */}
+          {/* Right Side - Account, Wallet & Mobile Menu */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* User Account */}
+            <UserAccountPortal />
+            
             {/* Wallet Button */}
             <div className="relative" ref={walletDropdownRef}>
               {isConnected && address ? (
