@@ -132,6 +132,14 @@ export async function GET(req: NextRequest) {
           netRaisedUSD, // 99% of gross (1% platform fee)
           totalRaisedUSD: grossRaisedUSD,
           active: camp.active ?? true,
+          // Debug info
+          _debug: {
+            submissionFound: !!submission,
+            goalUSD,
+            numEditions,
+            priceSource,
+            onchainMaxEditions: maxEditions
+          },
           closed: camp.closed ?? false,
           progressPercent: maxEditions > 0 ? Math.round((editionsMinted / maxEditions) * 100) : 0,
         }
