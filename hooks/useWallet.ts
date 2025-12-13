@@ -145,17 +145,16 @@ export function useWallet() {
       console.log('[WalletConnect] Starting connection, mobile:', onMobile)
 
       // Create WalletConnect provider
-      // On mobile, we disable the QR modal and handle deep linking ourselves
       const provider = await EthereumProvider.init({
         projectId: WALLETCONNECT_PROJECT_ID,
         chains: [BLOCKDAG_CHAIN_ID],
         optionalChains: [1], // Ethereum mainnet as fallback
-        showQrModal: !onMobile, // Only show QR modal on desktop
+        showQrModal: true, // Show modal - it has wallet selection for mobile
         metadata: {
           name: 'PatriotPledge NFTs',
           description: 'Support veterans through blockchain-powered fundraising',
-          url: typeof window !== 'undefined' ? window.location.origin : 'https://vetshelpingvets.life',
-          icons: ['https://vetshelpingvets.life/favicon.ico'],
+          url: typeof window !== 'undefined' ? window.location.origin : 'https://patriotpledgenfts.netlify.app',
+          icons: ['https://patriotpledgenfts.netlify.app/favicon.ico'],
         },
         rpcMap: {
           [BLOCKDAG_CHAIN_ID]: 'https://rpc.awakening.bdagscan.com',
@@ -166,19 +165,25 @@ export function useWallet() {
       // Store provider ref
       wcProviderRef.current = provider
 
-      // Set up event listener for URI - this fires immediately when connect() is called
+      // Set up event listener for URI
       provider.on('display_uri', (uri: string) => {
-        console.log('[WalletConnect] URI generated')
+        console.log('[WalletConnect] URI generated:', uri.substring(0, 50))
         
-        // On mobile, immediately redirect to MetaMask
+        // On mobile, try to open MetaMask with a delay to let modal render first
         if (onMobile) {
           const encodedUri = encodeURIComponent(uri)
-          // Use the universal link which works better on iOS
-          const metamaskLink = `https://metamask.app.link/wc?uri=${encodedUri}`
-          console.log('[WalletConnect] Redirecting to MetaMask...')
           
-          // Redirect immediately
-          window.location.href = metamaskLink
+          // Try multiple approaches with delays
+          setTimeout(() => {
+            // First try universal link
+            const link = document.createElement('a')
+            link.href = `https://metamask.app.link/wc?uri=${encodedUri}`
+            link.target = '_self'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            console.log('[WalletConnect] Opened MetaMask via universal link')
+          }, 1000)
         }
       })
 

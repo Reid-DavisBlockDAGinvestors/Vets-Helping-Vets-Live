@@ -370,41 +370,27 @@ export default function NavBar() {
         </div>
 
         <div className="space-y-3">
-          {/* Option 1: MetaMask Browser */}
+          {/* Option 1: MetaMask Browser - RECOMMENDED for mobile */}
           <button
             onClick={() => {
               setWalletModalOpen(false)
               openInMetaMaskBrowser()
             }}
-            className="w-full flex items-center gap-4 p-4 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-xl transition-colors"
+            className="w-full flex items-center gap-4 p-4 bg-orange-500/20 hover:bg-orange-500/30 border-2 border-orange-500/50 rounded-xl transition-colors relative"
           >
-            <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
+            <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+              BEST
+            </div>
+            <div className="w-12 h-12 bg-orange-500/30 rounded-xl flex items-center justify-center">
               <span className="text-2xl">🦊</span>
             </div>
             <div className="text-left">
-              <div className="font-semibold text-white">Open in MetaMask</div>
-              <div className="text-xs text-white/50">Use MetaMask's built-in browser</div>
+              <div className="font-semibold text-white">Open in MetaMask App</div>
+              <div className="text-xs text-white/60">Most reliable for mobile ⭐</div>
             </div>
           </button>
 
-          {/* Option 2: Install MetaMask */}
-          <button
-            onClick={() => {
-              setWalletModalOpen(false)
-              window.open('https://metamask.io/download/', '_blank')
-            }}
-            className="w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors"
-          >
-            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
-              <span className="text-2xl">📲</span>
-            </div>
-            <div className="text-left">
-              <div className="font-semibold text-white">Install MetaMask</div>
-              <div className="text-xs text-white/50">Download the MetaMask app</div>
-            </div>
-          </button>
-
-          {/* WalletConnect - Stay in browser */}
+          {/* Option 2: WalletConnect */}
           <button
             onClick={() => {
               setWalletModalOpen(false)
@@ -417,13 +403,30 @@ export default function NavBar() {
             </div>
             <div className="text-left">
               <div className="font-semibold text-white">WalletConnect</div>
-              <div className="text-xs text-white/50">Stay in your browser ✨</div>
+              <div className="text-xs text-white/50">Scan QR or select wallet</div>
+            </div>
+          </button>
+
+          {/* Option 3: Install MetaMask */}
+          <button
+            onClick={() => {
+              setWalletModalOpen(false)
+              window.open('https://metamask.io/download/', '_blank')
+            }}
+            className="w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors"
+          >
+            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">📲</span>
+            </div>
+            <div className="text-left">
+              <div className="font-semibold text-white">Install MetaMask</div>
+              <div className="text-xs text-white/50">Don't have it yet?</div>
             </div>
           </button>
         </div>
 
         <p className="text-center text-xs text-white/40 mt-4">
-          MetaMask is the recommended wallet for PatriotPledge NFTs
+          On mobile? Use "Open in MetaMask App" for the best experience
         </p>
       </div>
     </div>,
