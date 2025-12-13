@@ -79,7 +79,8 @@ export async function GET(req: NextRequest) {
         const camp = await contract.getCampaign(BigInt(campaignId))
 
         // Look up Supabase submission using string key
-        const submission = submissionByCampaignId[String(campaignId)] || submissionByTokenId[String(campaignId)] || null
+        // Try campaign_id first, then token_id (using ACTUAL token ID, not campaign ID)
+        const submission = submissionByCampaignId[String(campaignId)] || submissionByTokenId[String(tokenIdNum)] || null
 
         // Skip metadata fetch to avoid timeouts - use Supabase data only
         const metadata: any = null
