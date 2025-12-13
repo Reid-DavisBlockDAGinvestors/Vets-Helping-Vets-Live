@@ -55,7 +55,20 @@ export async function POST(req: NextRequest) {
 
     if (uploadErr) {
       console.error('Upload error:', uploadErr)
-      return NextResponse.json({ error: 'UPLOAD_FAILED', details: uploadErr.message }, { status: 500 })
+      // Check for common errors
+      if (uploadErr.message?.includes('not found') || uploadErr.message?.includes('does not exist')) {
+        return NextResponse.json({ 
+          error: 'BUCKET_NOT_FOUND', 
+          message: 'Storage bucket "community" not found. Please create it in Supabase Dashboard > Storage.' 
+        }, { status: 500 })
+      }
+      if (uploadErr.message?.includes('Payload too large') || uploadErr.message?.includes('file size')) {
+        return NextResponse.json({ 
+          error: 'FILE_TOO_LARGE', 
+          message: 'File is too large. Maximum size is 5MB.' 
+        }, { status: 400 })
+      }
+      return NextResponse.json({ error: 'UPLOAD_FAILED', message: uploadErr.message }, { status: 500 })
     }
 
     // Get public URL

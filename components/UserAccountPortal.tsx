@@ -137,7 +137,9 @@ export default function UserAccountPortal() {
         setCommunityProfile(prev => prev ? { ...prev, avatar_url: data.url } : null)
         setProfileMessage('✅ Avatar updated!')
       } else {
-        setProfileMessage(data?.message || 'Upload failed')
+        const errMsg = data?.message || data?.error || 'Upload failed'
+        setProfileMessage(`❌ ${errMsg}`)
+        console.error('Upload failed:', data)
       }
     } catch (e: any) {
       setProfileMessage(e?.message || 'Upload failed')
