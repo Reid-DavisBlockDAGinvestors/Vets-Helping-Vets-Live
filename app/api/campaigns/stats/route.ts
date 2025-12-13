@@ -50,6 +50,8 @@ export async function GET(req: NextRequest) {
         submissionMap[sub.campaign_id] = sub
       }
     }
+    console.log(`[CampaignStats] Found ${submissions?.length || 0} submissions for ${campaignIds.length} campaigns`)
+    console.log(`[CampaignStats] SubmissionMap keys:`, Object.keys(submissionMap))
 
     const provider = getProvider()
     const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
@@ -60,6 +62,8 @@ export async function GET(req: NextRequest) {
       try {
         const camp = await contract.getCampaign(BigInt(campaignId))
         const submission = submissionMap[campaignId]
+        
+        console.log(`[CampaignStats] Campaign ${campaignId}: submission found=${!!submission}, goal=${submission?.goal}, num_copies=${submission?.num_copies}, nft_editions=${submission?.nft_editions}`)
         
         const grossRaisedWei = BigInt(camp.grossRaised ?? 0n)
         const editionsMinted = Number(camp.editionsMinted ?? 0)
