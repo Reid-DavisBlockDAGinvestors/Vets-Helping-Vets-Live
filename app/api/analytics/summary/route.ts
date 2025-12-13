@@ -20,7 +20,7 @@ export async function GET(_req: NextRequest) {
     // Get minted campaigns from Supabase
     const { data: submissions, error: subError } = await supabase
       .from('submissions')
-      .select('id, campaign_id, title, goal, num_copies, nft_editions')
+      .select('id, campaign_id, title, goal, num_copies')
       .eq('status', 'minted')
       .not('campaign_id', 'is', null)
 
