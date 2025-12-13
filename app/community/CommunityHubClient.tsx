@@ -78,6 +78,7 @@ export default function CommunityHubClient() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [campaignPreviews, setCampaignPreviews] = useState<Record<string, CampaignPreview>>({})
   const [deletingPost, setDeletingPost] = useState<string | null>(null)
+  const [filterCampaign, setFilterCampaign] = useState<CampaignPreview | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -581,13 +582,47 @@ export default function CommunityHubClient() {
             ))}
           </div>
 
+          {/* Campaign Filter Banner */}
+          {filterCampaign && (
+            <div className="mb-4 p-3 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center gap-3">
+              {filterCampaign.image_uri && (
+                <img
+                  src={toHttpUrl(filterCampaign.image_uri) || ''}
+                  alt={filterCampaign.title}
+                  className="w-10 h-10 rounded-lg object-cover"
+                />
+              )}
+              <div className="flex-1">
+                <p className="text-sm text-purple-300">Showing discussions for:</p>
+                <p className="font-medium text-white">{filterCampaign.title}</p>
+              </div>
+              <button
+                onClick={() => setFilterCampaign(null)}
+                className="px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              >
+                Clear Filter
+              </button>
+            </div>
+          )}
+
           {/* Posts Feed */}
           {loading ? (
             <div className="text-center py-12">
               <div className="animate-spin w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full mx-auto mb-4"></div>
               <p className="text-white/50">Loading posts...</p>
             </div>
-          ) : posts.length === 0 ? (
+          ) : posts.filter(p => {
+            if (!filterCampaign) return true
+            // Filter posts that mention this campaign
+            const campaignId = filterCampaign.id
+            const mentions = p.content.match(/@\[([^\]]+)\]/g) || []
+            const mentionedIds = mentions.map((m: string) => m.slice(2, -1))
+            // Check if post mentions this campaign by id, slug, short_code, or campaign_id
+            return mentionedIds.some((id: string) => {
+              const preview = campaignPreviews[id]
+              return preview?.id === campaignId
+            }) || p.campaign_id === campaignId
+          }).length === 0 ? (
             <div className="text-center py-12 rounded-2xl bg-white/5 border border-white/10">
               <div className="text-4xl mb-4">🌟</div>
               <h3 className="text-xl font-semibold text-white mb-2">No posts yet</h3>
@@ -595,7 +630,16 @@ export default function CommunityHubClient() {
             </div>
           ) : (
             <div className="space-y-4">
-              {posts.map(post => (
+              {posts.filter(p => {
+                if (!filterCampaign) return true
+                const campaignId = filterCampaign.id
+                const mentions = p.content.match(/@\[([^\]]+)\]/g) || []
+                const mentionedIds = mentions.map((m: string) => m.slice(2, -1))
+                return mentionedIds.some((id: string) => {
+                  const preview = campaignPreviews[id]
+                  return preview?.id === campaignId
+                }) || p.campaign_id === campaignId
+              }).map(post => (
                 <div key={post.id} className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
                   {/* Post Header */}
                   <div className="p-4 pb-0">
@@ -657,10 +701,9 @@ export default function CommunityHubClient() {
                             const campaign = campaignPreviews[id]
                             if (!campaign) return null
                             return (
-                              <Link
+                              <div
                                 key={id}
-                                href={`/story/${campaign.id}`}
-                                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10"
                               >
                                 {campaign.image_uri ? (
                                   <img
@@ -675,9 +718,25 @@ export default function CommunityHubClient() {
                                 )}
                                 <div className="flex-1 min-w-0">
                                   <p className="font-medium text-white truncate">{campaign.title}</p>
-                                  <p className="text-sm text-blue-400">View Campaign →</p>
+                                  <div className="flex gap-2 mt-1">
+                                    <Link
+                                      href={`/story/${campaign.id}`}
+                                      className="text-sm text-blue-400 hover:text-blue-300"
+                                    >
+                                      View Campaign →
+                                    </Link>
+                                    <button
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        setFilterCampaign(campaign)
+                                      }}
+                                      className="text-sm text-purple-400 hover:text-purple-300"
+                                    >
+                                      💬 Discussions
+                                    </button>
+                                  </div>
                                 </div>
-                              </Link>
+                              </div>
                             )
                           })}
                         </div>
