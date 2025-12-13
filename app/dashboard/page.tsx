@@ -36,6 +36,8 @@ type CreatedCampaign = {
   imageUri: string
   status: string
   raised: number
+  nftSalesUSD: number
+  tipsUSD: number
   editionsMinted: number
   maxEditions: number
   pendingUpdates: number
@@ -403,6 +405,12 @@ export default function DashboardPage() {
                             <div>
                               <div className="text-xs text-white/40">Raised</div>
                               <div className="font-semibold text-white">${campaign.raised.toFixed(0)}</div>
+                              {campaign.raised > 0 && (
+                                <div className="flex gap-2 text-[10px] mt-0.5">
+                                  <span className="text-emerald-400">NFT: ${(campaign.nftSalesUSD || 0).toFixed(0)}</span>
+                                  <span className="text-purple-400">Tips: ${(campaign.tipsUSD || 0).toFixed(0)}</span>
+                                </div>
+                              )}
                             </div>
                             <div>
                               <div className="text-xs text-white/40">Goal</div>

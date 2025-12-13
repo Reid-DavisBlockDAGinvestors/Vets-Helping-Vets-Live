@@ -41,14 +41,27 @@ export async function GET(req: NextRequest) {
         if (contract && sub.campaign_id != null) {
           try {
             const camp = await contract.getCampaign(sub.campaign_id)
-            const netRaisedWei = BigInt(camp.netRaised ?? camp[4] ?? 0n)
-            const netRaisedBDAG = Number(netRaisedWei) / 1e18
+            const grossRaisedWei = BigInt(camp.grossRaised ?? camp[3] ?? 0n)
+            const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
+            const grossRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
+            
+            const editionsMinted = Number(camp.editionsMinted ?? camp[6] ?? 0)
+            const maxEditions = Number(camp.maxEditions ?? camp[7] ?? 0)
+            
+            // Calculate price per edition and NFT sales
+            const goalUSD = Number(sub.goal || 0)
+            const numEditions = Number(sub.num_copies || maxEditions || 100)
+            const pricePerCopy = Number(sub.price_per_copy || (goalUSD > 0 && numEditions > 0 ? goalUSD / numEditions : 0))
+            
+            const nftSalesUSD = editionsMinted * pricePerCopy
+            const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
             
             onchainData = {
-              grossRaised: Number(BigInt(camp.grossRaised ?? camp[3] ?? 0n)) / 1e18 * BDAG_USD_RATE,
-              netRaised: netRaisedBDAG * BDAG_USD_RATE,
-              editionsMinted: Number(camp.editionsMinted ?? camp[6] ?? 0),
-              maxEditions: Number(camp.maxEditions ?? camp[7] ?? 0),
+              grossRaised: grossRaisedUSD,
+              nftSalesUSD,
+              tipsUSD,
+              editionsMinted,
+              maxEditions,
               active: camp.active ?? camp[8] ?? true,
               closed: camp.closed ?? camp[9] ?? false
             }
@@ -98,7 +111,9 @@ export async function GET(req: NextRequest) {
           benchmarks: sub.benchmarks,
           createdAt: sub.created_at,
           // On-chain data
-          raised: onchainData?.netRaised || 0,
+          raised: onchainData?.grossRaised || 0,
+          nftSalesUSD: onchainData?.nftSalesUSD || 0,
+          tipsUSD: onchainData?.tipsUSD || 0,
           editionsMinted: onchainData?.editionsMinted || 0,
           maxEditions: onchainData?.maxEditions || sub.num_copies || 0,
           active: onchainData?.active ?? true,
