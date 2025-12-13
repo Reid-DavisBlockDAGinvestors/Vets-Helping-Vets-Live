@@ -49,6 +49,15 @@ interface Comment {
   }
 }
 
+// Convert IPFS URI to HTTP gateway URL
+const toHttpUrl = (uri: string | null): string | null => {
+  if (!uri) return null
+  if (uri.startsWith('ipfs://')) {
+    return `https://gateway.pinata.cloud/ipfs/${uri.slice(7)}`
+  }
+  return uri
+}
+
 export default function CommunityHubClient() {
   const searchParams = useSearchParams()
   const [posts, setPosts] = useState<Post[]>([])
@@ -655,7 +664,7 @@ export default function CommunityHubClient() {
                               >
                                 {campaign.image_uri ? (
                                   <img
-                                    src={campaign.image_uri}
+                                    src={toHttpUrl(campaign.image_uri) || ''}
                                     alt={campaign.title}
                                     className="w-16 h-16 rounded-lg object-cover"
                                   />
