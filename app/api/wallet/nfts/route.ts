@@ -93,8 +93,18 @@ export async function GET(req: NextRequest) {
           pricePerNFT = goalUSD / maxEditions
         }
         
-        // Calculate raised from editions sold × price (more accurate than on-chain)
-        const raisedUSD = editionsMinted * pricePerNFT
+        // Calculate NFT sales revenue
+        const nftSalesUSD = editionsMinted * pricePerNFT
+        
+        // Get gross raised from on-chain (includes tips)
+        const grossRaisedWei = BigInt(camp.grossRaised ?? camp[3] ?? 0n)
+        const grossRaisedUSD = (Number(grossRaisedWei) / 1e18) * BDAG_USD_RATE
+        
+        // Calculate tips = gross - NFT sales
+        const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
+        
+        // Total raised = NFT sales + tips
+        const raisedUSD = nftSalesUSD + tipsUSD
 
         nfts.push({
           tokenId: tokenIdNum,
@@ -111,6 +121,8 @@ export async function GET(req: NextRequest) {
           category: camp.category ?? camp[0],
           goal: goalUSD || Number(camp.goal ?? camp[2]) / 1e18 * BDAG_USD_RATE,
           raised: raisedUSD,
+          nftSalesUSD,
+          tipsUSD,
           active: camp.active ?? camp[8] ?? true,
           closed: camp.closed ?? camp[9] ?? false,
           submissionId: submission?.id || null,
