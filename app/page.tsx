@@ -61,7 +61,8 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
       const cause = s.category === 'veteran' ? 'veteran' : 'general'
 
       return {
-        id: String(s.campaign_id || s.id),
+        id: s.id,
+        campaignId: s.campaign_id || undefined,
         title: s.title || 'Untitled Campaign',
         image: s.image_url || '',
         causeType: cause as 'veteran' | 'general',
