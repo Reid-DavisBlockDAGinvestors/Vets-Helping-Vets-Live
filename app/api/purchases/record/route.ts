@@ -61,21 +61,39 @@ export async function POST(req: NextRequest) {
     // can display total copies sold and remaining. We keep this best-effort
     // and ignore errors so that on-chain/state changes are not blocked by a
     // failed counter update.
+    let campaignId: number | null = null
     try {
       const { data: sub } = await supabaseAdmin
         .from('submissions')
-        .select('id, sold_count')
+        .select('id, sold_count, campaign_id')
         .eq('token_id', tokenIdNum)
         .maybeSingle()
 
       if (sub?.id) {
         const current = (sub as any).sold_count ?? 0
+        campaignId = (sub as any).campaign_id ?? null
         await supabaseAdmin
           .from('submissions')
           .update({ sold_count: current + 1 })
           .eq('id', (sub as any).id)
       }
     } catch {}
+
+    // Track purchase for donor retention calculation
+    if (buyerWallet && campaignId != null) {
+      try {
+        await supabaseAdmin.from('purchases').insert({
+          wallet_address: buyerWallet.toLowerCase(),
+          campaign_id: campaignId,
+          token_id: tokenIdNum,
+          tx_hash: paymentRef,
+          amount_bdag: gross ? Number(gross) / 1e18 : null,
+          amount_usd: net ? Number(net) / 100 : null // Assuming cents
+        })
+      } catch (e) {
+        console.error('[purchases/record] Failed to track purchase:', e)
+      }
+    }
 
     // Call on-chain recordContribution and optional transferNFT
     const signer = getRelayerSigner()

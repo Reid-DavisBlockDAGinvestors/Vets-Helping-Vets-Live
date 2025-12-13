@@ -67,11 +67,46 @@ export async function GET(_req: NextRequest) {
     
     console.log(`[Analytics] TOTALS: raised=$${totalRaisedUSD.toFixed(2)}, nfts=${totalNftsMinted}, campaigns=${totalCampaigns}`)
 
-    // Donor retention calculation disabled for now - too many RPC calls causes timeout
-    // TODO: Implement as a background job or cache the results
-    const donorRetention = 0
-    const totalUniqueWallets = 0
-    const repeatDonors = 0
+    // Calculate donor retention from purchases table
+    // (% of wallets that purchased from 2+ different campaigns)
+    let donorRetention = 0
+    let totalUniqueWallets = 0
+    let repeatDonors = 0
+    
+    try {
+      // Get all purchases grouped by wallet
+      const { data: purchases } = await supabase
+        .from('purchases')
+        .select('wallet_address, campaign_id')
+      
+      if (purchases && purchases.length > 0) {
+        // Build map of wallet -> Set of campaign IDs
+        const walletCampaigns: Record<string, Set<number>> = {}
+        for (const p of purchases) {
+          const wallet = p.wallet_address?.toLowerCase()
+          if (wallet && p.campaign_id != null) {
+            if (!walletCampaigns[wallet]) {
+              walletCampaigns[wallet] = new Set()
+            }
+            walletCampaigns[wallet].add(p.campaign_id)
+          }
+        }
+        
+        // Calculate retention
+        const wallets = Object.keys(walletCampaigns)
+        totalUniqueWallets = wallets.length
+        repeatDonors = wallets.filter(w => walletCampaigns[w].size >= 2).length
+        
+        if (totalUniqueWallets > 0) {
+          donorRetention = Math.round((repeatDonors / totalUniqueWallets) * 100)
+        }
+        
+        console.log(`[Analytics] Donor Retention: ${repeatDonors}/${totalUniqueWallets} wallets (${donorRetention}%) from purchases table`)
+      }
+    } catch (e: any) {
+      console.error('[Analytics] Donor retention calc error:', e?.message)
+      // Table might not exist yet - that's OK
+    }
 
     // Get milestone count (approved campaign updates) and list of campaigns with milestones
     const { data: milestoneData, count: milestones } = await supabase
