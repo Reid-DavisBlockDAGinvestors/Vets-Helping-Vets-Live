@@ -16,12 +16,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabaseAdmin
       .from('community_posts')
-      .select(`
-        *,
-        user:community_profiles!community_posts_user_id_fkey(
-          display_name, avatar_url, is_verified, is_creator, is_donor
-        )
-      `)
+      .select('*')
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
@@ -56,32 +51,34 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Attach user profile info if not found via join
-    const enrichedPosts = await Promise.all((posts || []).map(async (post) => {
-      let userProfile = post.user
-      if (!userProfile) {
-        const { data: profile } = await supabaseAdmin
+    const postUserIds = Array.from(new Set((posts || []).map((p: any) => p.user_id).filter(Boolean)))
+
+    const { data: profiles } = postUserIds.length
+      ? await supabaseAdmin
           .from('community_profiles')
-          .select('display_name, avatar_url, is_verified, is_creator, is_donor')
-          .eq('user_id', post.user_id)
+          .select('user_id, display_name, avatar_url, is_verified, is_creator, is_donor')
+          .in('user_id', postUserIds)
+      : { data: [] as any[] }
+
+    const profileByUserId = new Map<string, any>((profiles || []).map((p: any) => [p.user_id, p]))
+
+    const enrichedPosts = await Promise.all((posts || []).map(async (post: any) => {
+      let userProfile = profileByUserId.get(post.user_id)
+
+      if (!userProfile) {
+        // Get from auth
+        const { data: authProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('email')
+          .eq('id', post.user_id)
           .maybeSingle()
-        
-        if (!profile) {
-          // Get from auth
-          const { data: authProfile } = await supabaseAdmin
-            .from('profiles')
-            .select('email')
-            .eq('id', post.user_id)
-            .maybeSingle()
-          userProfile = {
-            display_name: authProfile?.email?.split('@')[0] || 'Anonymous',
-            avatar_url: null,
-            is_verified: false,
-            is_creator: false,
-            is_donor: false
-          }
-        } else {
-          userProfile = profile
+
+        userProfile = {
+          display_name: authProfile?.email?.split('@')[0] || 'Anonymous',
+          avatar_url: null,
+          is_verified: false,
+          is_creator: false,
+          is_donor: false
         }
       }
 
