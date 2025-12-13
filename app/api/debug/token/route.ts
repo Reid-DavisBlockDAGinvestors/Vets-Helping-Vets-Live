@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { createClient } from '@supabase/supabase-js'
+import { ipfsToHttp } from '@/lib/ipfs'
 
 export const dynamic = 'force-dynamic'
 
@@ -115,12 +116,18 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Step 5: Fetch metadata
+    // Step 5: Fetch metadata (convert IPFS to HTTP gateway)
     if (results.tokenURI) {
       try {
-        const mres = await fetch(results.tokenURI, { cache: 'no-store' })
-        results.metadata = await mres.json()
-        results.steps.push({ step: 'fetchMetadata', success: true })
+        const httpUri = ipfsToHttp(results.tokenURI)
+        results.httpUri = httpUri
+        if (httpUri) {
+          const mres = await fetch(httpUri, { cache: 'no-store' })
+          results.metadata = await mres.json()
+          results.steps.push({ step: 'fetchMetadata', success: true, uri: httpUri })
+        } else {
+          results.steps.push({ step: 'fetchMetadata', success: false, error: 'Could not convert URI to HTTP' })
+        }
       } catch (e: any) {
         results.steps.push({ step: 'fetchMetadata', success: false, error: e?.message })
       }

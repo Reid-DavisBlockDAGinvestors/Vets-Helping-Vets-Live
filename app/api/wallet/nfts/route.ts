@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { ipfsToHttp } from '@/lib/ipfs'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,12 +82,17 @@ export async function GET(req: NextRequest) {
         // Look up Supabase submission using string key
         const submission = submissionByCampaignId[String(campaignId)] || submissionByTokenId[String(campaignId)] || null
 
-        // Fetch metadata from tokenURI
+        // Fetch metadata from tokenURI (convert IPFS to HTTP gateway)
         let metadata: any = null
         try {
-          const mres = await fetch(uri, { cache: 'no-store' })
-          metadata = await mres.json()
-        } catch {}
+          const httpUri = ipfsToHttp(uri)
+          if (httpUri) {
+            const mres = await fetch(httpUri, { cache: 'no-store' })
+            metadata = await mres.json()
+          }
+        } catch (metaErr: any) {
+          console.log(`[WalletNFTs] Metadata fetch failed for token ${tokenIdNum}:`, metaErr?.message)
+        }
 
         // === Get on-chain values (these are the source of truth for calculations) ===
         // getCampaign returns: category, baseURI, goal, grossRaised, netRaised, editionsMinted, maxEditions, pricePerEdition, active, closed
