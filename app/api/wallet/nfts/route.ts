@@ -53,14 +53,18 @@ export async function GET(req: NextRequest) {
     // Get balance (number of NFTs owned)
     const balance = await contract.balanceOf(address)
     const balanceNum = Number(balance)
+    
+    console.log(`[WalletNFTs] Wallet ${address.slice(0, 8)}... owns ${balanceNum} NFTs`)
 
     const nfts: any[] = []
+    const errors: any[] = []
 
     // Iterate through owned tokens
     for (let i = 0; i < balanceNum; i++) {
       try {
         const tokenId = await contract.tokenOfOwnerByIndex(address, i)
         const tokenIdNum = Number(tokenId)
+        console.log(`[WalletNFTs] Processing token ${i+1}/${balanceNum}: tokenId=${tokenIdNum}`)
 
         // Get edition info
         const [editionInfo, uri] = await Promise.all([
@@ -136,13 +140,20 @@ export async function GET(req: NextRequest) {
         })
       } catch (e: any) {
         console.error(`[WalletNFTs] Error fetching token at index ${i}:`, e?.message)
+        errors.push({ index: i, error: e?.message })
       }
+    }
+
+    console.log(`[WalletNFTs] Completed: ${nfts.length} NFTs loaded, ${errors.length} errors`)
+    if (errors.length > 0) {
+      console.log(`[WalletNFTs] Errors:`, errors)
     }
 
     return NextResponse.json({
       address,
       balance: balanceNum,
-      nfts
+      nfts,
+      errors: errors.length > 0 ? errors : undefined
     })
   } catch (e: any) {
     console.error('[WalletNFTs] Error:', e)
