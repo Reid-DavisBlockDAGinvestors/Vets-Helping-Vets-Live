@@ -17,6 +17,8 @@ export type NFTItem = {
   progress: number
   goal: number
   raised: number
+  nftSalesUSD?: number
+  tipsUSD?: number
   snippet: string
   sold?: number
   total?: number
@@ -89,7 +91,17 @@ export default function NFTCard({ item }: { item: NFTItem }) {
           {/* Progress Overlay */}
           <div className="absolute bottom-3 left-3 right-3">
             <div className="flex justify-between text-xs text-white mb-1">
-              <span className="font-semibold">${item.raised.toLocaleString()}</span>
+              <div className="flex flex-col">
+                <span className="font-semibold">${item.raised.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                {(item.nftSalesUSD !== undefined && item.nftSalesUSD > 0) && (
+                  <div className="flex gap-2 text-[10px] opacity-80">
+                    <span className="text-emerald-300">NFT: ${item.nftSalesUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                    {item.tipsUSD !== undefined && item.tipsUSD > 0 && (
+                      <span className="text-purple-300">Tips: ${item.tipsUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                    )}
+                  </div>
+                )}
+              </div>
               <span className="opacity-70">{pct}%</span>
             </div>
             <div className="h-1.5 rounded-full bg-white/20 overflow-hidden">

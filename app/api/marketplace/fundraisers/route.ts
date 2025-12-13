@@ -132,38 +132,39 @@ export async function GET(req: NextRequest) {
       
       // Use goal from Supabase submission (source of truth for display)
       let goal = Number(sub.goal || 0)
-      let raised = 0
+      let grossRaisedUSD = 0
       let editionsMinted = 0
-      let maxEditions = Number(sub.num_copies || 0) // 0 = unlimited
-      // Price per NFT = Goal ÷ Number of NFTs (or explicit price_per_copy if set)
-      let pricePerEdition = sub.price_per_copy ? Number(sub.price_per_copy) : 
-        (goal > 0 && maxEditions > 0 ? goal / maxEditions : 0)
+      let maxEditions = Number(sub.num_copies || sub.nft_editions || 0) // 0 = unlimited
+      // Price per NFT = Goal ÷ Number of NFTs (or explicit price from Supabase)
+      let pricePerEdition = sub.nft_price ? Number(sub.nft_price) :
+        (sub.price_per_copy ? Number(sub.price_per_copy) : 
+        (goal > 0 && maxEditions > 0 ? goal / maxEditions : 0))
       
       try {
         const contract = getContractForAddress(subContractAddr)
         // V5 getCampaign returns: category, baseURI, goal, grossRaised, netRaised, editionsMinted, maxEditions, pricePerEdition, active, closed
         const camp = await (contract as any).getCampaign(BigInt(campaignId))
-        // Convert netRaised from wei (10^18) to BDAG, then to USD
-        const netRaisedWei = BigInt(camp.netRaised ?? 0n)
-        const netRaisedBDAG = Number(netRaisedWei) / 1e18
-        raised = netRaisedBDAG * BDAG_USD_RATE // Convert BDAG to USD
+        // Convert grossRaised from wei (10^18) to BDAG, then to USD
+        const grossRaisedWei = BigInt(camp.grossRaised ?? 0n)
+        const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
+        grossRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
         editionsMinted = Number(camp.editionsMinted ?? 0n)
         // Use on-chain maxEditions if available
         if (camp.maxEditions) maxEditions = Number(camp.maxEditions)
-        // Convert pricePerEdition from wei to BDAG, then to USD
-        if (camp.pricePerEdition) {
-          const priceBDAG = Number(BigInt(camp.pricePerEdition)) / 1e18
-          pricePerEdition = priceBDAG * BDAG_USD_RATE
-        }
       } catch {}
 
       const remaining = maxEditions > 0 ? Math.max(0, maxEditions - editionsMinted) : null // null = unlimited
       
-      // Calculate raised from editions sold x price (more accurate than on-chain netRaised for display)
-      // This ensures the raised amount reflects actual NFT sales at the set price
-      if (editionsMinted > 0 && pricePerEdition > 0) {
-        raised = editionsMinted * pricePerEdition
-      }
+      // Calculate NFT sales revenue from editions sold x price
+      const nftSalesUSD = editionsMinted > 0 && pricePerEdition > 0 
+        ? editionsMinted * pricePerEdition 
+        : 0
+      
+      // Calculate tips = gross raised - NFT sales (tips are extra amounts above NFT price)
+      const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
+      
+      // Total raised = NFT sales + tips
+      const raised = nftSalesUSD + tipsUSD
       
       // Progress should be based on editions sold for V5 model (or raised/goal as fallback)
       const progress = maxEditions > 0 
@@ -185,6 +186,8 @@ export async function GET(req: NextRequest) {
         contract_address: subContractAddr,
         goal,
         raised,
+        nftSalesUSD,
+        tipsUSD,
         progress,
         editionsMinted,
         maxEditions,

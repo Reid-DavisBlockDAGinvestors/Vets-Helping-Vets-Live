@@ -42,6 +42,8 @@ export default function MarketplacePage() {
           progress: pct,
           goal,
           raised,
+          nftSalesUSD: Number(f.nftSalesUSD || 0),
+          tipsUSD: Number(f.tipsUSD || 0),
           snippet,
           sold,
           total,
