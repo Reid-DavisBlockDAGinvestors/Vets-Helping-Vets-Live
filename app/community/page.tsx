@@ -1,8 +1,10 @@
+
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 interface Post {
   id: string
@@ -41,6 +43,7 @@ interface Comment {
 }
 
 export default function CommunityHub() {
+  const searchParams = useSearchParams()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
@@ -57,6 +60,13 @@ export default function CommunityHub() {
   const [showEmbedModal, setShowEmbedModal] = useState(false)
   const [userProfile, setUserProfile] = useState<{ display_name: string; avatar_url: string | null } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const prefill = searchParams.get('prefill')
+    if (prefill && !newPostContent) {
+      setNewPostContent(prefill)
+    }
+  }, [searchParams, newPostContent])
 
   // Check auth on mount
   useEffect(() => {

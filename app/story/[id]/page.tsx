@@ -187,6 +187,9 @@ export default async function StoryViewer({ params }: { params: { id: string } }
     ? description.slice(0, maxPreviewLength).trimEnd() + '...'
     : description
 
+  const campaignKey = submission?.slug || submission?.short_code || submission?.id || id
+  const communityHref = `/community/campaign/${campaignKey}?prefill=${encodeURIComponent(`@[${campaignKey}] `)}`
+
   return (
     <div className="min-h-screen pb-12">
       {/* Header Bar */}
@@ -267,6 +270,12 @@ export default async function StoryViewer({ params }: { params: { id: string } }
               <h1 className="text-2xl md:text-3xl font-bold text-white">{title}</h1>
               <div className="mt-1 flex items-center gap-3 flex-wrap">
                 <p className="text-white/50 text-sm">Campaign #{id} on BlockDAG</p>
+                <Link
+                  href={communityHref}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 text-white/70 text-xs font-medium hover:bg-white/10 hover:text-white transition-colors border border-white/10"
+                >
+                  💬 Discuss in Community
+                </Link>
                 <a 
                   href={`https://awakening.bdagscan.com/address/${process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'}`}
                   target="_blank"

@@ -176,6 +176,8 @@ export async function GET(req: NextRequest) {
       
       return {
         id: sub.id,
+        slug: sub.slug || null,
+        short_code: sub.short_code || null,
         title: sub.title || sub.story || `Fundraiser #${campaignId}`,
         image: sub.image_uri || '',
         story: sub.story || '',

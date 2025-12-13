@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 interface Campaign {
   id: string
@@ -38,6 +39,7 @@ interface Stats {
 
 export default function CampaignCommunityPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const campaignId = params.id as string
   
   const [campaign, setCampaign] = useState<Campaign | null>(null)
@@ -49,6 +51,13 @@ export default function CampaignCommunityPage() {
   const [token, setToken] = useState<string | null>(null)
   const [newPostContent, setNewPostContent] = useState('')
   const [posting, setPosting] = useState(false)
+
+  useEffect(() => {
+    const prefill = searchParams.get('prefill')
+    if (prefill && !newPostContent) {
+      setNewPostContent(prefill)
+    }
+  }, [searchParams, newPostContent])
 
   useEffect(() => {
     const checkAuth = async () => {

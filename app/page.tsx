@@ -15,7 +15,7 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
     // First, get campaigns from database with full metadata - prioritize minted ones
     const { data: submissions, error: dbError } = await supabaseAdmin
       .from('submissions')
-      .select('id, campaign_id, title, story, image_uri, goal, status, category, creator_name, num_copies, price_per_copy')
+      .select('id, campaign_id, slug, short_code, title, story, image_uri, goal, status, category, creator_name, num_copies, price_per_copy')
       .in('status', ['minted', 'approved'])
       .order('status', { ascending: false }) // 'minted' comes before 'approved' alphabetically reversed
       .order('created_at', { ascending: false })
@@ -76,6 +76,8 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
       return {
         id: s.id,
         campaignId: s.campaign_id || undefined,
+        slug: s.slug || null,
+        short_code: s.short_code || null,
         title: s.title || 'Untitled Campaign',
         image: s.image_uri || '',
         causeType: cause as 'veteran' | 'general',

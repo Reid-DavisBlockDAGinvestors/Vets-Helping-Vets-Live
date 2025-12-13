@@ -36,6 +36,8 @@ export default function MarketplacePage() {
         return {
           id: f.id || String(f.campaignId), // Use submission UUID, fallback to campaignId
           campaignId: Number(f.campaignId), // V5: campaign ID for linking
+          slug: f.slug || null,
+          short_code: f.short_code || null,
           title,
           image,
           causeType: (cause === 'veteran' ? 'veteran' : 'general'),

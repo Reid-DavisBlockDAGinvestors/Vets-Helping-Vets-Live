@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ipfsToHttp } from '@/lib/ipfs'
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
@@ -9,6 +10,8 @@ const EXPLORER_URL = 'https://awakening.bdagscan.com'
 export type NFTItem = {
   id: string
   campaignId?: number // V5: campaign ID for story page link
+  slug?: string | null
+  short_code?: string | null
   title: string
   image: string
   causeType: 'veteran' | 'general'
@@ -30,6 +33,8 @@ export type NFTItem = {
 }
 
 export default function NFTCard({ item }: { item: NFTItem }) {
+  const router = useRouter()
+
   // Use edition-based progress (sold/total) when available, otherwise raised/goal
   const pct = (item.total && item.total > 0 && item.sold !== undefined)
     ? Math.min(100, Math.round((item.sold / item.total) * 100))
@@ -38,6 +43,9 @@ export default function NFTCard({ item }: { item: NFTItem }) {
   const snippet = item.snippet.length > maxLen
     ? item.snippet.slice(0, maxLen).trimEnd() + '...'
     : item.snippet
+
+  const communityKey = item.slug || item.short_code || String(item.campaignId ?? item.id)
+  const communityHref = `/community/campaign/${communityKey}?prefill=${encodeURIComponent(`@[${communityKey}] `)}`
 
   return (
     <Link href={`/story/${item.campaignId ?? item.id}`} className="group block">
@@ -128,6 +136,19 @@ export default function NFTCard({ item }: { item: NFTItem }) {
           {snippet && (
             <p className="mt-2 text-sm text-white/60 line-clamp-2">{snippet}</p>
           )}
+          <div className="mt-4">
+            <button
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                router.push(communityHref)
+              }}
+              className="inline-flex items-center gap-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 text-xs font-medium text-white/70 hover:text-white transition-colors"
+              title="Discuss this campaign in the Community Hub"
+            >
+              💬 Discuss
+            </button>
+          </div>
           <div className="mt-4 flex items-center justify-between">
             <div className="text-sm text-white/50">
               Goal: <span className="text-white/80">${item.goal.toLocaleString()}</span>
