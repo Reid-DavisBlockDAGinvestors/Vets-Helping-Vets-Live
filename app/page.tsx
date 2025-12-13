@@ -8,21 +8,72 @@ const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLI
 
 async function loadOnchain(limit = 12): Promise<NFTItem[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/onchain/tokens?limit=${limit}`, { cache: 'no-store' })
-    const data = await res.json()
-    const mapped: NFTItem[] = (data?.items || []).map((t: any) => {
-      const meta = t.metadata || {}
-      const goal = Number(t.goal || meta.goal || 0)
-      const raised = Number(t.raised || meta.raised || 0)
+    // First, get campaigns from database with full metadata
+    const { data: submissions } = await supabaseAdmin
+      .from('submissions')
+      .select('id, campaign_id, title, description, image_url, goal, status, category, creator_name')
+      .in('status', ['minted', 'approved'])
+      .not('campaign_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (!submissions || submissions.length === 0) {
+      // Fallback to on-chain data
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/onchain/tokens?limit=${limit}`, { cache: 'no-store' })
+      const data = await res.json()
+      const mapped: NFTItem[] = (data?.items || []).map((t: any) => {
+        const meta = t.metadata || {}
+        const goal = Number(t.goal || meta.goal || 0)
+        const raised = Number(t.raised || meta.raised || 0)
+        const pct = goal > 0 ? Math.round((raised / goal) * 100) : 0
+        const title = meta.name || meta.title || `Token #${t.tokenId}`
+        const image = meta.image || meta.image_url || ''
+        const snippet = meta.description || ''
+        const cause: any = (t.category || meta.category || 'general')
+        return { id: String(t.tokenId), title, image, causeType: (cause === 'veteran' ? 'veteran' : 'general'), progress: pct, goal, raised, snippet }
+      })
+      return mapped
+    }
+
+    // Get on-chain data for raised amounts
+    const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
+    const provider = getProvider()
+    const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
+
+    const mapped: NFTItem[] = await Promise.all(submissions.map(async (s: any) => {
+      let raised = 0
+      const goal = Number(s.goal || 0)
+
+      // Get raised amount from blockchain if campaign_id exists
+      if (s.campaign_id && contractAddress) {
+        try {
+          const campaign = await contract.getCampaign(s.campaign_id)
+          const grossRaisedWei = BigInt(campaign.grossRaised ?? campaign[3] ?? 0n)
+          const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
+          raised = grossRaisedBDAG * BDAG_USD_RATE
+        } catch (e) {
+          console.log(`[loadOnchain] Campaign ${s.campaign_id} not found on chain`)
+        }
+      }
+
       const pct = goal > 0 ? Math.round((raised / goal) * 100) : 0
-      const title = meta.name || meta.title || `Token #${t.tokenId}`
-      const image = meta.image || meta.image_url || ''
-      const snippet = meta.description || ''
-      const cause: any = (t.category || meta.category || 'general')
-      return { id: String(t.tokenId), title, image, causeType: (cause === 'veteran' ? 'veteran' : 'general'), progress: pct, goal, raised, snippet }
-    })
+      const cause = s.category === 'veteran' ? 'veteran' : 'general'
+
+      return {
+        id: String(s.campaign_id || s.id),
+        title: s.title || `Campaign #${s.campaign_id}`,
+        image: s.image_url || '',
+        causeType: cause as 'veteran' | 'general',
+        progress: pct,
+        goal,
+        raised,
+        snippet: s.description?.slice(0, 150) || ''
+      }
+    }))
+
     return mapped
-  } catch {
+  } catch (e) {
+    console.error('[loadOnchain] Error:', e)
     return []
   }
 }
@@ -205,6 +256,72 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Video Section - See How It Works */}
+      <section className="container py-16">
+        <div className="rounded-3xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 overflow-hidden">
+          <div className="grid md:grid-cols-2 gap-8 p-8 md:p-12">
+            <div className="flex flex-col justify-center">
+              <h2 className="text-3xl font-bold text-white mb-4">See How It Works</h2>
+              <p className="text-white/60 mb-6">
+                Watch our demo to understand how PatriotPledge NFTs revolutionizes charitable giving with blockchain transparency and dynamic NFTs.
+              </p>
+              <ul className="space-y-3">
+                {['Submit your story with KYC verification', 'Get approved and minted as an NFT', 'Supporters purchase your NFT to donate', 'Track every dollar on the blockchain'].map((item, i) => (
+                  <li key={i} className="flex items-center gap-3 text-white/70">
+                    <span className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
+                      {i + 1}
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="aspect-video rounded-2xl bg-black/50 overflow-hidden flex items-center justify-center" data-testid="demo-video">
+              <div className="text-center">
+                <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-4 cursor-pointer hover:bg-white/20 transition-all">
+                  <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+                <p className="text-white/50">Demo video coming soon</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section - Ready to Make a Difference */}
+      <section className="container py-20">
+        <div className="relative rounded-3xl overflow-hidden">
+          {/* Background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-red-600/20 via-purple-600/20 to-blue-600/20" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent" />
+          
+          <div className="relative p-12 md:p-20 text-center">
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
+              Ready to Make a Difference?
+            </h2>
+            <p className="text-lg text-white/60 max-w-2xl mx-auto mb-10">
+              Whether you need help or want to help others, PatriotPledge NFTs is the platform for transparent, impactful giving.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link 
+                href="/submit" 
+                className="px-8 py-4 rounded-xl bg-white text-gray-900 font-semibold text-lg hover:bg-white/90 transition-all"
+              >
+                Start Your Campaign
+              </Link>
+              <Link 
+                href="/marketplace" 
+                className="px-8 py-4 rounded-xl bg-white/10 border border-white/20 text-white font-semibold text-lg hover:bg-white/20 transition-all"
+              >
+                Support a Veteran
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Featured Campaigns */}
       {highlights.length > 0 && (
         <section className="container py-16">
@@ -261,72 +378,6 @@ export default async function HomePage() {
           </div>
         </section>
       )}
-
-      {/* Video Section */}
-      <section className="container py-16">
-        <div className="rounded-3xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 overflow-hidden">
-          <div className="grid md:grid-cols-2 gap-8 p-8 md:p-12">
-            <div className="flex flex-col justify-center">
-              <h2 className="text-3xl font-bold text-white mb-4">See How It Works</h2>
-              <p className="text-white/60 mb-6">
-                Watch our demo to understand how PatriotPledge NFTs revolutionizes charitable giving with blockchain transparency and dynamic NFTs.
-              </p>
-              <ul className="space-y-3">
-                {['Submit your story with KYC verification', 'Get approved and minted as an NFT', 'Supporters purchase your NFT to donate', 'Track every dollar on the blockchain'].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 text-white/70">
-                    <span className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
-                      {i + 1}
-                    </span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="aspect-video rounded-2xl bg-black/50 overflow-hidden flex items-center justify-center" data-testid="demo-video">
-              <div className="text-center">
-                <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-4 cursor-pointer hover:bg-white/20 transition-all">
-                  <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </div>
-                <p className="text-white/50">Demo video coming soon</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="container py-20">
-        <div className="relative rounded-3xl overflow-hidden">
-          {/* Background */}
-          <div className="absolute inset-0 bg-gradient-to-r from-red-600/20 via-purple-600/20 to-blue-600/20" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent" />
-          
-          <div className="relative p-12 md:p-20 text-center">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
-              Ready to Make a Difference?
-            </h2>
-            <p className="text-lg text-white/60 max-w-2xl mx-auto mb-10">
-              Whether you need help or want to help others, PatriotPledge NFTs is the platform for transparent, impactful giving.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link 
-                href="/submit" 
-                className="px-8 py-4 rounded-xl bg-white text-gray-900 font-semibold text-lg hover:bg-white/90 transition-all"
-              >
-                Start Your Campaign
-              </Link>
-              <Link 
-                href="/marketplace" 
-                className="px-8 py-4 rounded-xl bg-white/10 border border-white/20 text-white font-semibold text-lg hover:bg-white/20 transition-all"
-              >
-                Support a Veteran
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Trust Indicators */}
       <section className="container pb-20">
