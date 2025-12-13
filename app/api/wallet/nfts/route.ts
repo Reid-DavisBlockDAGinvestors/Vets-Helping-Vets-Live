@@ -81,22 +81,8 @@ export async function GET(req: NextRequest) {
         // Look up Supabase submission using string key
         const submission = submissionByCampaignId[String(campaignId)] || submissionByTokenId[String(campaignId)] || null
 
-        // Fetch metadata from tokenURI (only if Supabase submission not found)
-        let metadata: any = null
-        if (!submission && uri) {
-          try {
-            // Convert IPFS URI to HTTP gateway
-            let httpUri = uri
-            if (uri.startsWith('ipfs://')) {
-              const cid = uri.replace('ipfs://', '')
-              httpUri = `https://gateway.pinata.cloud/ipfs/${cid}`
-            }
-            const mres = await fetch(httpUri, { cache: 'no-store' })
-            metadata = await mres.json()
-          } catch (metaErr: any) {
-            console.log(`[WalletNFTs] Metadata fetch skipped for token ${tokenIdNum}:`, metaErr?.message)
-          }
-        }
+        // Skip metadata fetch to avoid timeouts - use Supabase data only
+        const metadata: any = null
 
         // === Get on-chain values (these are the source of truth for calculations) ===
         // getCampaign returns: category, baseURI, goal, grossRaised, netRaised, editionsMinted, maxEditions, pricePerEdition, active, closed
