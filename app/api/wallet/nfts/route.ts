@@ -100,8 +100,8 @@ export async function GET(req: NextRequest) {
           tokenId: tokenIdNum,
           campaignId,
           editionNumber,
-          totalEditions,
-          editionsMinted, // Include for progress calculation
+          totalEditions: maxEditions, // Use campaign maxEditions for progress calculation
+          editionsMinted,
           contractAddress,
           uri,
           metadata,
