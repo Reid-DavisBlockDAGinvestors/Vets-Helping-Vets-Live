@@ -122,7 +122,7 @@ export default function CommunityHubClient() {
       const headers: Record<string, string> = {}
       if (token) headers['authorization'] = `Bearer ${token}`
 
-      const res = await fetch(`/api/community/posts?${params}`, { headers })
+      const res = await fetch(`/api/community/posts?${params}`, { headers, cache: 'no-store' })
       const data = await res.json()
       setPosts(data?.posts || [])
     } catch (e) {
@@ -153,10 +153,11 @@ export default function CommunityHubClient() {
       })
 
       if (res.ok) {
+        await res.json().catch(() => ({}))
         setNewPostContent('')
         setSelectedMedia([])
         setMediaTypes([])
-        loadPosts()
+        await loadPosts()
       } else {
         const err = await res.json()
         alert(err?.message || 'Failed to create post')

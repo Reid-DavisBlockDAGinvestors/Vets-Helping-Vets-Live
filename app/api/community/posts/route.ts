@@ -92,7 +92,15 @@ export async function GET(req: NextRequest) {
       }
     }))
 
-    return NextResponse.json({ posts: enrichedPosts, page, limit })
+    return NextResponse.json(
+      { posts: enrichedPosts, page, limit },
+      {
+        headers: {
+          'Cache-Control': 'no-store, max-age=0',
+          'Vary': 'Authorization'
+        }
+      }
+    )
   } catch (e: any) {
     console.error('Posts error:', e)
     return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
