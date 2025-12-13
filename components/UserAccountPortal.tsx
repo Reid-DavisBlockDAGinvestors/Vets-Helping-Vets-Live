@@ -416,12 +416,12 @@ export default function UserAccountPortal() {
 
       {/* Auth Modal */}
       {showAuthModal && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[10000] flex items-start sm:items-center justify-center p-4 pt-16 sm:pt-4 overflow-y-auto">
           <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setShowAuthModal(false)}
           />
-          <div className="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6">
+          <div className="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6 my-auto">
             <button
               onClick={() => setShowAuthModal(false)}
               className="absolute top-4 right-4 text-white/50 hover:text-white"
@@ -507,12 +507,12 @@ export default function UserAccountPortal() {
 
       {/* Profile Edit Modal */}
       {showProfileModal && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[10000] flex items-start sm:items-center justify-center p-4 pt-16 sm:pt-4 overflow-y-auto">
           <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setShowProfileModal(false)}
           />
-          <div className="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl w-full max-w-lg p-6 my-auto">
             <button
               onClick={() => setShowProfileModal(false)}
               className="absolute top-4 right-4 text-white/50 hover:text-white"
