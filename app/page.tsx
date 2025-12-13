@@ -15,7 +15,7 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
     // First, get campaigns from database with full metadata - prioritize minted ones
     const { data: submissions, error: dbError } = await supabaseAdmin
       .from('submissions')
-      .select('id, campaign_id, title, story, image_uri, goal, status, category, creator_name')
+      .select('id, campaign_id, title, story, image_uri, goal, status, category, creator_name, num_copies, price_per_copy')
       .in('status', ['minted', 'approved'])
       .order('status', { ascending: false }) // 'minted' comes before 'approved' alphabetically reversed
       .order('created_at', { ascending: false })
@@ -43,7 +43,13 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
 
     const mapped: NFTItem[] = await Promise.all(submissions.map(async (s: any) => {
       let raised = 0
+      let nftSalesUSD = 0
+      let tipsUSD = 0
+      let editionsMinted = 0
+      let maxEditions = 0
       const goal = Number(s.goal || 0)
+      const numCopies = Number(s.num_copies || 100)
+      const pricePerCopy = Number(s.price_per_copy || (goal > 0 && numCopies > 0 ? goal / numCopies : 0))
 
       // Get raised amount from blockchain if campaign_id exists
       if (s.campaign_id && contract) {
@@ -52,6 +58,13 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
           const grossRaisedWei = BigInt(campaign.grossRaised ?? campaign[3] ?? 0n)
           const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
           raised = grossRaisedBDAG * BDAG_USD_RATE
+          
+          editionsMinted = Number(campaign.editionsMinted ?? campaign[5] ?? 0)
+          maxEditions = Number(campaign.maxEditions ?? campaign[6] ?? 0)
+          
+          // Calculate NFT sales and tips
+          nftSalesUSD = editionsMinted * pricePerCopy
+          tipsUSD = Math.max(0, raised - nftSalesUSD)
         } catch (e) {
           // Campaign may not exist on chain yet
         }
@@ -69,6 +82,10 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
         progress: pct,
         goal,
         raised,
+        nftSalesUSD,
+        tipsUSD,
+        sold: editionsMinted,
+        total: maxEditions || numCopies,
         snippet: s.story?.slice(0, 150) || ''
       }
     }))
@@ -159,8 +176,13 @@ const FEATURES = [
 
 export default async function HomePage() {
   const [all, stats] = await Promise.all([loadOnchain(24), loadStats()])
-  const highlights = all.slice(0, 6)
+  
+  // Success stories: campaigns that reached their goal
   const successStories = all.filter(i => i.goal > 0 && i.raised >= i.goal).slice(0, 3)
+  const successIds = new Set(successStories.map(s => s.id))
+  
+  // Featured: exclude fully funded campaigns (they go in Success Stories)
+  const highlights = all.filter(i => !successIds.has(i.id) && (i.goal === 0 || i.raised < i.goal)).slice(0, 6)
   
   // Format stats for display
   const formatCurrency = (n: number) => {
