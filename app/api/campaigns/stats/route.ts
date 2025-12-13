@@ -69,19 +69,22 @@ export async function GET(req: NextRequest) {
         const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
         const grossRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
         
-        // Get price per edition - use Supabase goal / maxEditions
-        // For V5 model: Goal = Editions × Price, so Price = Goal / Editions
-        const goalUSD = submission?.goal ? Number(submission.goal) : 0
+        // Get goal from Supabase, fallback to on-chain goal converted to USD
+        const onchainGoalWei = BigInt(camp.goal ?? camp[2] ?? 0n)
+        const onchainGoalBDAG = Number(onchainGoalWei) / 1e18
+        const onchainGoalUSD = onchainGoalBDAG * BDAG_USD_RATE
+        
+        const goalUSD = submission?.goal ? Number(submission.goal) : onchainGoalUSD
         const numEditions = Number(submission?.num_copies || submission?.nft_editions || maxEditions || 100)
         
         // Price calculation: nft_price > price_per_copy > goal/editions
-        let pricePerEditionUSD = 0
+        // For V5 model: Goal = Editions × Price, so Price = Goal / Editions
+        let pricePerEditionUSD = 1 // Default to $1 if nothing else works
         if (submission?.nft_price && Number(submission.nft_price) > 0) {
           pricePerEditionUSD = Number(submission.nft_price)
         } else if (submission?.price_per_copy && Number(submission.price_per_copy) > 0) {
           pricePerEditionUSD = Number(submission.price_per_copy)
         } else if (goalUSD > 0 && numEditions > 0) {
-          // Goal / Editions is always correct for V5 model
           pricePerEditionUSD = goalUSD / numEditions
         }
         

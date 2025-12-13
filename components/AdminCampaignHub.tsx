@@ -113,6 +113,12 @@ export default function AdminCampaignHub() {
   // Update delete state
   const [deletingUpdateId, setDeletingUpdateId] = useState<string | null>(null)
   
+  // Update expand/edit state
+  const [expandedUpdates, setExpandedUpdates] = useState<Set<string>>(new Set())
+  const [editingUpdate, setEditingUpdate] = useState<CampaignUpdate | null>(null)
+  const [editUpdateForm, setEditUpdateForm] = useState<Record<string, any>>({})
+  const [savingUpdate, setSavingUpdate] = useState(false)
+  
   // Approval confirmation modal state
   const [approvingCampaign, setApprovingCampaign] = useState<Campaign | null>(null)
   const [approvalForm, setApprovalForm] = useState<{
@@ -599,6 +605,57 @@ export default function AdminCampaignHub() {
     })
   }
 
+  const toggleUpdateExpanded = (updateId: string) => {
+    setExpandedUpdates(prev => {
+      const next = new Set(prev)
+      if (next.has(updateId)) next.delete(updateId)
+      else next.add(updateId)
+      return next
+    })
+  }
+
+  const openEditUpdate = (update: CampaignUpdate) => {
+    setEditingUpdate(update)
+    setEditUpdateForm({
+      title: update.title || '',
+      story_update: update.story_update || '',
+      funds_utilization: update.funds_utilization || '',
+      benefits: update.benefits || '',
+      still_needed: update.still_needed || '',
+      status: update.status
+    })
+  }
+
+  const saveUpdateEdit = async () => {
+    if (!editingUpdate) return
+    setSavingUpdate(true)
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) throw new Error('Not authenticated')
+      
+      const res = await fetch(`/api/admin/campaign-updates/${editingUpdate.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(editUpdateForm)
+      })
+      
+      if (!res.ok) throw new Error('Failed to update')
+      
+      // Refresh campaigns
+      loadData()
+      setEditingUpdate(null)
+    } catch (e: any) {
+      console.error('Failed to save update:', e)
+      alert(e?.message || 'Failed to save update')
+    } finally {
+      setSavingUpdate(false)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       minted: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -835,6 +892,28 @@ export default function AdminCampaignHub() {
                     {campaign.creator_email && <span>{campaign.creator_email}</span>}
                   </div>
                 </div>
+
+                {/* Quick Stats (for minted campaigns) */}
+                {campaign.status === 'minted' && campaign.onchainStats && (
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                      <span className="text-green-400 font-semibold">${campaign.onchainStats.totalRaisedUSD.toFixed(0)}</span>
+                      <span className="text-white/40 ml-1">raised</span>
+                    </div>
+                    <div className="px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                      <span className="text-blue-400 font-semibold">{campaign.onchainStats.editionsMinted}/{campaign.onchainStats.maxEditions}</span>
+                      <span className="text-white/40 ml-1">sold</span>
+                    </div>
+                    <div className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                      <span className="text-emerald-400 font-semibold">${campaign.onchainStats.nftSalesUSD.toFixed(0)}</span>
+                      <span className="text-white/40 ml-1">NFT</span>
+                    </div>
+                    <div className="px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                      <span className="text-purple-400 font-semibold">${campaign.onchainStats.tipsUSD.toFixed(0)}</span>
+                      <span className="text-white/40 ml-1">tips</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Updates Badges */}
                 <div className="flex items-center gap-2">
@@ -1335,43 +1414,82 @@ export default function AdminCampaignHub() {
                             </div>
                           </div>
 
-                          {/* Update Content Preview */}
-                          <div className="ml-10 space-y-1 text-xs">
-                            {update.story_update && (
-                              <p className="text-white/60 line-clamp-2">
-                                <span className="text-blue-400">Situation:</span> {update.story_update}
-                              </p>
-                            )}
-                            {update.funds_utilization && (
-                              <p className="text-white/60 line-clamp-1">
-                                <span className="text-green-400">Funds:</span> {update.funds_utilization}
-                              </p>
-                            )}
-                            {update.media_uris && update.media_uris.length > 0 && (
-                              <div className="flex items-center gap-2 mt-2">
-                                <span className="text-white/40">📎 {update.media_uris.length} attachment{update.media_uris.length !== 1 ? 's' : ''}</span>
-                                <div className="flex gap-1">
-                                  {update.media_uris.slice(0, 4).map((uri, i) => {
-                                    const httpUrl = ipfsToHttp(uri)
-                                    return (
-                                      <a
-                                        key={i}
-                                        href={httpUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="w-8 h-8 rounded bg-white/10 overflow-hidden hover:ring-1 hover:ring-blue-500"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <img src={httpUrl} alt="" className="w-full h-full object-cover" />
-                                      </a>
-                                    )
-                                  })}
-                                  {update.media_uris.length > 4 && (
-                                    <span className="w-8 h-8 rounded bg-white/10 flex items-center justify-center text-xs text-white/50">
-                                      +{update.media_uris.length - 4}
-                                    </span>
-                                  )}
+                          {/* Update Content - Expandable */}
+                          <div 
+                            className="ml-10 space-y-2 text-sm cursor-pointer"
+                            onClick={(e) => { e.stopPropagation(); toggleUpdateExpanded(update.id); }}
+                          >
+                            {/* Preview Mode */}
+                            {!expandedUpdates.has(update.id) ? (
+                              <>
+                                {update.story_update && (
+                                  <p className="text-white/60 text-xs line-clamp-2">
+                                    <span className="text-blue-400">Situation:</span> {update.story_update}
+                                  </p>
+                                )}
+                                <p className="text-blue-400 text-xs hover:text-blue-300">Click to expand...</p>
+                              </>
+                            ) : (
+                              /* Expanded Mode */
+                              <div className="space-y-3 bg-white/5 rounded-lg p-4 border border-white/10">
+                                <div className="flex justify-between items-start">
+                                  <h5 className="font-medium text-white">Full Update Details</h5>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openEditUpdate(update); }}
+                                    className="px-3 py-1 rounded text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 hover:text-blue-300 border border-blue-500/30 transition-colors"
+                                  >
+                                    ✏️ Edit
+                                  </button>
                                 </div>
+                                {update.story_update && (
+                                  <div>
+                                    <span className="text-blue-400 text-xs font-medium">📖 Situation Update:</span>
+                                    <p className="text-white/70 mt-1 whitespace-pre-wrap">{update.story_update}</p>
+                                  </div>
+                                )}
+                                {update.funds_utilization && (
+                                  <div>
+                                    <span className="text-green-400 text-xs font-medium">💰 Funds Utilization:</span>
+                                    <p className="text-white/70 mt-1 whitespace-pre-wrap">{update.funds_utilization}</p>
+                                  </div>
+                                )}
+                                {update.benefits && (
+                                  <div>
+                                    <span className="text-purple-400 text-xs font-medium">✨ Benefits:</span>
+                                    <p className="text-white/70 mt-1 whitespace-pre-wrap">{update.benefits}</p>
+                                  </div>
+                                )}
+                                {update.still_needed && (
+                                  <div>
+                                    <span className="text-orange-400 text-xs font-medium">🎯 Still Needed:</span>
+                                    <p className="text-white/70 mt-1 whitespace-pre-wrap">{update.still_needed}</p>
+                                  </div>
+                                )}
+                                {update.media_uris && update.media_uris.length > 0 && (
+                                  <div>
+                                    <span className="text-white/40 text-xs font-medium">📎 Attachments:</span>
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                      {update.media_uris.map((uri, i) => {
+                                        const httpUrl = ipfsToHttp(uri)
+                                        return (
+                                          <a
+                                            key={i}
+                                            href={httpUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-16 h-16 rounded bg-white/10 overflow-hidden hover:ring-2 hover:ring-blue-500"
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            <img src={httpUrl} alt="" className="w-full h-full object-cover" />
+                                          </a>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                                <p className="text-white/40 text-xs cursor-pointer hover:text-white/60" onClick={(e) => { e.stopPropagation(); toggleUpdateExpanded(update.id); }}>
+                                  Click to collapse
+                                </p>
                               </div>
                             )}
                           </div>
@@ -1903,6 +2021,122 @@ export default function AdminCampaignHub() {
                   </>
                 ) : (
                   <>✓ Create Campaign On-Chain</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Update Modal */}
+      {editingUpdate && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setEditingUpdate(null)}>
+          <div 
+            className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white">Edit Campaign Update</h2>
+              <button 
+                onClick={() => setEditingUpdate(null)}
+                className="text-white/50 hover:text-white text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-4">
+              <div>
+                <label className="block text-sm text-white/70 mb-1">Title</label>
+                <input
+                  type="text"
+                  value={editUpdateForm.title || ''}
+                  onChange={e => setEditUpdateForm({ ...editUpdateForm, title: e.target.value })}
+                  className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-blue-400 mb-1">📖 Situation Update</label>
+                <textarea
+                  value={editUpdateForm.story_update || ''}
+                  onChange={e => setEditUpdateForm({ ...editUpdateForm, story_update: e.target.value })}
+                  rows={4}
+                  className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white resize-none"
+                  placeholder="What's happening with the campaign?"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-green-400 mb-1">💰 Funds Utilization</label>
+                <textarea
+                  value={editUpdateForm.funds_utilization || ''}
+                  onChange={e => setEditUpdateForm({ ...editUpdateForm, funds_utilization: e.target.value })}
+                  rows={3}
+                  className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white resize-none"
+                  placeholder="How have the funds been used?"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-purple-400 mb-1">✨ Benefits</label>
+                <textarea
+                  value={editUpdateForm.benefits || ''}
+                  onChange={e => setEditUpdateForm({ ...editUpdateForm, benefits: e.target.value })}
+                  rows={3}
+                  className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white resize-none"
+                  placeholder="What benefits have been achieved?"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-orange-400 mb-1">🎯 Still Needed</label>
+                <textarea
+                  value={editUpdateForm.still_needed || ''}
+                  onChange={e => setEditUpdateForm({ ...editUpdateForm, still_needed: e.target.value })}
+                  rows={3}
+                  className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white resize-none"
+                  placeholder="What's still needed?"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-white/70 mb-1">Status</label>
+                <select
+                  value={editUpdateForm.status || 'pending'}
+                  onChange={e => setEditUpdateForm({ ...editUpdateForm, status: e.target.value })}
+                  className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-white/10 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setEditingUpdate(null)}
+                disabled={savingUpdate}
+                className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveUpdateEdit}
+                disabled={savingUpdate}
+                className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                {savingUpdate ? (
+                  <>
+                    <span className="animate-spin">⏳</span>
+                    Saving...
+                  </>
+                ) : (
+                  <>✓ Save Changes</>
                 )}
               </button>
             </div>
