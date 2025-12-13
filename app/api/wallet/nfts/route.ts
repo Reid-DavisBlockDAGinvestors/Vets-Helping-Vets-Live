@@ -109,6 +109,11 @@ export async function GET(req: NextRequest) {
         
         console.log(`[WalletNFTs] Campaign ${campaignId} calc: goal=${goalUSD}, editions=${maxEditions}, minted=${editionsMinted}, price=${pricePerEditionUSD.toFixed(2)}, raised=${grossRaisedUSD.toFixed(2)}, nft=${nftSalesUSD.toFixed(2)}, tips=${tipsUSD.toFixed(2)}`)
 
+        // Resolve image: try submission, metadata, and metadata.image_url
+        const resolvedImage = submission?.image_uri || metadata?.image || metadata?.image_url || ''
+        
+        console.log(`[WalletNFTs] Campaign ${campaignId} image: sub=${submission?.image_uri?.substring(0, 30) || 'none'}, meta=${metadata?.image?.substring(0, 30) || 'none'}, resolved=${resolvedImage?.substring(0, 30) || 'none'}`)
+        
         nfts.push({
           tokenId: tokenIdNum,
           campaignId,
@@ -119,7 +124,7 @@ export async function GET(req: NextRequest) {
           uri,
           metadata,
           title: submission?.title || metadata?.name || `Campaign #${campaignId}`,
-          image: submission?.image_uri || metadata?.image || '',
+          image: resolvedImage,
           story: submission?.story || metadata?.description || '',
           category: camp.category ?? camp[0],
           goal: goalUSD,
