@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '@/lib/supabase'
 import { useWallet } from '@/hooks/useWallet'
 
@@ -47,6 +48,12 @@ export default function UserAccountPortal() {
   const [editWebsite, setEditWebsite] = useState('')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [profileMessage, setProfileMessage] = useState('')
+  const [mounted, setMounted] = useState(false)
+
+  // Track mount state for portal
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const { 
     address, 
@@ -414,8 +421,8 @@ export default function UserAccountPortal() {
         )}
       </div>
 
-      {/* Auth Modal */}
-      {showAuthModal && (
+      {/* Auth Modal - rendered via portal */}
+      {mounted && showAuthModal && createPortal(
         <div className="fixed inset-0 z-[99999] overflow-y-auto">
           <div className="min-h-full flex items-center justify-center p-4">
             <div 
@@ -504,11 +511,12 @@ export default function UserAccountPortal() {
             </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Profile Edit Modal */}
-      {showProfileModal && (
+      {/* Profile Edit Modal - rendered via portal */}
+      {mounted && showProfileModal && createPortal(
         <div className="fixed inset-0 z-[99999] overflow-y-auto">
           <div className="min-h-full flex items-center justify-center p-4">
             <div 
@@ -633,7 +641,8 @@ export default function UserAccountPortal() {
             </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
