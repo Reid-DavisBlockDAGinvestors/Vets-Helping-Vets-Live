@@ -425,17 +425,17 @@ export default function DashboardPage() {
                             <div>
                               <div className="text-xs text-white/40">Progress</div>
                               <div className="font-semibold text-white">
-                                {campaign.goal ? Math.round((campaign.raised / campaign.goal) * 100) : 0}%
+                                {campaign.maxEditions > 0 ? Math.round((campaign.editionsMinted / campaign.maxEditions) * 100) : 0}%
                               </div>
                             </div>
                           </div>
 
-                          {/* Progress bar */}
+                          {/* Progress bar - based on NFTs sold */}
                           <div className="mt-3">
                             <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
                               <div
                                 className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400"
-                                style={{ width: `${Math.min(100, campaign.goal ? (campaign.raised / campaign.goal) * 100 : 0)}%` }}
+                                style={{ width: `${Math.min(100, campaign.maxEditions > 0 ? (campaign.editionsMinted / campaign.maxEditions) * 100 : 0)}%` }}
                               />
                             </div>
                           </div>
