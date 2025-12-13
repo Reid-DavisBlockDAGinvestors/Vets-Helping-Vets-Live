@@ -23,6 +23,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'NO_CONTRACT_CONFIGURED' }, { status: 500 })
     }
 
+    // Pre-fetch all minted submissions to avoid individual lookups
+    const { data: allSubmissions } = await supabaseAdmin
+      .from('submissions')
+      .select('id, title, story, goal, creator_wallet, image_uri, nft_price, num_copies, nft_editions, campaign_id, token_id')
+      .eq('status', 'minted')
+    
+    // Build lookup maps by campaign_id and token_id
+    const submissionByCampaignId: Record<number, any> = {}
+    const submissionByTokenId: Record<number, any> = {}
+    for (const sub of allSubmissions || []) {
+      if (sub.campaign_id != null) submissionByCampaignId[sub.campaign_id] = sub
+      if (sub.token_id != null) submissionByTokenId[sub.token_id] = sub
+    }
+
     const provider = getProvider()
     const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
 
@@ -58,36 +72,16 @@ export async function GET(req: NextRequest) {
           metadata = await mres.json()
         } catch {}
 
-        // Get Supabase submission for additional details - try multiple lookups
-        let submission: any = null
-        try {
-          // First try by campaign_id
-          let { data } = await supabaseAdmin
-            .from('submissions')
-            .select('id, title, story, goal, creator_wallet, image_uri, nft_price, num_copies, nft_editions')
-            .eq('campaign_id', campaignId)
-            .eq('status', 'minted')
-            .maybeSingle()
-          
-          // If not found, try by token_id (legacy)
-          if (!data) {
-            const result = await supabaseAdmin
-              .from('submissions')
-              .select('id, title, story, goal, creator_wallet, image_uri, nft_price, num_copies, nft_editions')
-              .eq('token_id', campaignId)
-              .eq('status', 'minted')
-              .maybeSingle()
-            data = result.data
-          }
-          
-          submission = data
-        } catch (e) {
-          console.error(`Error fetching submission for campaign ${campaignId}:`, e)
-        }
+        // Get Supabase submission from pre-fetched maps
+        const submission = submissionByCampaignId[campaignId] || submissionByTokenId[campaignId] || null
+        
+        console.log(`[WalletNFTs] Campaign ${campaignId}: submission found=${!!submission}, image=${submission?.image_uri?.substring(0, 50) || 'none'}`)
 
-        // Get on-chain values
-        const onchainMaxEditions = Number((camp.maxEditions ?? camp[6]) || 100)
-        const editionsMinted = Number((camp.editionsMinted ?? camp[5]) || 0)
+        // Get on-chain values - try named properties first, then array indices
+        const onchainMaxEditions = Number(camp.maxEditions ?? camp[6] ?? 100)
+        const editionsMinted = Number(camp.editionsMinted ?? camp[5] ?? 0)
+        
+        console.log(`[WalletNFTs] Campaign ${campaignId} on-chain: maxEditions=${onchainMaxEditions}, editionsMinted=${editionsMinted}, camp[5]=${camp[5]}, camp[6]=${camp[6]}`)
         
         // Convert on-chain goal to USD
         const onchainGoalWei = BigInt(camp.goal ?? camp[2] ?? 0n)
@@ -98,7 +92,7 @@ export async function GET(req: NextRequest) {
         const goalUSD = submission?.goal ? Number(submission.goal) : onchainGoalUSD
         const maxEditions = Number(submission?.num_copies || submission?.nft_editions || onchainMaxEditions)
         
-        // Price = goal / editions (use same source for both)
+        // Price = goal / editions (use same source for both) - default $1 per NFT
         const pricePerEditionUSD = goalUSD > 0 && maxEditions > 0 ? goalUSD / maxEditions : 1
         
         // Convert gross raised to USD
@@ -112,6 +106,8 @@ export async function GET(req: NextRequest) {
         
         // Tips = gross raised - NFT sales
         const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
+        
+        console.log(`[WalletNFTs] Campaign ${campaignId} calc: goal=${goalUSD}, editions=${maxEditions}, minted=${editionsMinted}, price=${pricePerEditionUSD.toFixed(2)}, raised=${grossRaisedUSD.toFixed(2)}, nft=${nftSalesUSD.toFixed(2)}, tips=${tipsUSD.toFixed(2)}`)
 
         nfts.push({
           tokenId: tokenIdNum,
