@@ -9,6 +9,7 @@ import UserAccountPortal from './UserAccountPortal'
 
 const NAV_LINKS = [
   { href: '/marketplace', label: 'Marketplace' },
+  { href: '/community', label: 'Community' },
   { href: '/submit', label: 'Submit Story' },
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/governance', label: 'Governance' },
@@ -290,6 +291,7 @@ export default function NavBar() {
               }`}
             >
               {link.label === 'Marketplace' && '🏪'}
+              {link.label === 'Community' && '🏛️'}
               {link.label === 'Submit Story' && '📝'}
               {link.label === 'Dashboard' && '📊'}
               {link.label === 'Governance' && '🗳️'}
