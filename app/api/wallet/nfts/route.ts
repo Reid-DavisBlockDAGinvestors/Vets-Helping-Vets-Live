@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { ipfsToHttp } from '@/lib/ipfs'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,16 +81,21 @@ export async function GET(req: NextRequest) {
         // Look up Supabase submission using string key
         const submission = submissionByCampaignId[String(campaignId)] || submissionByTokenId[String(campaignId)] || null
 
-        // Fetch metadata from tokenURI (convert IPFS to HTTP gateway)
+        // Fetch metadata from tokenURI (only if Supabase submission not found)
         let metadata: any = null
-        try {
-          const httpUri = ipfsToHttp(uri)
-          if (httpUri) {
+        if (!submission && uri) {
+          try {
+            // Convert IPFS URI to HTTP gateway
+            let httpUri = uri
+            if (uri.startsWith('ipfs://')) {
+              const cid = uri.replace('ipfs://', '')
+              httpUri = `https://gateway.pinata.cloud/ipfs/${cid}`
+            }
             const mres = await fetch(httpUri, { cache: 'no-store' })
             metadata = await mres.json()
+          } catch (metaErr: any) {
+            console.log(`[WalletNFTs] Metadata fetch skipped for token ${tokenIdNum}:`, metaErr?.message)
           }
-        } catch (metaErr: any) {
-          console.log(`[WalletNFTs] Metadata fetch failed for token ${tokenIdNum}:`, metaErr?.message)
         }
 
         // === Get on-chain values (these are the source of truth for calculations) ===
