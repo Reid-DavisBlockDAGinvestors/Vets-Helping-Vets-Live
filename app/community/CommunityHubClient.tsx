@@ -29,6 +29,14 @@ interface Post {
   isLiked: boolean
 }
 
+interface CampaignPreview {
+  id: string
+  title: string
+  image_uri: string | null
+  slug?: string
+  short_code?: string
+}
+
 interface Comment {
   id: string
   content: string
@@ -58,6 +66,9 @@ export default function CommunityHubClient() {
   const [embedInput, setEmbedInput] = useState('')
   const [showEmbedModal, setShowEmbedModal] = useState(false)
   const [userProfile, setUserProfile] = useState<{ display_name: string; avatar_url: string | null } | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [campaignPreviews, setCampaignPreviews] = useState<Record<string, CampaignPreview>>({})
+  const [deletingPost, setDeletingPost] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -101,8 +112,67 @@ export default function CommunityHubClient() {
         const data = await res.json()
         setUserProfile(data?.profile || null)
       }
+      // Check if user is admin
+      const adminRes = await fetch('/api/admin/me', {
+        headers: { authorization: `Bearer ${accessToken}` }
+      })
+      if (adminRes.ok) {
+        const adminData = await adminRes.json()
+        setIsAdmin(!!adminData?.admin)
+      }
     } catch (e) {
       console.error('Failed to fetch user profile:', e)
+    }
+  }
+
+  // Fetch campaign previews for mentions
+  const fetchCampaignPreviews = async (ids: string[]) => {
+    const newPreviews: Record<string, CampaignPreview> = {}
+    for (const id of ids) {
+      try {
+        const res = await fetch(`/api/community/campaigns/${id}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data?.campaign) {
+            newPreviews[id] = {
+              id: data.campaign.id,
+              title: data.campaign.title,
+              image_uri: data.campaign.image_uri,
+              slug: data.campaign.slug,
+              short_code: data.campaign.short_code
+            }
+          }
+        }
+      } catch (e) {
+        console.error(`Failed to fetch campaign ${id}:`, e)
+      }
+    }
+    if (Object.keys(newPreviews).length > 0) {
+      setCampaignPreviews(prev => ({ ...prev, ...newPreviews }))
+    }
+  }
+
+  // Delete a post
+  const deletePost = async (postId: string) => {
+    if (!token) return
+    if (!confirm('Are you sure you want to delete this post?')) return
+    
+    setDeletingPost(postId)
+    try {
+      const res = await fetch(`/api/community/posts?id=${postId}`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        setPosts(prev => prev.filter(p => p.id !== postId))
+      } else {
+        const err = await res.json()
+        alert(err?.error || 'Failed to delete post')
+      }
+    } catch (e: any) {
+      alert(e?.message || 'Failed to delete post')
+    } finally {
+      setDeletingPost(null)
     }
   }
 
@@ -124,7 +194,21 @@ export default function CommunityHubClient() {
 
       const res = await fetch(`/api/community/posts?${params}`, { headers, cache: 'no-store' })
       const data = await res.json()
-      setPosts(data?.posts || [])
+      const fetchedPosts = data?.posts || []
+      setPosts(fetchedPosts)
+      
+      // Extract campaign mentions and fetch previews
+      const mentionIds = new Set<string>()
+      for (const post of fetchedPosts) {
+        const mentions = post.content.match(/@\[([^\]]+)\]/g) || []
+        for (const m of mentions) {
+          const id = m.slice(2, -1)
+          if (id && !campaignPreviews[id]) mentionIds.add(id)
+        }
+      }
+      if (mentionIds.size > 0) {
+        fetchCampaignPreviews(Array.from(mentionIds))
+      }
     } catch (e) {
       console.error('Failed to load posts:', e)
     } finally {
@@ -534,10 +618,62 @@ export default function CommunityHubClient() {
                         </div>
                       </div>
                       {post.is_pinned && <span className="text-yellow-400" title="Pinned">📌</span>}
+                      {/* Delete button for owner or admin */}
+                      {user && (post.user_id === user.id || isAdmin) && (
+                        <button
+                          onClick={() => deletePost(post.id)}
+                          disabled={deletingPost === post.id}
+                          className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                          title="Delete post"
+                        >
+                          {deletingPost === post.id ? (
+                            <span className="animate-spin">⏳</span>
+                          ) : (
+                            <span>🗑️</span>
+                          )}
+                        </button>
+                      )}
                     </div>
 
                     {/* Post Content */}
                     <div className="mt-3 text-white whitespace-pre-wrap">{post.content}</div>
+
+                    {/* Campaign Preview Cards */}
+                    {(() => {
+                      const mentions = post.content.match(/@\[([^\]]+)\]/g) || []
+                      const uniqueIds = Array.from(new Set(mentions.map((m: string) => m.slice(2, -1))))
+                      return uniqueIds.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {uniqueIds.map((id: string) => {
+                            const campaign = campaignPreviews[id]
+                            if (!campaign) return null
+                            return (
+                              <Link
+                                key={id}
+                                href={`/story/${campaign.id}`}
+                                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                              >
+                                {campaign.image_uri ? (
+                                  <img
+                                    src={campaign.image_uri}
+                                    alt={campaign.title}
+                                    className="w-16 h-16 rounded-lg object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-900/50 to-purple-900/50 flex items-center justify-center">
+                                    <span className="text-2xl">🎖️</span>
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-white truncate">{campaign.title}</p>
+                                  <p className="text-sm text-blue-400">View Campaign →</p>
+                                </div>
+                              </Link>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
 
                     {/* Media */}
                     {renderMedia(post.media_urls, post.media_types)}

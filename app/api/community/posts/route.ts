@@ -233,3 +233,71 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
   }
 }
+
+// DELETE - Delete a post (owner or admin only)
+export async function DELETE(req: NextRequest) {
+  try {
+    const authHeader = req.headers.get('authorization') || ''
+    const token = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7) : ''
+    
+    if (!token) {
+      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+    }
+
+    const { data: userData, error: authErr } = await supabaseAdmin.auth.getUser(token)
+    if (authErr || !userData?.user?.id) {
+      return NextResponse.json({ error: 'INVALID_TOKEN' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const postId = searchParams.get('id')
+
+    if (!postId) {
+      return NextResponse.json({ error: 'POST_ID_REQUIRED' }, { status: 400 })
+    }
+
+    // Fetch the post to check ownership
+    const { data: post, error: fetchErr } = await supabaseAdmin
+      .from('community_posts')
+      .select('user_id')
+      .eq('id', postId)
+      .single()
+
+    if (fetchErr || !post) {
+      return NextResponse.json({ error: 'POST_NOT_FOUND' }, { status: 404 })
+    }
+
+    // Check if user is owner or admin
+    const { data: adminCheck } = await supabaseAdmin
+      .from('admin_users')
+      .select('id')
+      .eq('user_id', userData.user.id)
+      .maybeSingle()
+
+    const isOwner = post.user_id === userData.user.id
+    const isAdmin = !!adminCheck
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
+    }
+
+    // Delete related data first (comments, likes, mentions)
+    await supabaseAdmin.from('community_comments').delete().eq('post_id', postId)
+    await supabaseAdmin.from('community_likes').delete().eq('post_id', postId)
+    await supabaseAdmin.from('post_mentions').delete().eq('post_id', postId)
+
+    // Delete the post
+    const { error: deleteErr } = await supabaseAdmin
+      .from('community_posts')
+      .delete()
+      .eq('id', postId)
+
+    if (deleteErr) {
+      return NextResponse.json({ error: 'DELETE_FAILED', details: deleteErr.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
+  }
+}
