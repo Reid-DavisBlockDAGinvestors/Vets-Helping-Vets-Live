@@ -112,72 +112,64 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       const signer = await provider.getSigner()
       const contract = new Contract(CONTRACT_ADDRESS, MINT_EDITION_ABI, signer)
 
-      // Convert USD amounts to BDAG (wei)
-      const totalBdagWei = parseEther(bdagAmount.toFixed(18))
+      // Calculate per-NFT price in BDAG (contract mints 1 NFT per call)
+      const pricePerNftBdag = hasNftPrice ? usdToBdag(pricePerNft!) : bdagAmount
+      const pricePerNftWei = parseEther(pricePerNftBdag.toFixed(18))
       const tipBdagWei = bdagTipAmount > 0 ? parseEther(bdagTipAmount.toFixed(18)) : 0n
 
-      console.log(`[PurchasePanel] Minting edition for campaign ${targetId}`)
-      console.log(`[PurchasePanel] Total BDAG: ${bdagAmount} (${totalBdagWei} wei)`)
+      console.log(`[PurchasePanel] Minting ${quantity} edition(s) for campaign ${targetId}`)
+      console.log(`[PurchasePanel] Price per NFT: ${pricePerNftBdag} BDAG (${pricePerNftWei} wei)`)
       console.log(`[PurchasePanel] Tip BDAG: ${bdagTipAmount} (${tipBdagWei} wei)`)
       console.log(`[PurchasePanel] Contract: ${CONTRACT_ADDRESS}`)
       
-      setCryptoMsg('Please confirm the transaction in your wallet...')
-
-      let tx
-      if (tipBdagWei > 0n) {
-        // V5: Mint edition with tip - donor receives NFT
-        tx = await contract.mintWithBDAGAndTip(BigInt(targetId), tipBdagWei, {
-          value: totalBdagWei,
-        })
-      } else {
-        // V5: Mint edition - donor receives NFT
-        tx = await contract.mintWithBDAG(BigInt(targetId), {
-          value: totalBdagWei,
-        })
-      }
-
-      setCryptoMsg('Transaction submitted! Waiting for confirmation...')
-      setTxHash(tx.hash)
-      console.log(`[PurchasePanel] Tx submitted: ${tx.hash}`)
-
-      // Wait for confirmation with timeout (5 minutes max for slow chains)
-      let receipt
-      try {
-        // Use Promise.race to add timeout
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('CONFIRMATION_TIMEOUT')), 300000)
-        )
-        receipt = await Promise.race([tx.wait(1), timeoutPromise]) as any
-        console.log(`[PurchasePanel] Tx confirmed:`, receipt?.hash || tx.hash)
-      } catch (waitErr: any) {
-        if (waitErr?.message === 'CONFIRMATION_TIMEOUT') {
-          // Transaction was submitted but confirmation timed out
-          // The tx is likely still pending or already confirmed
-          console.log('[PurchasePanel] Confirmation timeout - tx may still be processing')
-          setCryptoMsg('Transaction submitted! Check your wallet for confirmation.')
-          setResult({ success: true, txHash: tx.hash })
-          return
+      const txHashes: string[] = []
+      
+      // Mint each NFT separately (contract mints 1 per call)
+      for (let i = 0; i < quantity; i++) {
+        const isLast = i === quantity - 1
+        setCryptoMsg(`Minting NFT ${i + 1} of ${quantity}... Please confirm in your wallet.`)
+        
+        let tx
+        // Apply tip only on the last mint
+        if (isLast && tipBdagWei > 0n) {
+          const valueWithTip = pricePerNftWei + tipBdagWei
+          tx = await contract.mintWithBDAGAndTip(BigInt(targetId), tipBdagWei, {
+            value: valueWithTip,
+          })
+        } else {
+          tx = await contract.mintWithBDAG(BigInt(targetId), {
+            value: pricePerNftWei,
+          })
         }
-        throw waitErr
+        
+        txHashes.push(tx.hash)
+        setTxHash(tx.hash)
+        console.log(`[PurchasePanel] Tx ${i + 1}/${quantity} submitted: ${tx.hash}`)
+        
+        // Wait for each tx to confirm before the next (prevents nonce issues)
+        setCryptoMsg(`Waiting for NFT ${i + 1} of ${quantity} to confirm...`)
+        await tx.wait(1)
+        console.log(`[PurchasePanel] Tx ${i + 1}/${quantity} confirmed`)
       }
       
-      // Use receipt hash if available, fallback to tx hash
-      const confirmedHash = receipt?.hash || tx.hash
+      console.log(`[PurchasePanel] All ${quantity} NFTs minted!`)
       
-      // Record the purchase in our backend
+      // Record the purchase in our backend (use last tx hash)
+      const lastTxHash = txHashes[txHashes.length - 1]
       try {
         await fetch('/api/purchase/record', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             campaignId: targetId,
-            txHash: confirmedHash,
+            txHash: lastTxHash,
             amountUSD: totalAmount,
             tipUSD: tipAmount,
             amountBDAG: bdagAmount,
             tipBDAG: bdagTipAmount,
             walletAddress: wallet.address,
-            editionMinted: true, // V5: Donor received an edition NFT
+            editionMinted: true,
+            quantity, // Track how many were minted
           })
         })
         console.log(`[PurchasePanel] Purchase recorded for campaign ${targetId}`)
@@ -186,8 +178,8 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
         console.warn('Failed to record purchase:', e)
       }
 
-      setResult({ success: true, txHash: confirmedHash })
-      setCryptoMsg('🎉 Transaction confirmed! Your NFT has been minted.')
+      setResult({ success: true, txHash: lastTxHash, txHashes, quantity })
+      setCryptoMsg(`🎉 ${quantity} NFT${quantity > 1 ? 's' : ''} minted successfully!`)
       wallet.updateBalance()
     } catch (e: any) {
       console.error('BDAG purchase error:', e)
