@@ -130,32 +130,59 @@ export function useWallet() {
     }
   }, [updateBalance])
 
+  // Detect if on mobile
+  const isMobile = useCallback(() => {
+    if (typeof window === 'undefined') return false
+    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  }, [])
+
   // Connect via WalletConnect (for mobile browsers without injected wallet)
   const connectWalletConnect = useCallback(async () => {
     setState(prev => ({ ...prev, isConnecting: true, error: null }))
 
     try {
+      const onMobile = isMobile()
+      console.log('[WalletConnect] Starting connection, mobile:', onMobile)
+
       // Create WalletConnect provider
+      // On mobile, we disable the QR modal and handle deep linking ourselves
       const provider = await EthereumProvider.init({
         projectId: WALLETCONNECT_PROJECT_ID,
         chains: [BLOCKDAG_CHAIN_ID],
-        optionalChains: [1, 137], // Ethereum mainnet and Polygon as fallbacks
-        showQrModal: true,
+        optionalChains: [1], // Ethereum mainnet as fallback
+        showQrModal: !onMobile, // Only show QR modal on desktop
         metadata: {
           name: 'PatriotPledge NFTs',
           description: 'Support veterans through blockchain-powered fundraising',
-          url: typeof window !== 'undefined' ? window.location.origin : 'https://patriotpledgenfts.com',
-          icons: ['https://patriotpledgenfts.netlify.app/favicon.ico'],
+          url: typeof window !== 'undefined' ? window.location.origin : 'https://vetshelpingvets.life',
+          icons: ['https://vetshelpingvets.life/favicon.ico'],
         },
         rpcMap: {
           [BLOCKDAG_CHAIN_ID]: 'https://rpc.awakening.bdagscan.com',
+          1: 'https://eth.llamarpc.com',
         },
       })
 
       // Store provider ref
       wcProviderRef.current = provider
 
-      // Connect
+      // Set up event listener for URI - this fires immediately when connect() is called
+      provider.on('display_uri', (uri: string) => {
+        console.log('[WalletConnect] URI generated')
+        
+        // On mobile, immediately redirect to MetaMask
+        if (onMobile) {
+          const encodedUri = encodeURIComponent(uri)
+          // Use the universal link which works better on iOS
+          const metamaskLink = `https://metamask.app.link/wc?uri=${encodedUri}`
+          console.log('[WalletConnect] Redirecting to MetaMask...')
+          
+          // Redirect immediately
+          window.location.href = metamaskLink
+        }
+      })
+
+      // Connect - this will trigger the display_uri event
       await provider.connect()
 
       // Get accounts and chain
@@ -201,7 +228,7 @@ export function useWallet() {
         error: e?.message || 'Failed to connect via WalletConnect',
       }))
     }
-  }, [])
+  }, [isMobile])
 
   const disconnect = useCallback(async () => {
     // Disconnect WalletConnect if active
