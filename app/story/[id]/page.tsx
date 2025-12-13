@@ -150,10 +150,11 @@ export default async function StoryViewer({ params }: { params: { id: string } }
   // Get raised amounts from on-chain
   const grossRaisedUSD = onchain ? Number(onchain.grossRaised || 0) : 0
   
-  // Calculate NFT sales = editions sold × price per edition
-  const nftSalesUSD = (editionsMinted > 0 && pricePerCopy && pricePerCopy > 0) 
+  // Calculate NFT sales = editions sold × price per edition (cap at gross raised)
+  const calculatedNftSales = (editionsMinted > 0 && pricePerCopy && pricePerCopy > 0) 
     ? editionsMinted * pricePerCopy 
     : 0
+  const nftSalesUSD = Math.min(calculatedNftSales, grossRaisedUSD) // Can't exceed total raised
   
   // Tips = gross raised - NFT sales (extra amounts above NFT price)
   const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)

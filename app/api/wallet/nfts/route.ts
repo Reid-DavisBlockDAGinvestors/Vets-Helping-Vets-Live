@@ -58,23 +58,47 @@ export async function GET(req: NextRequest) {
           metadata = await mres.json()
         } catch {}
 
-        // Get Supabase submission for additional details
+        // Get Supabase submission for additional details - try multiple lookups
         let submission: any = null
         try {
-          const { data } = await supabaseAdmin
+          // First try by campaign_id
+          let { data } = await supabaseAdmin
             .from('submissions')
             .select('id, title, story, goal, creator_wallet, image_uri, nft_price, num_copies, nft_editions')
             .eq('campaign_id', campaignId)
+            .eq('status', 'minted')
             .maybeSingle()
+          
+          // If not found, try by token_id (legacy)
+          if (!data) {
+            const result = await supabaseAdmin
+              .from('submissions')
+              .select('id, title, story, goal, creator_wallet, image_uri, nft_price, num_copies, nft_editions')
+              .eq('token_id', campaignId)
+              .eq('status', 'minted')
+              .maybeSingle()
+            data = result.data
+          }
+          
           submission = data
-        } catch {}
+        } catch (e) {
+          console.error(`Error fetching submission for campaign ${campaignId}:`, e)
+        }
 
-        // Get goal and editions from Supabase
-        const goalUSD = submission?.goal ? Number(submission.goal) : (Number(camp.goal ?? camp[2]) / 1e18 * BDAG_USD_RATE)
-        const maxEditions = Number(submission?.num_copies || submission?.nft_editions || (camp.maxEditions ?? camp[6]) || 100)
+        // Get on-chain values
+        const onchainMaxEditions = Number((camp.maxEditions ?? camp[6]) || 100)
         const editionsMinted = Number((camp.editionsMinted ?? camp[5]) || 0)
         
-        // Price = goal / editions
+        // Convert on-chain goal to USD
+        const onchainGoalWei = BigInt(camp.goal ?? camp[2] ?? 0n)
+        const onchainGoalBDAG = Number(onchainGoalWei) / 1e18
+        const onchainGoalUSD = onchainGoalBDAG * BDAG_USD_RATE
+        
+        // Use Supabase goal/editions for display, fallback to on-chain
+        const goalUSD = submission?.goal ? Number(submission.goal) : onchainGoalUSD
+        const maxEditions = Number(submission?.num_copies || submission?.nft_editions || onchainMaxEditions)
+        
+        // Price = goal / editions (use same source for both)
         const pricePerEditionUSD = goalUSD > 0 && maxEditions > 0 ? goalUSD / maxEditions : 1
         
         // Convert gross raised to USD
@@ -82,8 +106,9 @@ export async function GET(req: NextRequest) {
         const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
         const grossRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
         
-        // Calculate NFT sales = editions × price
-        const nftSalesUSD = editionsMinted * pricePerEditionUSD
+        // Calculate NFT sales = editions × price (but cap at gross raised)
+        const calculatedNftSales = editionsMinted * pricePerEditionUSD
+        const nftSalesUSD = Math.min(calculatedNftSales, grossRaisedUSD) // Can't exceed total raised
         
         // Tips = gross raised - NFT sales
         const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)

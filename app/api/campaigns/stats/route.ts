@@ -88,8 +88,9 @@ export async function GET(req: NextRequest) {
           pricePerEditionUSD = goalUSD / numEditions
         }
         
-        // Calculate NFT sales revenue = editions sold × price per edition (USD)
-        const nftSalesUSD = editionsMinted * pricePerEditionUSD
+        // Calculate NFT sales revenue = editions sold × price per edition (cap at gross raised)
+        const calculatedNftSales = editionsMinted * pricePerEditionUSD
+        const nftSalesUSD = Math.min(calculatedNftSales, grossRaisedUSD) // Can't exceed total raised
         
         // Tips = gross raised - NFT sales (anything paid above NFT price)
         const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)

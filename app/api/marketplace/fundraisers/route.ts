@@ -155,8 +155,9 @@ export async function GET(req: NextRequest) {
 
       const remaining = maxEditions > 0 ? Math.max(0, maxEditions - editionsMinted) : null // null = unlimited
       
-      // Calculate NFT sales revenue = editions sold × price per edition
-      const nftSalesUSD = editionsMinted * pricePerEdition
+      // Calculate NFT sales revenue = editions sold × price per edition (cap at gross raised)
+      const calculatedNftSales = editionsMinted * pricePerEdition
+      const nftSalesUSD = Math.min(calculatedNftSales, grossRaisedUSD) // Can't exceed total raised
       
       // Calculate tips = gross raised - NFT sales (tips are extra amounts above NFT price)
       const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
