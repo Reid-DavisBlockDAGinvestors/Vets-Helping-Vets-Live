@@ -55,6 +55,7 @@ export default function CommunityHub() {
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({})
   const [embedInput, setEmbedInput] = useState('')
   const [showEmbedModal, setShowEmbedModal] = useState(false)
+  const [userProfile, setUserProfile] = useState<{ display_name: string; avatar_url: string | null } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Check auth on mount
@@ -63,16 +64,38 @@ export default function CommunityHub() {
       const { data: { session } } = await supabase.auth.getSession()
       setUser(session?.user || null)
       setToken(session?.access_token || null)
+      if (session?.access_token) {
+        fetchUserProfile(session.access_token)
+      }
     }
     checkAuth()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_: any, session: any) => {
       setUser(session?.user || null)
       setToken(session?.access_token || null)
+      if (session?.access_token) {
+        fetchUserProfile(session.access_token)
+      } else {
+        setUserProfile(null)
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [])
+
+  const fetchUserProfile = async (accessToken: string) => {
+    try {
+      const res = await fetch('/api/community/profile', {
+        headers: { authorization: `Bearer ${accessToken}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setUserProfile(data?.profile || null)
+      }
+    } catch (e) {
+      console.error('Failed to fetch user profile:', e)
+    }
+  }
 
   // Load posts
   useEffect(() => {
@@ -333,8 +356,12 @@ export default function CommunityHub() {
           {user ? (
             <div className="rounded-2xl bg-white/5 border border-white/10 p-4 mb-6">
               <div className="flex gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
-                  {(user.email?.[0] || '?').toUpperCase()}
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold overflow-hidden">
+                  {userProfile?.avatar_url ? (
+                    <img src={userProfile.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    (user.email?.[0] || '?').toUpperCase()
+                  )}
                 </div>
                 <div className="flex-1">
                   <textarea
@@ -548,8 +575,12 @@ export default function CommunityHub() {
                       {/* Comment Input */}
                       {user && (
                         <div className="flex gap-3 mb-4">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
-                            {(user.email?.[0] || '?').toUpperCase()}
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold overflow-hidden">
+                            {userProfile?.avatar_url ? (
+                              <img src={userProfile.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              (user.email?.[0] || '?').toUpperCase()
+                            )}
                           </div>
                           <div className="flex-1 flex gap-2">
                             <input
