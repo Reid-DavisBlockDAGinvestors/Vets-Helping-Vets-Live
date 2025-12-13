@@ -1,36 +1,46 @@
 -- Create storage bucket for community uploads
--- Run this in Supabase Dashboard > Storage > New Bucket
+-- Run this in Supabase SQL Editor
 
--- Bucket name: community
--- Public: Yes (for avatar URLs to work)
--- File size limit: 5MB
--- Allowed MIME types: image/jpeg, image/png, image/gif, image/webp
+-- Step 1: Create the storage bucket
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'community',
+  'community',
+  true,
+  5242880, -- 5MB in bytes
+  ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = true,
+  file_size_limit = 5242880,
+  allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
--- After creating the bucket, add these policies:
+-- Step 2: Create RLS policies for the storage.objects table
 
--- Policy 1: Allow authenticated users to upload
--- Name: Allow authenticated uploads
--- Allowed operation: INSERT
--- Target roles: authenticated
--- WITH CHECK expression: (auth.uid() = (storage.foldername(name))[1]::uuid)
+-- Policy: Allow public read access to community bucket
+DROP POLICY IF EXISTS "Public read community" ON storage.objects;
+CREATE POLICY "Public read community" ON storage.objects
+  FOR SELECT
+  TO public
+  USING (bucket_id = 'community');
 
--- Policy 2: Allow public read access
--- Name: Allow public read
--- Allowed operation: SELECT
--- Target roles: public
--- USING expression: true
+-- Policy: Allow authenticated users to upload to community bucket
+DROP POLICY IF EXISTS "Authenticated upload community" ON storage.objects;
+CREATE POLICY "Authenticated upload community" ON storage.objects
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (bucket_id = 'community');
 
--- Policy 3: Allow users to update their own files
--- Name: Allow users to update own
--- Allowed operation: UPDATE
--- Target roles: authenticated
--- USING expression: (auth.uid() = (storage.foldername(name))[1]::uuid)
+-- Policy: Allow users to update their own files
+DROP POLICY IF EXISTS "Users update own community" ON storage.objects;
+CREATE POLICY "Users update own community" ON storage.objects
+  FOR UPDATE
+  TO authenticated
+  USING (bucket_id = 'community' AND auth.uid()::text = (storage.foldername(name))[1]);
 
--- Policy 4: Allow users to delete their own files
--- Name: Allow users to delete own
--- Allowed operation: DELETE  
--- Target roles: authenticated
--- USING expression: (auth.uid() = (storage.foldername(name))[1]::uuid)
-
--- Note: The folder structure is: {user_id}/{type}_{timestamp}.{ext}
--- This allows each user to manage their own files
+-- Policy: Allow users to delete their own files
+DROP POLICY IF EXISTS "Users delete own community" ON storage.objects;
+CREATE POLICY "Users delete own community" ON storage.objects
+  FOR DELETE
+  TO authenticated
+  USING (bucket_id = 'community' AND auth.uid()::text = (storage.foldername(name))[1]);
