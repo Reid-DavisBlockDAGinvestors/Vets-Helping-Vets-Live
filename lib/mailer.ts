@@ -10,7 +10,7 @@ const EXPLORER_URL = 'https://awakening.bdagscan.com'
 
 export async function sendEmail(payload: EmailPayload) {
   const apiKey = process.env.RESEND_API_KEY
-  const from = process.env.FROM_EMAIL || 'no-reply@patriotpledge.local'
+  const from = process.env.FROM_EMAIL || 'PatriotPledgeNFTs@VetsHelpingVets.Life'
   if (!apiKey) {
     console.log('[mailer] RESEND_API_KEY not set, skipping email', payload)
     return { skipped: true }
