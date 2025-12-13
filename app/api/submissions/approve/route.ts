@@ -113,12 +113,10 @@ export async function POST(req: NextRequest) {
     }
     
     // Price per NFT = Goal ÷ Copies (or explicit price if set) - in USD
-    let priceUSD = merged.price_per_copy || merged.nft_price
+    // Allow decimal prices (e.g., $0.50 for $50 goal / 100 copies)
+    const priceUSD = merged.price_per_copy || merged.nft_price
       ? Number(merged.price_per_copy || merged.nft_price)
-      : (goalUSD > 0 && copiesNum > 0 ? goalUSD / copiesNum : 1)
-    
-    // Ensure minimum $1 price
-    if (priceUSD < 1) priceUSD = 1
+      : (goalUSD > 0 && copiesNum > 0 ? goalUSD / copiesNum : 0.01)
     
     // Convert USD to BDAG for on-chain storage
     // BDAG_USD_RATE = 0.05 means 1 BDAG = $0.05, so 1 USD = 20 BDAG

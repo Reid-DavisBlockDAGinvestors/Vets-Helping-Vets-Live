@@ -97,8 +97,8 @@ export async function GET(req: NextRequest) {
         const goalUSD = submission?.goal ? Number(submission.goal) : 100 // Default $100 goal
         const maxEditions = Number(submission?.num_copies || submission?.nft_editions || onchainMaxEditions || 100)
         
-        // === Calculate price per NFT: Goal ÷ Max Editions ===
-        const pricePerEditionUSD = goalUSD > 0 && maxEditions > 0 ? goalUSD / maxEditions : 1
+        // === Calculate price per NFT: Goal ÷ Max Editions (allows decimals like $0.50) ===
+        const pricePerEditionUSD = goalUSD > 0 && maxEditions > 0 ? goalUSD / maxEditions : 0
         
         // === Calculate NFT sales revenue ===
         // NFT Sales = Editions Sold × Price Per Edition

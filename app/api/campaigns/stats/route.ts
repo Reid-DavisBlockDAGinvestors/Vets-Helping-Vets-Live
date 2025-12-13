@@ -81,17 +81,14 @@ export async function GET(req: NextRequest) {
         // Price calculation priority:
         // 1. Explicit nft_price from Supabase (in dollars)
         // 2. Explicit price_per_copy from Supabase (in dollars)
-        // 3. Goal / Editions
-        // 4. Default to $1 minimum
-        let pricePerEditionUSD = 1
-        if (submission?.nft_price && Number(submission.nft_price) >= 1) {
+        // 3. Goal / Editions (allows decimals like $0.50)
+        let pricePerEditionUSD = 0
+        if (submission?.nft_price && Number(submission.nft_price) > 0) {
           pricePerEditionUSD = Number(submission.nft_price)
-        } else if (submission?.price_per_copy && Number(submission.price_per_copy) >= 1) {
+        } else if (submission?.price_per_copy && Number(submission.price_per_copy) > 0) {
           pricePerEditionUSD = Number(submission.price_per_copy)
         } else if (goalUSD > 0 && numEditions > 0) {
-          const calculatedPrice = goalUSD / numEditions
-          // Ensure minimum $1 per NFT unless goal is very low
-          pricePerEditionUSD = Math.max(1, calculatedPrice)
+          pricePerEditionUSD = goalUSD / numEditions
         }
         
         // Calculate NFT sales revenue = editions sold × price per edition
