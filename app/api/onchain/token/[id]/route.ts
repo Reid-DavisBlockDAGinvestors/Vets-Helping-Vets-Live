@@ -26,7 +26,22 @@ export async function GET(_req: NextRequest, context: { params: { id: string } }
     let camp: any
     try {
       camp = await contract.getCampaign(BigInt(campaignId))
+      // Debug: log raw result
+      console.log(`[onchain/token] Campaign ${campaignId} raw result type:`, typeof camp)
+      console.log(`[onchain/token] Campaign ${campaignId} raw result:`, camp)
+      console.log(`[onchain/token] Campaign ${campaignId} parsed:`, {
+        category: camp.category,
+        goal: camp.goal?.toString(),
+        editionsMinted: camp.editionsMinted?.toString(),
+        maxEditions: camp.maxEditions?.toString(),
+        pricePerEdition: camp.pricePerEdition?.toString(),
+        active: camp.active,
+        // Also try indexed access
+        cat0: camp[0],
+        goal2: camp[2]?.toString(),
+      })
     } catch (e: any) {
+      console.error(`[onchain/token] Failed to get campaign ${campaignId}:`, e?.message)
       return NextResponse.json({ error: 'CAMPAIGN_NOT_FOUND', details: e?.message }, { status: 404 })
     }
 

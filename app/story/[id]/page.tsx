@@ -128,7 +128,7 @@ export default async function StoryViewer({ params }: { params: { id: string } }
   const editionsMinted = onchain?.editionsMinted ? Number(onchain.editionsMinted) : 0
   const goal = goalUsd ?? (onchain ? Number(onchain.goal || 0) : 0)
   
-  // Calculate price: check nft_price first (admin set in USD), then price_per_copy, then calculate from goal/copies
+  // Calculate price: check nft_price first (admin set in USD), then price_per_copy, then calculate from goal/copies, then on-chain price
   let pricePerCopy: number | null = null
   if (submission?.nft_price && Number(submission.nft_price) > 0) {
     // Admin explicitly set the price in USD
@@ -137,6 +137,13 @@ export default async function StoryViewer({ params }: { params: { id: string } }
     pricePerCopy = Number(submission.price_per_copy)
   } else if (goal > 0 && maxEditions > 0) {
     pricePerCopy = goal / maxEditions
+  } else if (onchain?.pricePerEdition && Number(onchain.pricePerEdition) > 0) {
+    // Fallback to on-chain price (already in USD from API)
+    pricePerCopy = Number(onchain.pricePerEdition)
+  } else if (goal > 0) {
+    // Last fallback: assume 100 editions if no other data (common default)
+    // This ensures campaigns with a goal always show NFT purchase UI
+    pricePerCopy = goal / 100
   }
   
   // Calculate raised from edition sales (more accurate than on-chain which may have BDAG conversion issues)
