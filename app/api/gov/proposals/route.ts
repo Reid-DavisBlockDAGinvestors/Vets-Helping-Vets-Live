@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { sendProposalSubmitted, sendProposalVotingOpen } from '@/lib/mailer'
 
 // GET: list proposals (optionally filter by admin param to see pending ones)
 export async function GET(req: NextRequest) {
@@ -95,6 +97,22 @@ export async function POST(req: NextRequest) {
     }
     
     console.log('[Proposals] Created proposal:', data?.id, 'by wallet:', submitter_wallet)
+    
+    // Send confirmation email to submitter
+    if (submitter_email) {
+      try {
+        await sendProposalSubmitted({
+          email: submitter_email,
+          proposalId: data?.id,
+          proposalTitle: title,
+          submitterName: submitter_name
+        })
+        console.log(`[Proposals] Sent submission confirmation to ${submitter_email}`)
+      } catch (emailErr) {
+        console.error('[Proposals] Failed to send submission email:', emailErr)
+      }
+    }
+    
     return NextResponse.json({ id: data?.id, success: true })
   } catch (e: any) {
     console.error('[Proposals] POST error:', e)
@@ -107,6 +125,13 @@ export async function PUT(req: NextRequest) {
   try {
     const { id, status, open, admin_notes } = await req.json()
     if (!id) return NextResponse.json({ error: 'Missing proposal ID' }, { status: 400 })
+    
+    // Get current proposal state before update
+    const { data: currentProposal } = await supabase
+      .from('proposals')
+      .select('open, status, title, description, submitter_email, submitter_name')
+      .eq('id', id)
+      .single()
     
     const updates: any = {}
     if (status !== undefined) updates.status = status
@@ -122,6 +147,66 @@ export async function PUT(req: NextRequest) {
     if (error) throw error
     
     console.log('[Proposals] Updated proposal:', id, updates)
+    
+    // If proposal was just opened for voting (open changed from false to true)
+    const justOpened = open === true && currentProposal && !currentProposal.open
+    if (justOpened && currentProposal) {
+      // Notify the submitter
+      if (currentProposal.submitter_email) {
+        try {
+          await sendProposalVotingOpen({
+            email: currentProposal.submitter_email,
+            proposalId: id,
+            proposalTitle: currentProposal.title,
+            proposalDescription: currentProposal.description || '',
+            recipientName: currentProposal.submitter_name
+          })
+          console.log(`[Proposals] Notified submitter ${currentProposal.submitter_email} that voting is open`)
+        } catch (emailErr) {
+          console.error('[Proposals] Failed to notify submitter:', emailErr)
+        }
+      }
+      
+      // Notify all donors and creators (people who have purchased NFTs or created campaigns)
+      try {
+        // Get unique emails from events (purchases) and submissions (creators)
+        const { data: purchaseEmails } = await supabaseAdmin
+          .from('events')
+          .select('metadata')
+          .not('metadata->buyerEmail', 'is', null)
+        
+        const { data: creatorEmails } = await supabaseAdmin
+          .from('submissions')
+          .select('creator_email')
+          .not('creator_email', 'is', null)
+          .eq('status', 'minted')
+        
+        const uniqueEmails = new Set<string>()
+        
+        // Add creator emails
+        creatorEmails?.forEach((c: any) => {
+          if (c.creator_email) uniqueEmails.add(c.creator_email)
+        })
+        
+        // Send to each unique email (limit to prevent spam)
+        const emailList = Array.from(uniqueEmails).slice(0, 100)
+        for (const email of emailList) {
+          if (email === currentProposal.submitter_email) continue // Already notified
+          try {
+            await sendProposalVotingOpen({
+              email,
+              proposalId: id,
+              proposalTitle: currentProposal.title,
+              proposalDescription: currentProposal.description || ''
+            })
+          } catch {}
+        }
+        console.log(`[Proposals] Notified ${emailList.length} community members about new vote`)
+      } catch (notifyErr) {
+        console.error('[Proposals] Failed to notify community:', notifyErr)
+      }
+    }
+    
     return NextResponse.json({ success: true })
   } catch (e: any) {
     console.error('[Proposals] PUT error:', e)

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { sendVoteConfirmation } from '@/lib/mailer'
 
 export async function POST(req: NextRequest) {
   try {
@@ -71,6 +72,29 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[Vote] ${voter_wallet} voted ${support ? 'YES' : 'NO'} on proposal ${id}`)
+    
+    // Send vote confirmation email if voter provided email
+    if (voter_email) {
+      try {
+        // Get proposal title for email
+        const { data: proposal } = await supabase
+          .from('proposals')
+          .select('title')
+          .eq('id', id)
+          .single()
+        
+        await sendVoteConfirmation({
+          email: voter_email,
+          proposalTitle: proposal?.title || 'Governance Proposal',
+          votedYes: support,
+          voterName: voter_name
+        })
+        console.log(`[Vote] Sent confirmation email to ${voter_email}`)
+      } catch (emailErr) {
+        console.error('[Vote] Failed to send confirmation email:', emailErr)
+      }
+    }
+    
     return NextResponse.json({ ok: true })
   } catch (e: any) {
     console.error('[Vote] Error:', e)

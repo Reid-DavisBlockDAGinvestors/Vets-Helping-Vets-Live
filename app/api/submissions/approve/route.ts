@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getRelayerSigner, getContract } from '@/lib/onchain'
-import { sendEmail } from '@/lib/mailer'
+import { sendCampaignApproved } from '@/lib/mailer'
+
+// Convert IPFS URI to HTTP gateway URL
+function toHttpUrl(uri: string | null): string | null {
+  if (!uri) return null
+  if (uri.startsWith('ipfs://')) {
+    return `https://gateway.pinata.cloud/ipfs/${uri.slice(7)}`
+  }
+  return uri
+}
 
 /**
  * V5 Approve Flow:
@@ -86,18 +95,7 @@ export async function POST(req: NextRequest) {
       metadata_uri: merged.metadata_uri 
     }).eq('id', id)
     
-    try {
-      let uname: string | null = null
-      try {
-        const { data: profU } = await supabaseAdmin.from('profiles').select('username').eq('email', sub.creator_email).maybeSingle()
-        uname = profU?.username || null
-      } catch {}
-      await sendEmail({
-        to: sub.creator_email,
-        subject: 'Your submission was approved',
-        html: `<p>${uname ? `Hi ${uname},` : 'Good news!'}</p><p>Your submission was approved and your fundraiser campaign is now live!</p><p>ID: ${id}</p>`
-      })
-    } catch {}
+    // Email will be sent after campaign is created on-chain with campaignId
 
     const signer = getRelayerSigner()
     const contract = getContract(signer)
@@ -228,20 +226,21 @@ export async function POST(req: NextRequest) {
       console.log(`[approve] Submission ${id} updated: campaign_id=${campaignId}, status=minted`)
     }
     
-    try {
-      let uname: string | null = null
+    // Send campaign approved email with proper template
+    if (campaignId != null) {
       try {
-        const { data: profU } = await supabaseAdmin.from('profiles').select('username').eq('email', sub.creator_email).maybeSingle()
-        uname = profU?.username || null
-      } catch {}
-      const base = process.env.NEXT_PUBLIC_EXPLORER_BASE || ''
-      const link = txHash && base ? `${base}/tx/${txHash}` : txHash || ''
-      await sendEmail({
-        to: sub.creator_email,
-        subject: 'Your fundraiser campaign is live!',
-        html: `<p>${uname ? `Hi ${uname},` : 'Congratulations!'}</p><p>Your fundraiser campaign is now live on the marketplace. Donors can now contribute and receive edition NFTs.</p><p>Campaign ID: ${campaignId}</p><p>Tx: <a href="${link}">${txHash}</a></p>`
-      })
-    } catch {}
+        await sendCampaignApproved({
+          email: sub.creator_email,
+          title: sub.title || 'Your Campaign',
+          campaignId: campaignId,
+          creatorName: sub.creator_name,
+          imageUrl: toHttpUrl(sub.image_uri) || undefined
+        })
+        console.log(`[approve] Sent campaign approved email to ${sub.creator_email}`)
+      } catch (emailErr) {
+        console.error('[approve] Failed to send campaign approved email:', emailErr)
+      }
+    }
 
     return NextResponse.json({
       ok: true,

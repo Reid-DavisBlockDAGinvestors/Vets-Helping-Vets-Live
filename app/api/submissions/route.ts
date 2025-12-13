@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { sendEmail } from '@/lib/mailer'
+import { sendSubmissionConfirmation } from '@/lib/mailer'
 
 // POST /api/submissions  -> create a new creator submission (status=pending)
 export async function POST(req: NextRequest) {
@@ -65,16 +65,11 @@ export async function POST(req: NextRequest) {
     } catch {}
     // Send receipt email (best-effort)
     try {
-      // Personalize with username when available
-      let uname: string | null = null
-      try {
-        const { data: profU } = await supabaseAdmin.from('profiles').select('username').eq('email', creator_email).maybeSingle()
-        uname = profU?.username || null
-      } catch {}
-      await sendEmail({
-        to: creator_email,
-        subject: 'Submission received',
-        html: `<p>${uname ? `Hi ${uname},` : 'Thanks for your submission.'}</p><p>ID: ${data.id}</p><p>We will review and notify you on approval.</p>`
+      await sendSubmissionConfirmation({
+        email: creator_email,
+        submissionId: data.id,
+        title: title || 'Your Campaign',
+        creatorName: creator_name
       })
     } catch {}
     return NextResponse.json({ id: data.id, status: data.status })
