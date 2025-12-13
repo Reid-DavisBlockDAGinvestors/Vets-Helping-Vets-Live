@@ -28,10 +28,12 @@ export default function AdminPage() {
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [requestName, setRequestName] = useState('')
   const [requestReason, setRequestReason] = useState('')
+  const [requestedRole, setRequestedRole] = useState<'admin' | 'moderator' | 'viewer'>('admin')
   const [requestMsg, setRequestMsg] = useState('')
   const [requestLoading, setRequestLoading] = useState(false)
   const [adminRequests, setAdminRequests] = useState<any[]>([])
   const [requestsLoading, setRequestsLoading] = useState(false)
+  const [userPermissions, setUserPermissions] = useState<any>(null)
 
   // Check for existing session on mount
   useEffect(() => {
@@ -42,8 +44,11 @@ export default function AdminPage() {
         if (token) {
           const res = await fetch('/api/admin/me', { headers: { authorization: `Bearer ${token}` } })
           const data = await res.json().catch(() => ({}))
-          if (res.ok && data?.role === 'admin') {
+          // Allow any role with dashboard access
+          const validRoles = ['super_admin', 'admin', 'moderator', 'viewer']
+          if (res.ok && validRoles.includes(data?.role)) {
             setAuthed(true)
+            setUserPermissions(data?.permissions || {})
           }
         }
       } catch (e) {
@@ -79,8 +84,10 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/me', { headers: { authorization: `Bearer ${token}` } })
       const data = await res.json().catch(()=>({}))
       if (!res.ok) { setAuthMsg(data?.error || 'Unauthorized'); return }
-      if ((data?.role || 'user') !== 'admin') { setAuthMsg('Unauthorized: not an admin'); return }
+      const validRoles = ['super_admin', 'admin', 'moderator', 'viewer']
+      if (!validRoles.includes(data?.role || 'user')) { setAuthMsg('Unauthorized: not an admin'); return }
       setAuthed(true)
+      setUserPermissions(data?.permissions || {})
     } catch (e:any) {
       setAuthMsg(e?.message || 'Auth failed')
     }
@@ -115,7 +122,7 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: requestName, reason: requestReason })
+        body: JSON.stringify({ name: requestName, reason: requestReason, requestedRole })
       })
       const data = await res.json().catch(() => ({}))
       
@@ -155,7 +162,7 @@ export default function AdminPage() {
   }
 
   // Approve or reject a request
-  const handleRequest = async (requestId: string, action: 'approve' | 'reject') => {
+  const handleRequest = async (requestId: string, action: 'approve' | 'reject', role?: string) => {
     try {
       const { data: session } = await supabase.auth.getSession()
       const token = session?.session?.access_token
@@ -164,7 +171,7 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-        body: JSON.stringify({ requestId, action })
+        body: JSON.stringify({ requestId, action, role })
       })
       const data = await res.json().catch(() => ({}))
       
@@ -269,6 +276,18 @@ export default function AdminPage() {
                     value={requestName} 
                     onChange={e=>setRequestName(e.target.value)} 
                   />
+                  <div>
+                    <label className="block text-sm text-white/60 mb-2">Access Level Requested</label>
+                    <select
+                      className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white focus:outline-none focus:border-blue-500/50"
+                      value={requestedRole}
+                      onChange={e => setRequestedRole(e.target.value as any)}
+                    >
+                      <option value="admin" className="bg-gray-800">Admin - Full campaign management</option>
+                      <option value="moderator" className="bg-gray-800">Moderator - Approve updates only</option>
+                      <option value="viewer" className="bg-gray-800">Viewer - Read-only access</option>
+                    </select>
+                  </div>
                   <textarea 
                     className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50 min-h-[80px]" 
                     placeholder="Why do you need admin access?" 
@@ -449,6 +468,13 @@ export default function AdminPage() {
                             <span className="font-medium text-white">{req.name || 'No name'}</span>
                             <span className="text-white/50">•</span>
                             <span className="text-white/70 text-sm">{req.email}</span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              req.requested_role === 'admin' ? 'bg-blue-500/20 text-blue-400' :
+                              req.requested_role === 'moderator' ? 'bg-purple-500/20 text-purple-400' :
+                              'bg-gray-500/20 text-gray-400'
+                            }`}>
+                              {req.requested_role || 'admin'}
+                            </span>
                           </div>
                           {req.reason && (
                             <p className="text-white/60 text-sm mt-1">{req.reason}</p>
@@ -457,9 +483,21 @@ export default function AdminPage() {
                             Requested: {new Date(req.created_at).toLocaleDateString()}
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2">
+                          <select
+                            id={`role-${req.id}`}
+                            className="rounded-lg bg-white/10 border border-white/10 px-2 py-1.5 text-white text-sm focus:outline-none"
+                            defaultValue={req.requested_role || 'admin'}
+                          >
+                            <option value="admin" className="bg-gray-800">Admin</option>
+                            <option value="moderator" className="bg-gray-800">Moderator</option>
+                            <option value="viewer" className="bg-gray-800">Viewer</option>
+                          </select>
                           <button
-                            onClick={() => handleRequest(req.id, 'approve')}
+                            onClick={() => {
+                              const roleSelect = document.getElementById(`role-${req.id}`) as HTMLSelectElement
+                              handleRequest(req.id, 'approve', roleSelect?.value)
+                            }}
                             className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors"
                           >
                             Approve

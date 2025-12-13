@@ -19,6 +19,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}))
     const name = body?.name || ''
     const reason = body?.reason || ''
+    const requestedRole = body?.requestedRole || 'admin'
+    
+    // Validate requested role
+    const validRoles = ['admin', 'moderator', 'viewer']
+    if (!validRoles.includes(requestedRole)) {
+      return NextResponse.json({ error: 'INVALID_ROLE', message: 'Invalid role requested' }, { status: 400 })
+    }
 
     // Check if user already has a pending request
     const { data: existing } = await supabaseAdmin
@@ -49,6 +56,7 @@ export async function POST(req: NextRequest) {
       email: userEmail,
       name,
       reason,
+      requested_role: requestedRole,
       status: 'pending'
     })
 

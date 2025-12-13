@@ -18,20 +18,33 @@ export async function GET(req: NextRequest) {
     let { data: profile } = await supabaseAdmin.from('profiles').select('role,email').eq('id', uid).maybeSingle()
 
     if (!profile) {
-      // Create profile row if missing
-      const roleToSet = userEmail && bootstrapAdminEmail && userEmail.toLowerCase() === bootstrapAdminEmail.toLowerCase() ? 'admin' : 'user'
+      // Create profile row if missing - bootstrap admin gets super_admin
+      const roleToSet = userEmail && bootstrapAdminEmail && userEmail.toLowerCase() === bootstrapAdminEmail.toLowerCase() ? 'super_admin' : 'user'
       await supabaseAdmin.from('profiles').upsert({ id: uid, email: userEmail, role: roleToSet }).eq('id', uid)
       profileRole = roleToSet
     } else {
       profileRole = profile?.role || 'user'
-      // Promote to admin if bootstrap email matches (idempotent)
-      if (userEmail && bootstrapAdminEmail && userEmail.toLowerCase() === bootstrapAdminEmail.toLowerCase() && profileRole !== 'admin') {
-        await supabaseAdmin.from('profiles').update({ role: 'admin' }).eq('id', uid)
-        profileRole = 'admin'
+      // Promote to super_admin if bootstrap email matches (idempotent)
+      if (userEmail && bootstrapAdminEmail && userEmail.toLowerCase() === bootstrapAdminEmail.toLowerCase() && profileRole !== 'super_admin') {
+        await supabaseAdmin.from('profiles').update({ role: 'super_admin' }).eq('id', uid)
+        profileRole = 'super_admin'
       }
     }
 
-    return NextResponse.json({ userId: uid, email: profile?.email || userEmail, role: profileRole })
+    // Define permissions based on role
+    const permissions = {
+      canManageCampaigns: ['super_admin', 'admin'].includes(profileRole),
+      canApproveUpdates: ['super_admin', 'admin', 'moderator'].includes(profileRole),
+      canManageAdmins: ['super_admin'].includes(profileRole),
+      canViewDashboard: ['super_admin', 'admin', 'moderator', 'viewer'].includes(profileRole),
+    }
+
+    return NextResponse.json({ 
+      userId: uid, 
+      email: profile?.email || userEmail, 
+      role: profileRole,
+      permissions
+    })
   } catch (e:any) {
     return NextResponse.json({ error: 'ADMIN_ME_FAILED', details: e?.message || String(e) }, { status: 500 })
   }
