@@ -86,14 +86,25 @@ export async function GET(req: NextRequest) {
         // 1. Explicit nft_price from Supabase (in dollars)
         // 2. Explicit price_per_copy from Supabase (in dollars)
         // 3. Goal / Editions (allows decimals like $0.50)
+        // 4. Default to goal / on-chain maxEditions
         let pricePerEditionUSD = 0
+        let priceSource = 'none'
         if (submission?.nft_price && Number(submission.nft_price) > 0) {
           pricePerEditionUSD = Number(submission.nft_price)
+          priceSource = 'nft_price'
         } else if (submission?.price_per_copy && Number(submission.price_per_copy) > 0) {
           pricePerEditionUSD = Number(submission.price_per_copy)
+          priceSource = 'price_per_copy'
         } else if (goalUSD > 0 && numEditions > 0) {
           pricePerEditionUSD = goalUSD / numEditions
+          priceSource = `goal(${goalUSD})/editions(${numEditions})`
+        } else if (goalUSD > 0 && maxEditions > 0) {
+          // Fallback: use on-chain maxEditions directly
+          pricePerEditionUSD = goalUSD / maxEditions
+          priceSource = `goal(${goalUSD})/maxEditions(${maxEditions})`
         }
+        
+        console.log(`[CampaignStats] Campaign ${campaignId}: priceSource=${priceSource}, price=$${pricePerEditionUSD.toFixed(4)}`)
         
         // Calculate NFT sales revenue = editions sold × price per edition
         const nftSalesUSD = editionsMinted * pricePerEditionUSD
