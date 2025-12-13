@@ -884,6 +884,12 @@ export default function AdminCampaignHub() {
                     }`}>
                       {campaign.category}
                     </span>
+                    {/* Milestone badge */}
+                    {campaign.approvedUpdates > 0 && (
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-orange-500/20 text-orange-300 flex items-center gap-1">
+                        🏆 {campaign.approvedUpdates} milestone{campaign.approvedUpdates > 1 ? 's' : ''}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-4 mt-1 text-xs text-white/50">
                     {campaign.campaign_id && <span>#{campaign.campaign_id}</span>}

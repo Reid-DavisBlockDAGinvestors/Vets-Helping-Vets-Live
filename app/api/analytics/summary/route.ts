@@ -18,11 +18,15 @@ export async function GET(_req: NextRequest) {
     const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
     
     // Get minted campaigns from Supabase
-    const { data: submissions } = await supabase
+    const { data: submissions, error: subError } = await supabase
       .from('submissions')
-      .select('campaign_id, goal, num_copies, nft_editions')
+      .select('id, campaign_id, title, goal, num_copies, nft_editions')
       .eq('status', 'minted')
       .not('campaign_id', 'is', null)
+
+    if (subError) {
+      console.error('[Analytics] Supabase error:', subError)
+    }
 
     const campaignIds = (submissions || [])
       .map(s => s.campaign_id)
@@ -63,27 +67,45 @@ export async function GET(_req: NextRequest) {
     
     console.log(`[Analytics] TOTALS: raised=$${totalRaisedUSD.toFixed(2)}, nfts=${totalNftsMinted}, campaigns=${totalCampaigns}`)
 
-    // Get milestone count (approved campaign updates)
-    const { count: milestones } = await supabase
+    // Get milestone count (approved campaign updates) and list of campaigns with milestones
+    const { data: milestoneData, count: milestones } = await supabase
       .from('campaign_updates')
-      .select('*', { count: 'exact', head: true })
+      .select('submission_id, title, created_at', { count: 'exact' })
       .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    // Get submission IDs that have approved milestones
+    const milestonedSubmissionIds = [...new Set((milestoneData || []).map(m => m.submission_id))]
+
+    // Count milestones per submission
+    const milestonesPerSubmission: Record<string, number> = {}
+    for (const m of milestoneData || []) {
+      milestonesPerSubmission[m.submission_id] = (milestonesPerSubmission[m.submission_id] || 0) + 1
+    }
 
     return NextResponse.json({
-      fundsRaised: totalRaisedUSD,
+      fundsRaised: Math.round(totalRaisedUSD * 100) / 100,
       purchases: totalNftsMinted, // NFTs sold = purchases
       mints: totalCampaigns, // Campaigns minted
       milestones: milestones || 0,
-      donorRetention: 0 // Placeholder
+      donorRetention: 0, // Placeholder
+      // Detailed milestone info
+      milestonedSubmissionIds,
+      milestonesPerSubmission,
+      recentMilestones: (milestoneData || []).slice(0, 10)
     })
   } catch (e: any) {
-    console.error('Analytics error:', e)
+    console.error('[Analytics] Error:', e)
     return NextResponse.json({
       fundsRaised: 0,
       purchases: 0,
       mints: 0,
       milestones: 0,
       donorRetention: 0,
+      milestonedSubmissionIds: [],
+      milestonesPerSubmission: {},
+      recentMilestones: [],
       error: e?.message
     })
   }

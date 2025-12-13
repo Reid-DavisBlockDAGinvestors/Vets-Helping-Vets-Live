@@ -12,6 +12,7 @@ export default function AdminPage() {
   const [password, setPassword] = useState('')
   const [authed, setAuthed] = useState(false)
   const [summary, setSummary] = useState<any>(null)
+  const [showMilestoneModal, setShowMilestoneModal] = useState(false)
   const [authMsg, setAuthMsg] = useState('')
   const [mktContracts, setMktContracts] = useState<any[]>([])
   const [mktMsg, setMktMsg] = useState('')
@@ -216,12 +217,15 @@ export default function AdminPage() {
             </div>
             <div className="text-sm text-purple-400/70 mt-1">NFTs Minted</div>
           </div>
-          <div className="rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/10 border border-orange-500/20 p-5">
+          <button
+            onClick={() => setShowMilestoneModal(true)}
+            className="rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/10 border border-orange-500/20 p-5 text-left hover:border-orange-500/40 transition-colors cursor-pointer"
+          >
             <div className="text-3xl font-bold text-orange-400">
               {summary?.milestones?.toLocaleString?.() || 0}
             </div>
-            <div className="text-sm text-orange-400/70 mt-1">Milestones</div>
-          </div>
+            <div className="text-sm text-orange-400/70 mt-1">Milestones <span className="text-orange-400/50">→ Click to view</span></div>
+          </button>
           <div className="rounded-xl bg-gradient-to-br from-cyan-500/20 to-teal-500/10 border border-cyan-500/20 p-5">
             <div className="text-3xl font-bold text-cyan-400">
               {summary?.donorRetention || 0}%
@@ -429,6 +433,57 @@ export default function AdminPage() {
           </>
         )}
       </div>
+
+      {/* Milestone Modal */}
+      {showMilestoneModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white">🏆 Milestones Reached</h2>
+                <p className="text-white/50 text-sm mt-1">{summary?.milestones || 0} total approved updates</p>
+              </div>
+              <button
+                onClick={() => setShowMilestoneModal(false)}
+                className="text-white/50 hover:text-white p-2 rounded-lg hover:bg-white/10"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {summary?.recentMilestones?.length > 0 ? (
+                <div className="space-y-3">
+                  {summary.recentMilestones.map((m: any, i: number) => (
+                    <div key={i} className="p-4 rounded-lg bg-white/5 border border-white/10">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium text-white">{m.title || 'Untitled Update'}</div>
+                        <div className="text-xs text-white/50">
+                          {new Date(m.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="text-sm text-orange-400 mt-1">
+                        Submission ID: {m.submission_id}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-white/50 py-8">
+                  No milestones reached yet
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-white/10 bg-white/5">
+              <button
+                onClick={() => setShowMilestoneModal(false)}
+                className="w-full py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
