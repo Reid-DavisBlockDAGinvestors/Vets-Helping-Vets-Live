@@ -25,7 +25,10 @@ export default function MarketplacePage() {
       const mapped: NFTItem[] = (data?.items || []).map((f: any) => {
         const goal = Number(f.goal || 0)
         const raised = Number(f.raised || 0)
-        const pct = goal > 0 ? Math.round((raised / goal) * 100) : 0
+        const sold = Number(f.editionsMinted || 0)
+        const total = Number(f.maxEditions || 0)
+        // Use API-calculated progress (edition-based for V5)
+        const pct = Number(f.progress || 0)
         const title = f.title || `Fundraiser #${f.campaignId}`
         const image = f.image || ''
         const snippet = f.story || ''
@@ -40,8 +43,8 @@ export default function MarketplacePage() {
           goal,
           raised,
           snippet,
-          sold: Number(f.editionsMinted || 0),
-          total: Number(f.maxEditions || 0),
+          sold,
+          total,
           remaining: f.remaining != null ? Number(f.remaining) : null,
           // Living NFT update info
           updateCount: f.updateCount || 0,

@@ -28,7 +28,10 @@ export type NFTItem = {
 }
 
 export default function NFTCard({ item }: { item: NFTItem }) {
-  const pct = Math.min(100, Math.round((item.raised / Math.max(1, item.goal)) * 100))
+  // Use edition-based progress (sold/total) when available, otherwise raised/goal
+  const pct = (item.total && item.total > 0 && item.sold !== undefined)
+    ? Math.min(100, Math.round((item.sold / item.total) * 100))
+    : (item.progress !== undefined ? item.progress : Math.min(100, Math.round((item.raised / Math.max(1, item.goal)) * 100)))
   const maxLen = 120
   const snippet = item.snippet.length > maxLen
     ? item.snippet.slice(0, maxLen).trimEnd() + '...'

@@ -158,7 +158,17 @@ export async function GET(req: NextRequest) {
       } catch {}
 
       const remaining = maxEditions > 0 ? Math.max(0, maxEditions - editionsMinted) : null // null = unlimited
-      const progress = goal > 0 ? Math.round((raised / goal) * 100) : 0
+      
+      // Calculate raised from editions sold x price (more accurate than on-chain netRaised for display)
+      // This ensures the raised amount reflects actual NFT sales at the set price
+      if (editionsMinted > 0 && pricePerEdition > 0) {
+        raised = editionsMinted * pricePerEdition
+      }
+      
+      // Progress should be based on editions sold for V5 model (or raised/goal as fallback)
+      const progress = maxEditions > 0 
+        ? Math.min(100, Math.round((editionsMinted / maxEditions) * 100))
+        : (goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0)
 
       // Get update info for this submission
       const updateCount = updateCountMap[sub.id] || 0
