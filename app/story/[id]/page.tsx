@@ -188,7 +188,7 @@ export default async function StoryViewer({ params }: { params: { id: string } }
     : description
 
   const campaignKey = submission?.slug || submission?.short_code || submission?.id || id
-  const communityHref = `/community/campaign/${campaignKey}?prefill=${encodeURIComponent(`@[${campaignKey}] `)}`
+  const communityHref = `/community?prefill=${encodeURIComponent(`@[${campaignKey}] `)}`
 
   return (
     <div className="min-h-screen pb-12">

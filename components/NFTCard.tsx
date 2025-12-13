@@ -45,7 +45,7 @@ export default function NFTCard({ item }: { item: NFTItem }) {
     : item.snippet
 
   const communityKey = item.slug || item.short_code || String(item.campaignId ?? item.id)
-  const communityHref = `/community/campaign/${communityKey}?prefill=${encodeURIComponent(`@[${communityKey}] `)}`
+  const communityHref = `/community?prefill=${encodeURIComponent(`@[${communityKey}] `)}`
 
   return (
     <Link href={`/story/${item.campaignId ?? item.id}`} className="group block">
