@@ -134,11 +134,7 @@ export async function GET(req: NextRequest) {
       let goal = Number(sub.goal || 0)
       let grossRaisedUSD = 0
       let editionsMinted = 0
-      let maxEditions = Number(sub.num_copies || sub.nft_editions || 0) // 0 = unlimited
-      // Price per NFT = Goal ÷ Number of NFTs (or explicit price from Supabase)
-      let pricePerEdition = sub.nft_price ? Number(sub.nft_price) :
-        (sub.price_per_copy ? Number(sub.price_per_copy) : 
-        (goal > 0 && maxEditions > 0 ? goal / maxEditions : 0))
+      let maxEditions = Number(sub.num_copies || sub.nft_editions || 100) // Default 100 if not set
       
       try {
         const contract = getContractForAddress(subContractAddr)
@@ -149,22 +145,24 @@ export async function GET(req: NextRequest) {
         const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
         grossRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
         editionsMinted = Number(camp.editionsMinted ?? 0n)
-        // Use on-chain maxEditions if available
-        if (camp.maxEditions) maxEditions = Number(camp.maxEditions)
+        // Use on-chain maxEditions if available and > 0
+        const onchainMax = Number(camp.maxEditions ?? 0n)
+        if (onchainMax > 0) maxEditions = onchainMax
       } catch {}
+
+      // Price per NFT = Goal ÷ Max Editions (this is always correct for V5 model)
+      const pricePerEdition = goal > 0 && maxEditions > 0 ? goal / maxEditions : 1
 
       const remaining = maxEditions > 0 ? Math.max(0, maxEditions - editionsMinted) : null // null = unlimited
       
-      // Calculate NFT sales revenue from editions sold x price
-      const nftSalesUSD = editionsMinted > 0 && pricePerEdition > 0 
-        ? editionsMinted * pricePerEdition 
-        : 0
+      // Calculate NFT sales revenue = editions sold × price per edition
+      const nftSalesUSD = editionsMinted * pricePerEdition
       
       // Calculate tips = gross raised - NFT sales (tips are extra amounts above NFT price)
       const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
       
-      // Total raised = NFT sales + tips
-      const raised = nftSalesUSD + tipsUSD
+      // Total raised = gross raised from blockchain (most accurate)
+      const raised = grossRaisedUSD
       
       // Progress should be based on editions sold for V5 model (or raised/goal as fallback)
       const progress = maxEditions > 0 

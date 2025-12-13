@@ -62,6 +62,17 @@ type Campaign = {
   // On-chain data
   tx_hash: string | null
   contract_address: string | null
+  // On-chain stats (for minted campaigns)
+  onchainStats: {
+    editionsMinted: number
+    maxEditions: number
+    remainingEditions: number | null
+    progressPercent: number
+    nftSalesUSD: number
+    tipsUSD: number
+    totalRaisedUSD: number
+    netRaisedUSD: number
+  } | null
   // Updates
   updates: CampaignUpdate[]
   pendingUpdates: number
@@ -197,12 +208,34 @@ export default function AdminCampaignHub() {
           // On-chain data
           tx_hash: sub.tx_hash || null,
           contract_address: sub.contract_address || null,
+          onchainStats: null, // Will be populated below for minted campaigns
           // Updates
           updates: subUpdates,
           pendingUpdates: subUpdates.filter(u => u.status === 'pending').length,
           approvedUpdates: subUpdates.filter(u => u.status === 'approved').length
         }
       })
+      
+      // Fetch on-chain stats for minted campaigns
+      const mintedCampaigns = campaignsWithUpdates.filter(c => c.status === 'minted' && c.campaign_id != null)
+      if (mintedCampaigns.length > 0) {
+        try {
+          const campaignIds = mintedCampaigns.map(c => c.campaign_id).join(',')
+          const statsRes = await fetch(`/api/campaigns/stats?campaignIds=${campaignIds}`)
+          if (statsRes.ok) {
+            const statsData = await statsRes.json()
+            const statsMap = statsData?.stats || {}
+            // Attach stats to campaigns
+            for (const c of campaignsWithUpdates) {
+              if (c.campaign_id != null && statsMap[c.campaign_id] && !statsMap[c.campaign_id].error) {
+                c.onchainStats = statsMap[c.campaign_id]
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch on-chain stats:', e)
+        }
+      }
       
       setCampaigns(campaignsWithUpdates)
     } catch (e: any) {
@@ -932,6 +965,66 @@ export default function AdminCampaignHub() {
                           </div>
                         </div>
                       </div>
+
+                      {/* On-Chain Stats - Only for minted campaigns */}
+                      {campaign.status === 'minted' && campaign.onchainStats && (
+                        <div className="rounded-lg bg-gradient-to-br from-green-900/20 to-emerald-900/20 border border-green-500/20 p-4">
+                          <h4 className="text-sm font-medium text-green-400 mb-3 flex items-center gap-2">
+                            📊 Live Fundraising Stats
+                          </h4>
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div className="bg-white/5 rounded-lg p-3">
+                              <div className="text-white/50 text-xs mb-1">NFTs Sold</div>
+                              <div className="text-white font-semibold">
+                                {campaign.onchainStats.editionsMinted} / {campaign.onchainStats.maxEditions}
+                              </div>
+                              <div className="text-green-400 text-xs">
+                                {campaign.onchainStats.remainingEditions !== null 
+                                  ? `${campaign.onchainStats.remainingEditions} remaining`
+                                  : 'Unlimited'}
+                              </div>
+                            </div>
+                            <div className="bg-white/5 rounded-lg p-3">
+                              <div className="text-white/50 text-xs mb-1">Progress</div>
+                              <div className="text-white font-semibold">{campaign.onchainStats.progressPercent}%</div>
+                              <div className="h-1.5 rounded-full bg-white/10 mt-1">
+                                <div 
+                                  className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400" 
+                                  style={{ width: `${Math.min(100, campaign.onchainStats.progressPercent)}%` }}
+                                />
+                              </div>
+                            </div>
+                            <div className="bg-white/5 rounded-lg p-3">
+                              <div className="text-white/50 text-xs mb-1">NFT Sales Revenue</div>
+                              <div className="text-emerald-400 font-semibold">
+                                ${campaign.onchainStats.nftSalesUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            </div>
+                            <div className="bg-white/5 rounded-lg p-3">
+                              <div className="text-white/50 text-xs mb-1">Tips Received</div>
+                              <div className="text-purple-400 font-semibold">
+                                ${campaign.onchainStats.tipsUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            </div>
+                            <div className="col-span-2 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg p-3 border border-green-500/20">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="text-white/50 text-xs mb-1">Total Raised</div>
+                                  <div className="text-green-400 font-bold text-lg">
+                                    ${campaign.onchainStats.totalRaisedUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-white/50 text-xs mb-1">Net (after 1% fee)</div>
+                                  <div className="text-white font-semibold">
+                                    ${campaign.onchainStats.netRaisedUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Verification Status */}
                       <div className="rounded-lg bg-white/5 border border-white/10 p-4">

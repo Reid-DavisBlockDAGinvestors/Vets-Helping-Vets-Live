@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     // Batch fetch all submissions for these campaign IDs
     const { data: submissions } = await supabase
       .from('submissions')
-      .select('campaign_id, goal, num_copies, price_per_copy')
+      .select('campaign_id, goal, num_copies, nft_editions, price_per_copy, nft_price')
       .eq('status', 'minted')
       .in('campaign_id', campaignIds)
 
@@ -69,18 +69,20 @@ export async function GET(req: NextRequest) {
         const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
         const grossRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
         
-        // Get price per edition - use Supabase goal / on-chain maxEditions
-        // Priority: price_per_copy > goal/num_copies > goal/maxEditions
-        let pricePerEditionUSD = 0
+        // Get price per edition - use Supabase goal / maxEditions
+        // For V5 model: Goal = Editions × Price, so Price = Goal / Editions
         const goalUSD = submission?.goal ? Number(submission.goal) : 0
+        const numEditions = Number(submission?.num_copies || submission?.nft_editions || maxEditions || 100)
         
-        if (submission?.price_per_copy && Number(submission.price_per_copy) > 0) {
+        // Price calculation: nft_price > price_per_copy > goal/editions
+        let pricePerEditionUSD = 0
+        if (submission?.nft_price && Number(submission.nft_price) > 0) {
+          pricePerEditionUSD = Number(submission.nft_price)
+        } else if (submission?.price_per_copy && Number(submission.price_per_copy) > 0) {
           pricePerEditionUSD = Number(submission.price_per_copy)
-        } else if (goalUSD > 0 && submission?.num_copies && Number(submission.num_copies) > 0) {
-          pricePerEditionUSD = goalUSD / Number(submission.num_copies)
-        } else if (goalUSD > 0 && maxEditions > 0) {
-          // Use Supabase goal with on-chain maxEditions
-          pricePerEditionUSD = goalUSD / maxEditions
+        } else if (goalUSD > 0 && numEditions > 0) {
+          // Goal / Editions is always correct for V5 model
+          pricePerEditionUSD = goalUSD / numEditions
         }
         
         // Calculate NFT sales revenue = editions sold × price per edition (USD)
