@@ -131,14 +131,6 @@ export async function GET(req: NextRequest) {
           netRaisedUSD, // 99% of gross (1% platform fee)
           totalRaisedUSD: grossRaisedUSD,
           active: camp.active ?? true,
-          // Debug info
-          _debug: {
-            submissionFound: !!submission,
-            goalUSD,
-            numEditions,
-            priceSource,
-            onchainMaxEditions: maxEditions
-          },
           closed: camp.closed ?? false,
           progressPercent: maxEditions > 0 ? Math.round((editionsMinted / maxEditions) * 100) : 0,
         }
@@ -148,15 +140,7 @@ export async function GET(req: NextRequest) {
       }
     }))
 
-    return NextResponse.json({ 
-      stats,
-      _queryDebug: {
-        requestedIds: campaignIds,
-        foundSubmissions: submissions?.length || 0,
-        supabaseError: subError?.message || null,
-        submissionMapKeys: Object.keys(submissionMap)
-      }
-    })
+    return NextResponse.json({ stats })
   } catch (e: any) {
     console.error('Campaign stats error:', e)
     return NextResponse.json({ error: 'FETCH_FAILED', details: e?.message }, { status: 500 })
