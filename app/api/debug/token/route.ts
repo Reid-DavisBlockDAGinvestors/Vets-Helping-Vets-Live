@@ -27,7 +27,36 @@ export async function GET(req: NextRequest) {
     const results: any = {
       tokenId: tokenIdNum,
       contractAddress,
+      rpcUrl: (process.env.BLOCKDAG_RPC || 'not set').substring(0, 50) + '...',
       steps: []
+    }
+
+    // Step 0: Check total supply
+    try {
+      const totalSupply = await contract.totalSupply()
+      results.totalSupply = Number(totalSupply)
+      results.steps.push({ step: 'totalSupply', success: true, value: Number(totalSupply) })
+    } catch (e: any) {
+      results.steps.push({ step: 'totalSupply', success: false, error: e?.message })
+    }
+
+    // Step 0.5: Try tokenByIndex to see if token 75 is in the enumeration
+    try {
+      // Get all token IDs up to min(totalSupply, 100)
+      const supply = results.totalSupply || 0
+      const maxCheck = Math.min(supply, 100)
+      const tokenIds: number[] = []
+      for (let i = 0; i < maxCheck; i++) {
+        try {
+          const tid = await contract.tokenByIndex(i)
+          tokenIds.push(Number(tid))
+        } catch { break }
+      }
+      results.allTokenIds = tokenIds
+      results.tokenIdExists = tokenIds.includes(tokenIdNum)
+      results.steps.push({ step: 'enumTokenIds', success: true, count: tokenIds.length, includes75: tokenIds.includes(tokenIdNum) })
+    } catch (e: any) {
+      results.steps.push({ step: 'enumTokenIds', success: false, error: e?.message })
     }
 
     // Step 1: Check if token exists by getting owner
