@@ -15,13 +15,13 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
     // First, get campaigns from database with full metadata - prioritize minted ones
     const { data: submissions, error: dbError } = await supabaseAdmin
       .from('submissions')
-      .select('id, campaign_id, title, description, image_url, goal, status, category, creator_name')
+      .select('id, campaign_id, title, story, image_uri, goal, status, category, creator_name')
       .in('status', ['minted', 'approved'])
       .order('status', { ascending: false }) // 'minted' comes before 'approved' alphabetically reversed
       .order('created_at', { ascending: false })
       .limit(limit)
 
-    console.log(`[loadOnchain] Found ${submissions?.length || 0} submissions from DB`, dbError ? `Error: ${dbError.message}` : '')
+    console.log(`[loadOnchain] Found ${submissions?.length || 0} submissions from DB`, dbError ? `Error: ${dbError.message}` : '', submissions?.[0] ? `First: ${submissions[0].title}` : '')
 
     if (!submissions || submissions.length === 0) {
       console.log('[loadOnchain] No submissions found, returning empty')
@@ -64,12 +64,12 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
         id: s.id,
         campaignId: s.campaign_id || undefined,
         title: s.title || 'Untitled Campaign',
-        image: s.image_url || '',
+        image: s.image_uri || '',
         causeType: cause as 'veteran' | 'general',
         progress: pct,
         goal,
         raised,
-        snippet: s.description?.slice(0, 150) || ''
+        snippet: s.story?.slice(0, 150) || ''
       }
     }))
 
