@@ -13,19 +13,43 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     // campaign_id is the numeric ID (e.g., 13), id is the UUID
     const isNumeric = /^\d+$/.test(campaignId)
     
-    let campaignQuery = supabaseAdmin.from('submissions').select('*')
+    let campaign = null
+    let campaignErr = null
     
     if (isNumeric) {
-      // If numeric, check campaign_id first
-      campaignQuery = campaignQuery.or(`campaign_id.eq.${campaignId},slug.eq.${campaignId},short_code.eq.${campaignId}`)
+      // If numeric, check campaign_id first (only minted campaigns have this)
+      const numericId = parseInt(campaignId, 10)
+      const { data, error } = await supabaseAdmin
+        .from('submissions')
+        .select('*')
+        .eq('campaign_id', numericId)
+        .maybeSingle()
+      
+      campaign = data
+      campaignErr = error
+      
+      // Fallback to slug/short_code if not found
+      if (!campaign) {
+        const { data: fallback } = await supabaseAdmin
+          .from('submissions')
+          .select('*')
+          .or(`slug.eq.${campaignId},short_code.eq.${campaignId}`)
+          .maybeSingle()
+        campaign = fallback
+      }
     } else {
       // If not numeric, check UUID id, slug, or short_code
-      campaignQuery = campaignQuery.or(`id.eq.${campaignId},slug.eq.${campaignId},short_code.eq.${campaignId}`)
+      const { data, error } = await supabaseAdmin
+        .from('submissions')
+        .select('*')
+        .or(`id.eq.${campaignId},slug.eq.${campaignId},short_code.eq.${campaignId}`)
+        .maybeSingle()
+      campaign = data
+      campaignErr = error
     }
-    
-    const { data: campaign, error: campaignErr } = await campaignQuery.single()
 
     if (campaignErr || !campaign) {
+      console.error('[community/campaigns] Not found:', campaignId, campaignErr?.message)
       return NextResponse.json({ error: 'CAMPAIGN_NOT_FOUND' }, { status: 404 })
     }
 
