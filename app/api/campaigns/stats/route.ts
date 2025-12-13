@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
+import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
 const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
+const PLATFORM_FEE_PERCENT = 1 // 1% platform fee
 
 /**
  * GET /api/campaigns/stats?campaignIds=1,2,3
@@ -27,6 +29,28 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Contract not configured' }, { status: 500 })
     }
 
+    // Create Supabase client to fetch submission data for accurate pricing
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+      { auth: { persistSession: false } }
+    )
+
+    // Batch fetch all submissions for these campaign IDs
+    const { data: submissions } = await supabase
+      .from('submissions')
+      .select('campaign_id, goal, num_copies, price_per_copy')
+      .eq('status', 'minted')
+      .in('campaign_id', campaignIds)
+
+    // Build lookup map
+    const submissionMap: Record<number, any> = {}
+    for (const sub of submissions || []) {
+      if (sub.campaign_id != null) {
+        submissionMap[sub.campaign_id] = sub
+      }
+    }
+
     const provider = getProvider()
     const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
 
@@ -35,29 +59,38 @@ export async function GET(req: NextRequest) {
     await Promise.all(campaignIds.map(async (campaignId) => {
       try {
         const camp = await contract.getCampaign(BigInt(campaignId))
+        const submission = submissionMap[campaignId]
         
-        const pricePerEditionWei = BigInt(camp.pricePerEdition ?? 0n)
         const grossRaisedWei = BigInt(camp.grossRaised ?? 0n)
-        const netRaisedWei = BigInt(camp.netRaised ?? 0n)
         const editionsMinted = Number(camp.editionsMinted ?? 0)
         const maxEditions = Number(camp.maxEditions ?? 0)
         
-        // Convert from BDAG (wei) to USD
-        const pricePerEditionBDAG = Number(pricePerEditionWei) / 1e18
-        const pricePerEditionUSD = pricePerEditionBDAG * BDAG_USD_RATE
-        
+        // Convert gross raised from BDAG to USD
         const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
         const grossRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
         
-        const netRaisedBDAG = Number(netRaisedWei) / 1e18
-        const netRaisedUSD = netRaisedBDAG * BDAG_USD_RATE
+        // Get price per edition - use Supabase goal / on-chain maxEditions
+        // Priority: price_per_copy > goal/num_copies > goal/maxEditions
+        let pricePerEditionUSD = 0
+        const goalUSD = submission?.goal ? Number(submission.goal) : 0
         
-        // Calculate NFT sales revenue = editions sold × price per edition
+        if (submission?.price_per_copy && Number(submission.price_per_copy) > 0) {
+          pricePerEditionUSD = Number(submission.price_per_copy)
+        } else if (goalUSD > 0 && submission?.num_copies && Number(submission.num_copies) > 0) {
+          pricePerEditionUSD = goalUSD / Number(submission.num_copies)
+        } else if (goalUSD > 0 && maxEditions > 0) {
+          // Use Supabase goal with on-chain maxEditions
+          pricePerEditionUSD = goalUSD / maxEditions
+        }
+        
+        // Calculate NFT sales revenue = editions sold × price per edition (USD)
         const nftSalesUSD = editionsMinted * pricePerEditionUSD
         
-        // Tips = gross raised - (editions × price) 
-        // Note: This is approximate since grossRaised includes NFT sales
+        // Tips = gross raised - NFT sales (anything paid above NFT price)
         const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
+        
+        // Net after 1% platform fee (gas is paid by donor, not deducted from funds)
+        const netRaisedUSD = grossRaisedUSD * (1 - PLATFORM_FEE_PERCENT / 100)
         
         // Remaining editions
         const remainingEditions = maxEditions > 0 ? maxEditions - editionsMinted : null
@@ -71,15 +104,13 @@ export async function GET(req: NextRequest) {
           nftSalesUSD,
           tipsUSD,
           grossRaisedUSD,
-          netRaisedUSD,
-          totalRaisedUSD: grossRaisedUSD, // Alias for clarity
+          netRaisedUSD, // 99% of gross (1% platform fee)
+          totalRaisedUSD: grossRaisedUSD,
           active: camp.active ?? true,
           closed: camp.closed ?? false,
-          // Progress percentage based on editions
           progressPercent: maxEditions > 0 ? Math.round((editionsMinted / maxEditions) * 100) : 0,
         }
       } catch (e: any) {
-        // Campaign not found or error - skip
         console.error(`Error fetching campaign ${campaignId}:`, e?.message)
         stats[campaignId] = { error: 'Campaign not found', campaignId }
       }
