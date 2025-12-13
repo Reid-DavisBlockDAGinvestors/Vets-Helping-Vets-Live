@@ -139,6 +139,82 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'CREATE_FAILED', details: insertErr.message }, { status: 500 })
     }
 
+    // Parse mentions from content
+    // Campaign mentions: @[campaign-slug] or #campaignhashtag
+    const campaignMentions = content.match(/@\[([^\]]+)\]/g) || []
+    const hashtagMentions = content.match(/#(\w+)/g) || []
+
+    // Process campaign mentions
+    for (const mention of campaignMentions) {
+      const slug = mention.slice(2, -1) // Remove @[ and ]
+      const { data: campaign } = await supabaseAdmin
+        .from('submissions')
+        .select('id')
+        .or(`slug.eq.${slug},short_code.eq.${slug}`)
+        .single()
+      
+      if (campaign) {
+        await supabaseAdmin.from('post_mentions').insert({
+          post_id: post.id,
+          mention_type: 'campaign',
+          campaign_id: campaign.id
+        })
+        
+        // Log campaign activity
+        await supabaseAdmin.from('campaign_activity').insert({
+          campaign_id: campaign.id,
+          activity_type: 'mention',
+          actor_id: userData.user.id,
+          post_id: post.id
+        })
+      }
+    }
+
+    // Process hashtag mentions (match to campaign hashtags)
+    for (const hashtag of hashtagMentions) {
+      const tag = hashtag.slice(1).toLowerCase() // Remove #
+      
+      // Check if it's a campaign hashtag
+      const { data: campaign } = await supabaseAdmin
+        .from('submissions')
+        .select('id')
+        .eq('hashtag', tag)
+        .single()
+      
+      if (campaign) {
+        await supabaseAdmin.from('post_mentions').insert({
+          post_id: post.id,
+          mention_type: 'campaign',
+          campaign_id: campaign.id
+        })
+      }
+
+      // Check if it's a tag
+      const { data: tagRecord } = await supabaseAdmin
+        .from('campaign_tags')
+        .select('id')
+        .eq('slug', tag)
+        .single()
+
+      if (tagRecord) {
+        await supabaseAdmin.from('post_mentions').insert({
+          post_id: post.id,
+          mention_type: 'tag',
+          tag_id: tagRecord.id
+        })
+      }
+    }
+
+    // If linked to a campaign, log activity
+    if (campaign_id) {
+      await supabaseAdmin.from('campaign_activity').insert({
+        campaign_id,
+        activity_type: 'post',
+        actor_id: userData.user.id,
+        post_id: post.id
+      })
+    }
+
     // Ensure user has a community profile
     await supabaseAdmin
       .from('community_profiles')
