@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
 
 const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
 
@@ -64,12 +66,18 @@ export async function GET(req: NextRequest) {
         // Get Supabase submission for additional details
         let submission: any = null
         try {
-          const { data } = await supabaseAdmin
+          const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+            process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+            { auth: { persistSession: false } }
+          )
+          const { data } = await supabase
             .from('submissions')
-            .select('id, title, story, goal, creator_wallet, image_uri, nft_price, price_per_copy, num_copies')
+            .select('id, title, story, goal, creator_wallet, image_uri, price_per_copy, num_copies')
+            .eq('status', 'minted')
             .eq('campaign_id', campaignId)
-            .maybeSingle()
-          submission = data
+          
+          submission = data && data.length > 0 ? data[0] : null
         } catch {}
 
         // Get edition data from on-chain
@@ -79,9 +87,7 @@ export async function GET(req: NextRequest) {
         
         // Calculate price per NFT from Supabase (USD) - most accurate source
         let pricePerNFT = 0
-        if (submission?.nft_price && Number(submission.nft_price) > 0) {
-          pricePerNFT = Number(submission.nft_price)
-        } else if (submission?.price_per_copy && Number(submission.price_per_copy) > 0) {
+        if (submission?.price_per_copy && Number(submission.price_per_copy) > 0) {
           pricePerNFT = Number(submission.price_per_copy)
         } else if (goalUSD > 0 && maxEditions > 0) {
           pricePerNFT = goalUSD / maxEditions
@@ -108,7 +114,7 @@ export async function GET(req: NextRequest) {
           active: camp.active ?? camp[8] ?? true,
           closed: camp.closed ?? camp[9] ?? false,
           submissionId: submission?.id || null,
-          isCreator: submission?.creator_wallet?.toLowerCase() === address.toLowerCase()
+          isCreator: submission?.creator_wallet?.toLowerCase() === address.toLowerCase(),
         })
       } catch (e: any) {
         console.error(`Error fetching token at index ${i}:`, e?.message)
