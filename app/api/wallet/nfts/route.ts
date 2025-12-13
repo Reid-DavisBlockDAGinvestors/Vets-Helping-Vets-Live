@@ -23,18 +23,28 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'NO_CONTRACT_CONFIGURED' }, { status: 500 })
     }
 
-    // Pre-fetch all minted submissions to avoid individual lookups
-    const { data: allSubmissions } = await supabaseAdmin
+    // Pre-fetch ALL minted submissions to build lookup maps
+    const { data: allSubmissions, error: subError } = await supabaseAdmin
       .from('submissions')
-      .select('id, title, story, goal, creator_wallet, image_uri, nft_price, num_copies, nft_editions, campaign_id, token_id')
+      .select('*')
       .eq('status', 'minted')
     
-    // Build lookup maps by campaign_id and token_id
-    const submissionByCampaignId: Record<number, any> = {}
-    const submissionByTokenId: Record<number, any> = {}
+    if (subError) {
+      console.error('[WalletNFTs] Supabase error:', subError)
+    }
+    
+    console.log(`[WalletNFTs] Loaded ${allSubmissions?.length || 0} minted submissions`)
+    
+    // Build lookup maps - use string keys to avoid type issues
+    const submissionByCampaignId: Record<string, any> = {}
+    const submissionByTokenId: Record<string, any> = {}
     for (const sub of allSubmissions || []) {
-      if (sub.campaign_id != null) submissionByCampaignId[sub.campaign_id] = sub
-      if (sub.token_id != null) submissionByTokenId[sub.token_id] = sub
+      if (sub.campaign_id != null) {
+        submissionByCampaignId[String(sub.campaign_id)] = sub
+      }
+      if (sub.token_id != null) {
+        submissionByTokenId[String(sub.token_id)] = sub
+      }
     }
 
     const provider = getProvider()
@@ -60,60 +70,48 @@ export async function GET(req: NextRequest) {
 
         const campaignId = Number(editionInfo.campaignId ?? editionInfo[0])
         const editionNumber = Number(editionInfo.editionNumber ?? editionInfo[1])
-        const totalEditions = Number(editionInfo.totalEditions ?? editionInfo[2])
 
-        // Get campaign data
-        const camp = await contract.getCampaign(campaignId)
+        // Get campaign data from contract
+        const camp = await contract.getCampaign(BigInt(campaignId))
 
-        // Fetch metadata
+        // Look up Supabase submission using string key
+        const submission = submissionByCampaignId[String(campaignId)] || submissionByTokenId[String(campaignId)] || null
+
+        // Fetch metadata from tokenURI
         let metadata: any = null
         try {
           const mres = await fetch(uri, { cache: 'no-store' })
           metadata = await mres.json()
         } catch {}
 
-        // Get Supabase submission from pre-fetched maps
-        const submission = submissionByCampaignId[campaignId] || submissionByTokenId[campaignId] || null
-        
-        console.log(`[WalletNFTs] Campaign ${campaignId}: submission found=${!!submission}, image=${submission?.image_uri?.substring(0, 50) || 'none'}`)
-
-        // Get on-chain values - try named properties first, then array indices
-        const onchainMaxEditions = Number(camp.maxEditions ?? camp[6] ?? 100)
-        const editionsMinted = Number(camp.editionsMinted ?? camp[5] ?? 0)
-        
-        console.log(`[WalletNFTs] Campaign ${campaignId} on-chain: maxEditions=${onchainMaxEditions}, editionsMinted=${editionsMinted}, camp[5]=${camp[5]}, camp[6]=${camp[6]}`)
-        
-        // Convert on-chain goal to USD
-        const onchainGoalWei = BigInt(camp.goal ?? camp[2] ?? 0n)
-        const onchainGoalBDAG = Number(onchainGoalWei) / 1e18
-        const onchainGoalUSD = onchainGoalBDAG * BDAG_USD_RATE
-        
-        // Use Supabase goal/editions for display, fallback to on-chain
-        const goalUSD = submission?.goal ? Number(submission.goal) : onchainGoalUSD
-        const maxEditions = Number(submission?.num_copies || submission?.nft_editions || onchainMaxEditions)
-        
-        // Price = goal / editions (use same source for both) - default $1 per NFT
-        const pricePerEditionUSD = goalUSD > 0 && maxEditions > 0 ? goalUSD / maxEditions : 1
-        
-        // Convert gross raised to USD
+        // === Get on-chain values (these are the source of truth for calculations) ===
+        // getCampaign returns: category, baseURI, goal, grossRaised, netRaised, editionsMinted, maxEditions, pricePerEdition, active, closed
+        const editionsMinted = Number(camp.editionsMinted ?? camp[5] ?? 0n)
+        const onchainMaxEditions = Number(camp.maxEditions ?? camp[6] ?? 100n)
         const grossRaisedWei = BigInt(camp.grossRaised ?? camp[3] ?? 0n)
         const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
         const grossRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
         
-        // Calculate NFT sales = editions × price (but cap at gross raised)
-        const calculatedNftSales = editionsMinted * pricePerEditionUSD
-        const nftSalesUSD = Math.min(calculatedNftSales, grossRaisedUSD) // Can't exceed total raised
+        // === Get goal and editions from Supabase (source of truth for display) ===
+        const goalUSD = submission?.goal ? Number(submission.goal) : 100 // Default $100 goal
+        const maxEditions = Number(submission?.num_copies || submission?.nft_editions || onchainMaxEditions || 100)
         
-        // Tips = gross raised - NFT sales
+        // === Calculate price per NFT: Goal ÷ Max Editions ===
+        const pricePerEditionUSD = goalUSD > 0 && maxEditions > 0 ? goalUSD / maxEditions : 1
+        
+        // === Calculate NFT sales revenue ===
+        // NFT Sales = Editions Sold × Price Per Edition
+        const nftSalesUSD = editionsMinted * pricePerEditionUSD
+        
+        // === Calculate tips ===
+        // Tips = Gross Raised - NFT Sales (but never negative)
         const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
         
-        console.log(`[WalletNFTs] Campaign ${campaignId} calc: goal=${goalUSD}, editions=${maxEditions}, minted=${editionsMinted}, price=${pricePerEditionUSD.toFixed(2)}, raised=${grossRaisedUSD.toFixed(2)}, nft=${nftSalesUSD.toFixed(2)}, tips=${tipsUSD.toFixed(2)}`)
+        // === Resolve image: prioritize Supabase, then metadata ===
+        const resolvedImage = submission?.image_uri || metadata?.image || ''
 
-        // Resolve image: try submission, metadata, and metadata.image_url
-        const resolvedImage = submission?.image_uri || metadata?.image || metadata?.image_url || ''
-        
-        console.log(`[WalletNFTs] Campaign ${campaignId} image: sub=${submission?.image_uri?.substring(0, 30) || 'none'}, meta=${metadata?.image?.substring(0, 30) || 'none'}, resolved=${resolvedImage?.substring(0, 30) || 'none'}`)
-        
+        console.log(`[WalletNFTs] Campaign #${campaignId}: goal=$${goalUSD}, editions=${maxEditions}, minted=${editionsMinted}, price=$${pricePerEditionUSD.toFixed(2)}, raised=$${grossRaisedUSD.toFixed(2)}, nftSales=$${nftSalesUSD.toFixed(2)}, tips=$${tipsUSD.toFixed(2)}, image=${resolvedImage ? 'yes' : 'no'}`)
+
         nfts.push({
           tokenId: tokenIdNum,
           campaignId,
@@ -126,18 +124,18 @@ export async function GET(req: NextRequest) {
           title: submission?.title || metadata?.name || `Campaign #${campaignId}`,
           image: resolvedImage,
           story: submission?.story || metadata?.description || '',
-          category: camp.category ?? camp[0],
+          category: String(camp.category ?? camp[0] ?? 'general'),
           goal: goalUSD,
           raised: grossRaisedUSD,
           nftSalesUSD,
           tipsUSD,
-          active: camp.active ?? camp[8] ?? true,
-          closed: camp.closed ?? camp[9] ?? false,
+          active: Boolean(camp.active ?? camp[8] ?? true),
+          closed: Boolean(camp.closed ?? camp[9] ?? false),
           submissionId: submission?.id || null,
           isCreator: submission?.creator_wallet?.toLowerCase() === address.toLowerCase()
         })
       } catch (e: any) {
-        console.error(`Error fetching token at index ${i}:`, e?.message)
+        console.error(`[WalletNFTs] Error fetching token at index ${i}:`, e?.message)
       }
     }
 
@@ -147,7 +145,7 @@ export async function GET(req: NextRequest) {
       nfts
     })
   } catch (e: any) {
-    console.error('Wallet NFTs error:', e)
+    console.error('[WalletNFTs] Error:', e)
     return NextResponse.json({ error: 'FETCH_FAILED', details: e?.message || String(e) }, { status: 500 })
   }
 }
