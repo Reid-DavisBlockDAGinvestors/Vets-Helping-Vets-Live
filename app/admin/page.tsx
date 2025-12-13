@@ -23,6 +23,15 @@ export default function AdminPage() {
   const [backfillMsg, setBackfillMsg] = useState('')
   const [backfillAddr, setBackfillAddr] = useState('')
   const [checkingSession, setCheckingSession] = useState(true)
+  
+  // Admin request state
+  const [showRequestForm, setShowRequestForm] = useState(false)
+  const [requestName, setRequestName] = useState('')
+  const [requestReason, setRequestReason] = useState('')
+  const [requestMsg, setRequestMsg] = useState('')
+  const [requestLoading, setRequestLoading] = useState(false)
+  const [adminRequests, setAdminRequests] = useState<any[]>([])
+  const [requestsLoading, setRequestsLoading] = useState(false)
 
   // Check for existing session on mount
   useEffect(() => {
@@ -84,6 +93,92 @@ export default function AdminPage() {
     setPassword('')
   }
 
+  // Submit admin access request
+  const submitRequest = async () => {
+    setRequestMsg('')
+    setRequestLoading(true)
+    try {
+      // First sign in or create account
+      let { error: signErr } = await supabase.auth.signInWithPassword({ email, password })
+      if (signErr) {
+        const { error: suErr } = await supabase.auth.signUp({ email, password })
+        if (suErr) { setRequestMsg(signErr.message || suErr.message || 'Sign-in failed'); return }
+        const r = await supabase.auth.signInWithPassword({ email, password })
+        signErr = r.error
+        if (signErr) { setRequestMsg(signErr.message || 'Sign-in failed'); return }
+      }
+
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) { setRequestMsg('Missing session token'); return }
+
+      const res = await fetch('/api/admin/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: requestName, reason: requestReason })
+      })
+      const data = await res.json().catch(() => ({}))
+      
+      if (res.ok) {
+        setRequestMsg('✅ Request submitted! An admin will review your request.')
+        setShowRequestForm(false)
+        setRequestName('')
+        setRequestReason('')
+      } else {
+        setRequestMsg(data?.message || data?.error || 'Request failed')
+      }
+    } catch (e: any) {
+      setRequestMsg(e?.message || 'Request failed')
+    } finally {
+      setRequestLoading(false)
+    }
+  }
+
+  // Load admin requests (for admins)
+  const loadAdminRequests = async () => {
+    setRequestsLoading(true)
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) return
+
+      const res = await fetch('/api/admin/requests?status=pending', {
+        headers: { authorization: `Bearer ${token}` }
+      })
+      const data = await res.json().catch(() => ({}))
+      setAdminRequests(data?.requests || [])
+    } catch (e) {
+      console.error('Failed to load requests:', e)
+    } finally {
+      setRequestsLoading(false)
+    }
+  }
+
+  // Approve or reject a request
+  const handleRequest = async (requestId: string, action: 'approve' | 'reject') => {
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) return
+
+      const res = await fetch('/api/admin/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ requestId, action })
+      })
+      const data = await res.json().catch(() => ({}))
+      
+      if (res.ok) {
+        // Refresh the list
+        loadAdminRequests()
+      } else {
+        alert(data?.message || data?.error || 'Action failed')
+      }
+    } catch (e: any) {
+      alert(e?.message || 'Action failed')
+    }
+  }
+
   useEffect(() => {
     const sub = supabase.auth.onAuthStateChange((_e, session) => {
       if (!session) setAuthed(false)
@@ -138,9 +233,15 @@ export default function AdminPage() {
         <div className="w-full max-w-md px-4">
           <div className="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 sm:p-8">
             <div className="text-center mb-6 sm:mb-8">
-              <div className="text-4xl mb-3">🔐</div>
-              <h1 className="text-xl sm:text-2xl font-bold text-white">Admin Login</h1>
-              <p className="mt-2 text-white/50 text-sm">Sign in to access the admin dashboard</p>
+              <div className="text-4xl mb-3">{showRequestForm ? '📝' : '🔐'}</div>
+              <h1 className="text-xl sm:text-2xl font-bold text-white">
+                {showRequestForm ? 'Request Admin Access' : 'Admin Login'}
+              </h1>
+              <p className="mt-2 text-white/50 text-sm">
+                {showRequestForm 
+                  ? 'Submit a request to become an admin' 
+                  : 'Sign in to access the admin dashboard'}
+              </p>
             </div>
             <div className="space-y-4">
               <input 
@@ -156,17 +257,67 @@ export default function AdminPage() {
                 type="password" 
                 value={password} 
                 onChange={e=>setPassword(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && login()}
+                onKeyDown={e => e.key === 'Enter' && (showRequestForm ? submitRequest() : login())}
               />
+              
+              {showRequestForm && (
+                <>
+                  <input 
+                    className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50" 
+                    placeholder="Your Name" 
+                    type="text" 
+                    value={requestName} 
+                    onChange={e=>setRequestName(e.target.value)} 
+                  />
+                  <textarea 
+                    className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50 min-h-[80px]" 
+                    placeholder="Why do you need admin access?" 
+                    value={requestReason} 
+                    onChange={e=>setRequestReason(e.target.value)} 
+                  />
+                </>
+              )}
+              
+              {showRequestForm ? (
+                <button 
+                  className="w-full rounded-lg bg-green-600 hover:bg-green-500 px-4 py-3 font-medium text-white transition-colors disabled:opacity-50" 
+                  onClick={submitRequest}
+                  disabled={requestLoading || !email || !password}
+                >
+                  {requestLoading ? 'Submitting...' : 'Submit Request'}
+                </button>
+              ) : (
+                <button 
+                  className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-3 font-medium text-white transition-colors" 
+                  onClick={login}
+                >
+                  Login
+                </button>
+              )}
+              
               <button 
-                className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-3 font-medium text-white transition-colors" 
-                onClick={login}
+                className="w-full rounded-lg bg-white/5 hover:bg-white/10 px-4 py-2.5 text-sm text-white/70 transition-colors" 
+                onClick={() => {
+                  setShowRequestForm(!showRequestForm)
+                  setAuthMsg('')
+                  setRequestMsg('')
+                }}
               >
-                Login
+                {showRequestForm ? '← Back to Login' : 'Need access? Request here →'}
               </button>
+              
               {authMsg && (
                 <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-red-400 text-sm text-center">
                   {authMsg}
+                </div>
+              )}
+              {requestMsg && (
+                <div className={`rounded-lg p-3 text-sm text-center ${
+                  requestMsg.startsWith('✅') 
+                    ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                    : 'bg-red-500/10 border border-red-500/30 text-red-400'
+                }`}>
+                  {requestMsg}
                 </div>
               )}
             </div>
@@ -273,6 +424,66 @@ export default function AdminPage() {
         {activeTab === 'governance' && <AdminGovernance />}
         {activeTab === 'settings' && (
           <>
+            {/* Admin Access Requests */}
+            <div className="rounded-xl bg-white/5 border border-white/10 p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Admin Access Requests</h2>
+                  <p className="text-sm text-white/50">Review and approve requests for admin access</p>
+                </div>
+                <button
+                  onClick={loadAdminRequests}
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
+                >
+                  {requestsLoading ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
+              
+              {adminRequests.length > 0 ? (
+                <div className="space-y-3">
+                  {adminRequests.map(req => (
+                    <div key={req.id} className="rounded-lg bg-white/5 border border-white/10 p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-white">{req.name || 'No name'}</span>
+                            <span className="text-white/50">•</span>
+                            <span className="text-white/70 text-sm">{req.email}</span>
+                          </div>
+                          {req.reason && (
+                            <p className="text-white/60 text-sm mt-1">{req.reason}</p>
+                          )}
+                          <p className="text-white/40 text-xs mt-2">
+                            Requested: {new Date(req.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleRequest(req.id, 'approve')}
+                            className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleRequest(req.id, 'reject')}
+                            className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-colors"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-white/40">
+                  <div className="text-3xl mb-2">✅</div>
+                  <p>No pending requests</p>
+                  <p className="text-sm mt-1">Click Refresh to check for new requests</p>
+                </div>
+              )}
+            </div>
+
             {/* Marketplace Contracts - Compact */}
         <div className="rounded-xl bg-white/5 border border-white/10 p-6">
           <div className="flex items-center justify-between mb-4">
