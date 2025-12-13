@@ -104,13 +104,21 @@ export async function POST(req: NextRequest) {
     
     // V5: Create campaign on-chain
     // Convert goal/copies to numbers first (handles string values from Supabase)
-    const goalUSD = Number(merged.goal) || 0  // Goal in USD
-    const copiesNum = Number(merged.num_copies) || 0
+    const goalUSD = Number(merged.goal) || 100  // Default $100 goal if not set
+    
+    // Default to 100 copies if not set, or calculate from goal ($1 per copy minimum)
+    let copiesNum = Number(merged.num_copies) || Number(merged.nft_editions) || 0
+    if (copiesNum === 0 && goalUSD > 0) {
+      copiesNum = Math.max(100, Math.floor(goalUSD)) // Default: goal amount as copies (min 100)
+    }
     
     // Price per NFT = Goal ÷ Copies (or explicit price if set) - in USD
-    const priceUSD = merged.price_per_copy 
-      ? Number(merged.price_per_copy)
-      : (goalUSD > 0 && copiesNum > 0 ? goalUSD / copiesNum : 0)
+    let priceUSD = merged.price_per_copy || merged.nft_price
+      ? Number(merged.price_per_copy || merged.nft_price)
+      : (goalUSD > 0 && copiesNum > 0 ? goalUSD / copiesNum : 1)
+    
+    // Ensure minimum $1 price
+    if (priceUSD < 1) priceUSD = 1
     
     // Convert USD to BDAG for on-chain storage
     // BDAG_USD_RATE = 0.05 means 1 BDAG = $0.05, so 1 USD = 20 BDAG
@@ -198,7 +206,7 @@ export async function POST(req: NextRequest) {
     campaignId = result.campaignId
     txHash = result.hash
 
-    // Update submission with campaign info
+    // Update submission with campaign info and NFT settings
     const contractAddress = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || null
     const { error: updateError } = await supabaseAdmin
       .from('submissions')
@@ -207,7 +215,12 @@ export async function POST(req: NextRequest) {
         campaign_id: campaignId, 
         tx_hash: txHash, 
         contract_address: contractAddress, 
-        visible_on_marketplace: true 
+        visible_on_marketplace: true,
+        // Save NFT settings that were used for on-chain campaign
+        num_copies: copiesNum || null,
+        price_per_copy: priceUSD || null,
+        nft_editions: copiesNum || null,
+        nft_price: priceUSD || null
       })
       .eq('id', id)
     
