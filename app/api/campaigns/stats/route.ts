@@ -37,11 +37,13 @@ export async function GET(req: NextRequest) {
     )
 
     // Batch fetch all submissions for these campaign IDs
-    const { data: submissions } = await supabase
+    const { data: submissions, error: subError } = await supabase
       .from('submissions')
       .select('campaign_id, goal, num_copies, nft_editions, price_per_copy, nft_price')
       .eq('status', 'minted')
       .in('campaign_id', campaignIds)
+    
+    console.log(`[CampaignStats] Supabase query: campaignIds=${JSON.stringify(campaignIds)}, found=${submissions?.length || 0}, error=${subError?.message || 'none'}`)
 
     // Build lookup map
     const submissionMap: Record<number, any> = {}
@@ -149,7 +151,15 @@ export async function GET(req: NextRequest) {
       }
     }))
 
-    return NextResponse.json({ stats })
+    return NextResponse.json({ 
+      stats,
+      _queryDebug: {
+        requestedIds: campaignIds,
+        foundSubmissions: submissions?.length || 0,
+        supabaseError: subError?.message || null,
+        submissionMapKeys: Object.keys(submissionMap)
+      }
+    })
   } catch (e: any) {
     console.error('Campaign stats error:', e)
     return NextResponse.json({ error: 'FETCH_FAILED', details: e?.message }, { status: 500 })
