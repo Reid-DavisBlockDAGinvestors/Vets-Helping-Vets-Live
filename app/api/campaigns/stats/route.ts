@@ -37,9 +37,10 @@ export async function GET(req: NextRequest) {
     )
 
     // Batch fetch all submissions for these campaign IDs
+    // Note: only select columns that exist in the table
     const { data: submissions, error: subError } = await supabase
       .from('submissions')
-      .select('campaign_id, goal, num_copies, nft_editions, price_per_copy, nft_price')
+      .select('campaign_id, goal, num_copies, price_per_copy')
       .eq('status', 'minted')
       .in('campaign_id', campaignIds)
     
@@ -82,19 +83,15 @@ export async function GET(req: NextRequest) {
         
         // Goal from Supabase is in dollars
         const goalUSD = submission?.goal ? Number(submission.goal) : (onchainGoalUSD > 0 ? onchainGoalUSD : 100)
-        const numEditions = Number(submission?.num_copies || submission?.nft_editions || maxEditions || 100)
+        const numEditions = Number(submission?.num_copies || maxEditions || 100)
         
         // Price calculation priority:
-        // 1. Explicit nft_price from Supabase (in dollars)
-        // 2. Explicit price_per_copy from Supabase (in dollars)
-        // 3. Goal / Editions (allows decimals like $0.50)
-        // 4. Default to goal / on-chain maxEditions
+        // 1. Explicit price_per_copy from Supabase (in dollars)
+        // 2. Goal / Editions (allows decimals like $0.50)
+        // 3. Default to goal / on-chain maxEditions
         let pricePerEditionUSD = 0
         let priceSource = 'none'
-        if (submission?.nft_price && Number(submission.nft_price) > 0) {
-          pricePerEditionUSD = Number(submission.nft_price)
-          priceSource = 'nft_price'
-        } else if (submission?.price_per_copy && Number(submission.price_per_copy) > 0) {
+        if (submission?.price_per_copy && Number(submission.price_per_copy) > 0) {
           pricePerEditionUSD = Number(submission.price_per_copy)
           priceSource = 'price_per_copy'
         } else if (goalUSD > 0 && numEditions > 0) {
