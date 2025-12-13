@@ -130,64 +130,32 @@ export function useWallet() {
     }
   }, [updateBalance])
 
-  // Detect if on mobile
-  const isMobile = useCallback(() => {
-    if (typeof window === 'undefined') return false
-    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-  }, [])
-
   // Connect via WalletConnect (for mobile browsers without injected wallet)
   const connectWalletConnect = useCallback(async () => {
     setState(prev => ({ ...prev, isConnecting: true, error: null }))
 
     try {
-      const onMobile = isMobile()
-      console.log('[WalletConnect] Starting connection, mobile:', onMobile)
-
       // Create WalletConnect provider
       const provider = await EthereumProvider.init({
         projectId: WALLETCONNECT_PROJECT_ID,
         chains: [BLOCKDAG_CHAIN_ID],
-        optionalChains: [1], // Ethereum mainnet as fallback
-        showQrModal: true, // Show modal - it has wallet selection for mobile
+        optionalChains: [1, 137], // Ethereum mainnet and Polygon as fallbacks
+        showQrModal: true,
         metadata: {
           name: 'PatriotPledge NFTs',
           description: 'Support veterans through blockchain-powered fundraising',
-          url: typeof window !== 'undefined' ? window.location.origin : 'https://patriotpledgenfts.netlify.app',
+          url: typeof window !== 'undefined' ? window.location.origin : 'https://patriotpledgenfts.com',
           icons: ['https://patriotpledgenfts.netlify.app/favicon.ico'],
         },
         rpcMap: {
           [BLOCKDAG_CHAIN_ID]: 'https://rpc.awakening.bdagscan.com',
-          1: 'https://eth.llamarpc.com',
         },
       })
 
       // Store provider ref
       wcProviderRef.current = provider
 
-      // Set up event listener for URI
-      provider.on('display_uri', (uri: string) => {
-        console.log('[WalletConnect] URI generated:', uri.substring(0, 50))
-        
-        // On mobile, try to open MetaMask with a delay to let modal render first
-        if (onMobile) {
-          const encodedUri = encodeURIComponent(uri)
-          
-          // Try multiple approaches with delays
-          setTimeout(() => {
-            // First try universal link
-            const link = document.createElement('a')
-            link.href = `https://metamask.app.link/wc?uri=${encodedUri}`
-            link.target = '_self'
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-            console.log('[WalletConnect] Opened MetaMask via universal link')
-          }, 1000)
-        }
-      })
-
-      // Connect - this will trigger the display_uri event
+      // Connect
       await provider.connect()
 
       // Get accounts and chain
@@ -233,7 +201,7 @@ export function useWallet() {
         error: e?.message || 'Failed to connect via WalletConnect',
       }))
     }
-  }, [isMobile])
+  }, [])
 
   const disconnect = useCallback(async () => {
     // Disconnect WalletConnect if active

@@ -12,7 +12,6 @@ type OnchainItem = {
   category: string
   goal: string
   raised: string
-  grossRaised?: string
   // V5 edition fields
   editionsMinted?: number
   maxEditions?: number
@@ -147,22 +146,8 @@ export default async function StoryViewer({ params }: { params: { id: string } }
     pricePerCopy = goal / 100
   }
   
-  // Calculate NFT sales revenue
-  const nftSalesUSD = (pricePerCopy && editionsMinted > 0) 
-    ? editionsMinted * pricePerCopy 
-    : 0
-  
-  // Get gross raised from on-chain (includes tips)
-  const grossRaisedUSD = onchain?.grossRaised ? Number(onchain.grossRaised) : 0
-  
-  // Calculate tips = gross - NFT sales (tips are the extra amounts paid above NFT price)
-  const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
-  
-  // Total raised = NFT sales + tips
-  const raised = nftSalesUSD + tipsUSD
-  
-  // Remaining editions
-  const remainingEditions = maxEditions > 0 ? maxEditions - editionsMinted : null
+  // Get raised amount from on-chain
+  const raised = onchain ? Number(onchain.raised || 0) : 0
   
   // Calculate progress percentage based on editions sold (most accurate for V5 model)
   const pct = maxEditions > 0 
@@ -283,25 +268,10 @@ export default async function StoryViewer({ params }: { params: { id: string } }
               </div>
             </div>
             <div className="md:text-right">
-              <div className="text-2xl font-bold text-white">${raised.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+              <div className="text-2xl font-bold text-white">${raised.toLocaleString()}</div>
               <div className="text-sm text-white/50">
                 {goalUsd ? `raised of $${Number(goalUsd).toLocaleString()} goal` : 'raised'}
               </div>
-              {/* Breakdown of NFT sales vs tips */}
-              {(nftSalesUSD > 0 || tipsUSD > 0) && (
-                <div className="mt-2 text-xs space-y-0.5">
-                  <div className="flex items-center justify-end gap-2">
-                    <span className="text-emerald-400">NFT Sales:</span>
-                    <span className="text-white">${nftSalesUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                  {tipsUSD > 0 && (
-                    <div className="flex items-center justify-end gap-2">
-                      <span className="text-purple-400">Tips:</span>
-                      <span className="text-white">${tipsUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
           

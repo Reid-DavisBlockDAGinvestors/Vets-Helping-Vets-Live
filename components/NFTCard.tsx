@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import { ipfsToHttp } from '@/lib/ipfs'
 
@@ -26,10 +28,7 @@ export type NFTItem = {
 }
 
 export default function NFTCard({ item }: { item: NFTItem }) {
-  // Use edition-based progress (sold/total) when available, otherwise fall back to raised/goal
-  const pct = (item.total && item.total > 0 && item.sold !== undefined)
-    ? Math.min(100, Math.round((item.sold / item.total) * 100))
-    : Math.min(100, Math.round((item.raised / Math.max(1, item.goal)) * 100))
+  const pct = Math.min(100, Math.round((item.raised / Math.max(1, item.goal)) * 100))
   const maxLen = 120
   const snippet = item.snippet.length > maxLen
     ? item.snippet.slice(0, maxLen).trimEnd() + '...'

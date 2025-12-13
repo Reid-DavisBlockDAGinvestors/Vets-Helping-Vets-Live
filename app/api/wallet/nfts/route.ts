@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
-export const fetchCache = 'force-no-store'
 
 const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
 
@@ -31,8 +29,6 @@ export async function GET(req: NextRequest) {
     // Get balance (number of NFTs owned)
     const balance = await contract.balanceOf(address)
     const balanceNum = Number(balance)
-    
-    console.log(`[wallet/nfts] Address ${address} owns ${balanceNum} NFTs`)
 
     const nfts: any[] = []
 
@@ -41,7 +37,6 @@ export async function GET(req: NextRequest) {
       try {
         const tokenId = await contract.tokenOfOwnerByIndex(address, i)
         const tokenIdNum = Number(tokenId)
-        console.log(`[wallet/nfts] Found token #${tokenIdNum} at index ${i}`)
 
         // Get edition info
         const [editionInfo, uri] = await Promise.all([
@@ -66,52 +61,24 @@ export async function GET(req: NextRequest) {
         // Get Supabase submission for additional details
         let submission: any = null
         try {
-          const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-            process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-            { auth: { persistSession: false } }
-          )
-          const { data } = await supabase
+          const { data } = await supabaseAdmin
             .from('submissions')
-            .select('id, title, story, goal, creator_wallet, image_uri, price_per_copy, num_copies')
-            .eq('status', 'minted')
+            .select('id, title, story, goal, creator_wallet, image_uri')
             .eq('campaign_id', campaignId)
-          
-          submission = data && data.length > 0 ? data[0] : null
+            .maybeSingle()
+          submission = data
         } catch {}
 
-        // Get edition data from on-chain
-        const editionsMinted = Number(camp.editionsMinted ?? camp[5] ?? 0n)
-        const maxEditions = Number(camp.maxEditions ?? camp[6] ?? 0n)
-        const goalUSD = submission?.goal ? Number(submission.goal) : 0
-        
-        // Calculate price per NFT from Supabase (USD) - most accurate source
-        let pricePerNFT = 0
-        if (submission?.price_per_copy && Number(submission.price_per_copy) > 0) {
-          pricePerNFT = Number(submission.price_per_copy)
-        } else if (goalUSD > 0 && maxEditions > 0) {
-          pricePerNFT = goalUSD / maxEditions
-        }
-        
-        // Calculate NFT sales revenue
-        const nftSalesUSD = editionsMinted * pricePerNFT
-        
-        // Get gross raised from on-chain (includes tips)
-        const grossRaisedWei = BigInt(camp.grossRaised ?? camp[3] ?? 0n)
-        const grossRaisedUSD = (Number(grossRaisedWei) / 1e18) * BDAG_USD_RATE
-        
-        // Calculate tips = gross - NFT sales
-        const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
-        
-        // Total raised = NFT sales + tips
-        const raisedUSD = nftSalesUSD + tipsUSD
+        // Convert raised to USD
+        const netRaisedWei = BigInt(camp.netRaised ?? camp[4] ?? 0n)
+        const netRaisedBDAG = Number(netRaisedWei) / 1e18
+        const raisedUSD = netRaisedBDAG * BDAG_USD_RATE
 
         nfts.push({
           tokenId: tokenIdNum,
           campaignId,
           editionNumber,
-          totalEditions: maxEditions, // Use campaign maxEditions for progress calculation
-          editionsMinted,
+          totalEditions,
           contractAddress,
           uri,
           metadata,
@@ -119,14 +86,12 @@ export async function GET(req: NextRequest) {
           image: submission?.image_uri || metadata?.image || '',
           story: submission?.story || metadata?.description || '',
           category: camp.category ?? camp[0],
-          goal: goalUSD || Number(camp.goal ?? camp[2]) / 1e18 * BDAG_USD_RATE,
+          goal: submission?.goal || Number(camp.goal ?? camp[2]) / 1e18 * BDAG_USD_RATE,
           raised: raisedUSD,
-          nftSalesUSD,
-          tipsUSD,
           active: camp.active ?? camp[8] ?? true,
           closed: camp.closed ?? camp[9] ?? false,
           submissionId: submission?.id || null,
-          isCreator: submission?.creator_wallet?.toLowerCase() === address.toLowerCase(),
+          isCreator: submission?.creator_wallet?.toLowerCase() === address.toLowerCase()
         })
       } catch (e: any) {
         console.error(`Error fetching token at index ${i}:`, e?.message)
