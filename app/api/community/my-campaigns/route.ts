@@ -34,23 +34,62 @@ export async function GET(req: NextRequest) {
     )
 
     // 1. Campaigns user created (by user_id or email)
-    const { data: createdCampaigns, error: createdErr } = await supabaseAdmin
+    // Try by user_id first
+    let createdCampaigns: any[] = []
+    const { data: byUserId, error: byUserIdErr } = await supabaseAdmin
       .from('submissions')
       .select('id, title, image_uri, slug, short_code, campaign_id, category, status')
-      .or(`user_id.eq.${userId},email.ilike.%${userEmail}%`)
+      .eq('user_id', userId)
       .in('status', ['minted', 'approved', 'pending'])
       .order('created_at', { ascending: false })
     
-    if (createdErr) console.error('[my-campaigns] createdCampaigns error:', createdErr)
+    if (byUserIdErr) console.error('[my-campaigns] byUserId error:', byUserIdErr)
+    createdCampaigns = byUserId || []
+    
+    // Also try by email if we have one
+    if (userEmail) {
+      const { data: byEmail, error: byEmailErr } = await supabaseAdmin
+        .from('submissions')
+        .select('id, title, image_uri, slug, short_code, campaign_id, category, status')
+        .ilike('creator_email', userEmail)
+        .in('status', ['minted', 'approved', 'pending'])
+        .order('created_at', { ascending: false })
+      
+      if (byEmailErr) console.error('[my-campaigns] byEmail error:', byEmailErr)
+      // Merge, avoiding duplicates
+      const existingIds = new Set(createdCampaigns.map(c => c.id))
+      for (const c of (byEmail || [])) {
+        if (!existingIds.has(c.id)) createdCampaigns.push(c)
+      }
+    }
+    
     console.log('[my-campaigns] createdCampaigns:', createdCampaigns?.length, 'for user:', userId, userEmail)
 
     // 2. Campaigns user purchased NFTs for (from purchases table)
-    const { data: purchases, error: purchasesErr } = await supabaseAdmin
+    // Try by user_id first, then by email
+    let purchases: any[] = []
+    const { data: purchasesByUserId, error: purchasesErr1 } = await supabaseAdmin
       .from('purchases')
       .select('campaign_id, submission_id')
-      .or(`user_id.eq.${userId},email.ilike.%${userEmail}%`)
+      .eq('user_id', userId)
     
-    if (purchasesErr) console.error('[my-campaigns] purchases error:', purchasesErr)
+    if (purchasesErr1) console.error('[my-campaigns] purchases by user_id error:', purchasesErr1)
+    purchases = purchasesByUserId || []
+    
+    if (userEmail) {
+      const { data: purchasesByEmail, error: purchasesErr2 } = await supabaseAdmin
+        .from('purchases')
+        .select('campaign_id, submission_id')
+        .ilike('email', userEmail)
+      
+      if (purchasesErr2) console.error('[my-campaigns] purchases by email error:', purchasesErr2)
+      // Merge
+      for (const p of (purchasesByEmail || [])) {
+        purchases.push(p)
+      }
+    }
+    
+    console.log('[my-campaigns] purchases:', purchases?.length)
 
     const purchasedSubmissionIds = [...new Set(purchases?.map(p => p.submission_id).filter(Boolean) || [])]
     
