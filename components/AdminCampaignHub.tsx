@@ -1919,11 +1919,11 @@ export default function AdminCampaignHub() {
       {approvingCampaign && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setApprovingCampaign(null)}>
           <div 
-            className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden"
+            className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col"
             onClick={e => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-green-500/10">
+            {/* Modal Header - Fixed */}
+            <div className="px-6 py-3 border-b border-white/10 flex items-center justify-between bg-green-500/10 flex-shrink-0">
               <h2 className="text-lg font-bold text-white">✓ Approve & Create Campaign</h2>
               <button 
                 onClick={() => setApprovingCampaign(null)}
@@ -1933,83 +1933,74 @@ export default function AdminCampaignHub() {
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 space-y-4">
+            {/* Modal Body - Scrollable */}
+            <div className="p-4 space-y-3 overflow-y-auto flex-1">
               <div className="text-sm text-white/70 mb-4">
                 <strong className="text-white">{approvingCampaign.title}</strong>
                 <p className="mt-1">Review and adjust the campaign settings before creating on-chain:</p>
               </div>
 
-              {/* Goal */}
-              <div>
-                <label className="block text-sm text-white/70 mb-1">Fundraising Goal (USD)</label>
-                <input
-                  type="number"
-                  value={approvalForm.goal}
-                  onChange={e => setApprovalForm({ ...approvalForm, goal: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white text-lg font-medium"
-                />
-              </div>
-
-              {/* NFT Settings */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Goal + NFT Settings - Compact Grid */}
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm text-white/70 mb-1">Price per NFT (USD)</label>
+                  <label className="block text-xs text-white/70 mb-1">Goal (USD)</label>
+                  <input
+                    type="number"
+                    value={approvalForm.goal}
+                    onChange={e => setApprovalForm({ ...approvalForm, goal: parseFloat(e.target.value) || 0 })}
+                    className="w-full rounded-lg bg-white/10 border border-white/10 p-2 text-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-white/70 mb-1">Price/NFT (USD)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={approvalForm.nft_price}
                     onChange={e => setApprovalForm({ ...approvalForm, nft_price: parseFloat(e.target.value) || 1 })}
-                    className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white"
+                    className="w-full rounded-lg bg-white/10 border border-white/10 p-2 text-white text-sm"
                   />
-                  <p className="text-xs text-white/40 mt-1">
-                    = {(approvalForm.nft_price / 0.05).toFixed(0)} BDAG
-                  </p>
+                  <p className="text-xs text-white/40">= {(approvalForm.nft_price / 0.05).toFixed(0)} BDAG</p>
                 </div>
                 <div>
-                  <label className="block text-sm text-white/70 mb-1">Max Editions</label>
+                  <label className="block text-xs text-white/70 mb-1">Max Editions</label>
                   <input
                     type="number"
                     value={approvalForm.nft_editions}
                     onChange={e => setApprovalForm({ ...approvalForm, nft_editions: parseInt(e.target.value) || 100 })}
-                    className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white"
+                    className="w-full rounded-lg bg-white/10 border border-white/10 p-2 text-white text-sm"
                   />
                 </div>
               </div>
 
               {/* Wallet */}
               <div>
-                <label className="block text-sm text-white/70 mb-1">Creator Wallet Address</label>
+                <label className="block text-xs text-white/70 mb-1">Creator Wallet Address</label>
                 <input
                   type="text"
                   value={approvalForm.creator_wallet}
                   onChange={e => setApprovalForm({ ...approvalForm, creator_wallet: e.target.value })}
                   placeholder="0x..."
-                  className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white font-mono text-sm"
+                  className="w-full rounded-lg bg-white/10 border border-white/10 p-2 text-white font-mono text-xs"
                 />
                 {!approvalForm.creator_wallet && (
-                  <p className="text-xs text-yellow-400 mt-1">
-                    ⚠️ No wallet set - will use relayer address as fallback
-                  </p>
+                  <p className="text-xs text-yellow-400">⚠️ No wallet - uses relayer fallback</p>
                 )}
               </div>
 
               {/* Benchmarks / Milestones */}
               <div>
-                <label className="block text-sm text-white/70 mb-1">Benchmarks / Milestones (one per line)</label>
+                <label className="block text-xs text-white/70 mb-1">Benchmarks (one per line, optional)</label>
                 <textarea
                   value={approvalForm.benchmarks}
                   onChange={e => setApprovalForm({ ...approvalForm, benchmarks: e.target.value })}
-                  placeholder="e.g.&#10;25% - Initial medical consultation&#10;50% - Surgery scheduled&#10;75% - Post-op recovery&#10;100% - Full recovery"
-                  className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white text-sm h-28"
+                  placeholder="25% - Milestone 1&#10;50% - Milestone 2&#10;100% - Complete"
+                  className="w-full rounded-lg bg-white/10 border border-white/10 p-2 text-white text-sm h-20"
                 />
-                <p className="text-xs text-white/40 mt-1">
-                  Define milestones that will be shown on the campaign page to track progress
-                </p>
               </div>
 
               {/* Summary */}
-              <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-4 mt-4">
+              <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-3">
                 <div className="text-sm text-green-300">
                   <div className="flex justify-between mb-1">
                     <span>Max Potential Revenue:</span>
@@ -2023,8 +2014,8 @@ export default function AdminCampaignHub() {
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-white/10 flex items-center justify-end gap-3">
+            {/* Modal Footer - Fixed */}
+            <div className="px-4 py-3 border-t border-white/10 flex items-center justify-end gap-3 flex-shrink-0 bg-gray-900">
               <button
                 onClick={() => setApprovingCampaign(null)}
                 disabled={approving === approvingCampaign.id}
@@ -2038,7 +2029,7 @@ export default function AdminCampaignHub() {
                   setApprovingCampaign(null)
                 }}
                 disabled={approving === approvingCampaign.id}
-                className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 text-white text-sm font-medium transition-colors flex items-center gap-2"
+                className="px-5 py-2 rounded-lg bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 text-white text-sm font-medium transition-colors flex items-center gap-2"
               >
                 {approving === approvingCampaign.id ? (
                   <>
@@ -2046,7 +2037,7 @@ export default function AdminCampaignHub() {
                     Creating...
                   </>
                 ) : (
-                  <>✓ Create Campaign On-Chain</>
+                  <>✓ Create On-Chain</>
                 )}
               </button>
             </div>
