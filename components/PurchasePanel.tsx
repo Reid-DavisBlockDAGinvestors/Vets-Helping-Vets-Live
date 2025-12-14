@@ -151,6 +151,12 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       return
     }
 
+    // Block purchases for pending campaigns
+    if (isPendingOnchain) {
+      setCryptoMsg('⏳ Campaign is awaiting blockchain confirmation. Please wait for admin to verify the transaction.')
+      return
+    }
+
     try {
       setLoading(true)
       setCryptoMsg('Verifying campaign on blockchain...')

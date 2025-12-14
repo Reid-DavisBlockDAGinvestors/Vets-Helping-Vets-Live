@@ -351,7 +351,58 @@ export default function AdminCampaignHub() {
     })
   }
 
-  // Verify and fix campaign on-chain status
+  // Verify pending transaction and get confirmed campaign ID
+  const [verifying, setVerifying] = useState<string | null>(null)
+  const verifyTransaction = async (campaign: Campaign) => {
+    setVerifying(campaign.id)
+    setError('')
+    
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) throw new Error('Not authenticated')
+
+      const res = await fetch('/api/admin/verify-tx', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ submissionId: campaign.id })
+      })
+      
+      const data = await res.json()
+      
+      if (data.verified) {
+        // Transaction confirmed, campaign ID verified
+        setCampaigns(prev => prev.map(c => 
+          c.id === campaign.id 
+            ? { ...c, campaign_id: data.campaignId, status: 'minted' } 
+            : c
+        ))
+        alert(`✅ Campaign Verified!\n\nConfirmed Campaign ID: ${data.campaignId}\nActive: ${data.active}\nBlock: ${data.blockNumber}\n\n${data.message}`)
+      } else if (data.status === 'pending') {
+        alert(`⏳ Transaction Still Pending\n\nThe transaction has not been confirmed yet.\nPlease wait a few minutes and try again.\n\nTx: ${data.txHash?.slice(0, 20)}...`)
+      } else if (data.status === 'failed') {
+        // Transaction failed, reset to approved
+        setCampaigns(prev => prev.map(c => 
+          c.id === campaign.id 
+            ? { ...c, campaign_id: null, status: 'approved', tx_hash: null } 
+            : c
+        ))
+        alert(`❌ Transaction Failed\n\n${data.message}\n\nYou can retry creating the campaign.`)
+      } else {
+        alert(`⚠️ Verification Issue\n\nStatus: ${data.status}\n${data.message || data.error || 'Unknown issue'}`)
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Verification failed')
+      alert(`❌ Verification failed: ${e?.message || 'Unknown error'}`)
+    } finally {
+      setVerifying(null)
+    }
+  }
+
+  // Verify and fix campaign on-chain status (for minted campaigns with wrong ID)
   const [fixing, setFixing] = useState<string | null>(null)
   const verifyCampaign = async (campaign: Campaign) => {
     setFixing(campaign.id)
@@ -1302,6 +1353,40 @@ export default function AdminCampaignHub() {
                           >
                             ↩️ Move to Pending
                           </button>
+                        )}
+                        {/* Pending on-chain verification - show Verify button */}
+                        {campaign.status === 'pending_onchain' && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="px-4 py-2 rounded-lg bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 text-sm animate-pulse">
+                              ⏳ Awaiting Blockchain Confirmation
+                            </div>
+                            {campaign.tx_hash && (
+                              <a
+                                href={`https://awakening.bdagscan.com/tx/${campaign.tx_hash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors flex items-center gap-2"
+                              >
+                                🔗 View Tx
+                              </a>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); verifyTransaction(campaign); }}
+                              disabled={verifying === campaign.id}
+                              className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 text-white text-sm font-medium transition-colors flex items-center gap-2"
+                              title="Check if transaction is confirmed and get real campaign ID"
+                            >
+                              {verifying === campaign.id ? (
+                                <>
+                                  <span className="animate-spin">⏳</span>
+                                  Verifying...
+                                </>
+                              ) : (
+                                <>✅ Verify On-Chain</>
+                              )}
+                            </button>
+                          </div>
                         )}
                         {/* Minted campaigns show their on-chain ID and explorer link */}
                         {campaign.status === 'minted' && campaign.campaign_id != null && (

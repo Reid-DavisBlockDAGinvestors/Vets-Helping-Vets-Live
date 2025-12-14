@@ -118,8 +118,9 @@ export default async function StoryViewer({ params }: { params: { id: string } }
   const goalUsd = submission?.goal ? Number(submission.goal) : null
   const benchmarks: string[] = Array.isArray(submission?.benchmarks) ? submission.benchmarks : []
   
-  // Check if campaign is approved but not yet on-chain (pending blockchain confirmation)
-  const isPendingOnchain = submission?.status === 'approved' && !onchain
+  // Check if campaign is pending blockchain confirmation
+  // Either status is 'pending_onchain' (new flow) or 'approved' without on-chain data (legacy)
+  const isPendingOnchain = submission?.status === 'pending_onchain' || (submission?.status === 'approved' && !onchain)
   
   // V5 Edition NFT pricing info
   // Price per NFT = Goal ÷ Number of NFTs in the series

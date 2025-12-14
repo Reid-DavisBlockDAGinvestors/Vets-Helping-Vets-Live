@@ -209,16 +209,17 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await createCampaignFast()
-    campaignId = result.campaignId
+    campaignId = result.campaignId // This is just a prediction, will be verified later
     txHash = result.hash
 
-    // Update submission with campaign info and NFT settings
+    // Update submission with PENDING status - campaign ID will be confirmed by background verification
+    // We store the predicted ID but mark status as pending_onchain until verified
     const contractAddress = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || null
     const { error: updateError } = await supabaseAdmin
       .from('submissions')
       .update({ 
-        status: 'minted', // Using 'minted' status to indicate campaign is live
-        campaign_id: campaignId, 
+        status: 'pending_onchain', // NEW: Pending until tx is verified on-chain
+        campaign_id: campaignId,   // Predicted ID - will be verified/corrected
         tx_hash: txHash, 
         contract_address: contractAddress, 
         visible_on_marketplace: true,
@@ -231,30 +232,30 @@ export async function POST(req: NextRequest) {
     if (updateError) {
       console.error('[approve] Failed to update submission:', updateError)
     } else {
-      console.log(`[approve] Submission ${id} updated: campaign_id=${campaignId}, status=minted`)
+      console.log(`[approve] Submission ${id} updated: campaign_id=${campaignId} (predicted), status=pending_onchain, tx=${txHash}`)
     }
     
-    // Send campaign approved email with proper template
-    if (campaignId != null) {
-      try {
-        await sendCampaignApproved({
-          email: sub.creator_email,
-          title: sub.title || 'Your Campaign',
-          campaignId: campaignId,
-          creatorName: sub.creator_name,
-          imageUrl: toHttpUrl(sub.image_uri) || undefined,
-          txHash: txHash || undefined
-        })
-        console.log(`[approve] Sent campaign approved email to ${sub.creator_email} with txHash: ${txHash}`)
-      } catch (emailErr) {
-        console.error('[approve] Failed to send campaign approved email:', emailErr)
-      }
+    // Send campaign approved email - note that campaign is pending verification
+    try {
+      await sendCampaignApproved({
+        email: sub.creator_email,
+        title: sub.title || 'Your Campaign',
+        campaignId: campaignId,
+        creatorName: sub.creator_name,
+        imageUrl: toHttpUrl(sub.image_uri) || undefined,
+        txHash: txHash || undefined
+      })
+      console.log(`[approve] Sent campaign approved email to ${sub.creator_email} with txHash: ${txHash}`)
+    } catch (emailErr) {
+      console.error('[approve] Failed to send campaign approved email:', emailErr)
     }
 
     return NextResponse.json({
       ok: true,
       txHash,
-      campaignId: campaignId != null ? campaignId : undefined
+      campaignId: campaignId != null ? campaignId : undefined,
+      status: 'pending_onchain',
+      message: 'Campaign transaction submitted. Awaiting blockchain confirmation. Use "Verify" button to check status.'
     })
   } catch (e:any) {
     console.error('[approve] Error:', e?.message || String(e))
