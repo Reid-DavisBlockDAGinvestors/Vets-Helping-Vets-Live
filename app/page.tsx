@@ -356,10 +356,9 @@ export default async function HomePage() {
                 <h3 className="text-xl font-semibold text-white">Get BDAG Tokens</h3>
               </div>
               <div className="space-y-3 text-white/70">
-                <p>You&apos;ll need BDAG tokens to purchase NFTs. During testnet, you can:</p>
+                <p>You&apos;ll need BDAG tokens to purchase NFTs. During testnet:</p>
                 <ul className="list-disc list-inside space-y-2 ml-2">
-                  <li>Request testnet BDAG from the <a href="https://t.me/BlockDAGBuildathon" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">BlockDAG Buildathon Telegram</a></li>
-                  <li>Contact the PatriotPledge team for testnet tokens</li>
+                  <li>Get free testnet BDAG from the <a href="https://awakening.bdagscan.com/faucet" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">BlockDAG Explorer Faucet</a></li>
                 </ul>
               </div>
             </div>
