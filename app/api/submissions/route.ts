@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { sendSubmissionConfirmation } from '@/lib/mailer'
+import { sendSubmissionConfirmation, sendAdminNewSubmission } from '@/lib/mailer'
 
 // POST /api/submissions  -> create a new creator submission (status=pending)
 export async function POST(req: NextRequest) {
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         await supabaseAdmin.from('profiles').insert({ email: creator_email })
       }
     } catch {}
-    // Send receipt email (best-effort)
+    // Send receipt email to creator (best-effort)
     try {
       console.log('[submissions] Sending confirmation email to:', creator_email)
       const emailResult = await sendSubmissionConfirmation({
@@ -81,6 +81,23 @@ export async function POST(req: NextRequest) {
     } catch (emailErr) {
       console.error('[submissions] Failed to send confirmation email:', emailErr)
     }
+    
+    // Send notification email to admin (best-effort)
+    try {
+      console.log('[submissions] Sending admin notification email')
+      const adminEmailResult = await sendAdminNewSubmission({
+        submissionId: data.id,
+        title: title || 'Untitled Campaign',
+        creatorName: creator_name,
+        creatorEmail: creator_email,
+        category: category || 'general',
+        goal: typeof goal === 'number' ? goal : undefined
+      })
+      console.log('[submissions] Admin notification result:', adminEmailResult)
+    } catch (adminEmailErr) {
+      console.error('[submissions] Failed to send admin notification:', adminEmailErr)
+    }
+    
     return NextResponse.json({ id: data.id, status: data.status })
   } catch (e:any) {
     return NextResponse.json({ error: 'SUBMISSION_CREATE_ERROR', details: e?.message || String(e) }, { status: 500 })

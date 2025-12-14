@@ -406,6 +406,54 @@ export type ProposalSubmittedData = {
   submitterName?: string
 }
 
+// Admin notification for new submissions
+export type AdminNewSubmissionData = {
+  submissionId: string
+  title: string
+  creatorName?: string
+  creatorEmail: string
+  category: string
+  goal?: number
+}
+
+export async function sendAdminNewSubmission(data: AdminNewSubmissionData) {
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'reid@blockdaginvestors.com'
+  const adminUrl = `${SITE_URL}/admin`
+  
+  const content = `
+    <h1 style="color: #fff; font-size: 24px; margin: 0 0 20px 0;">🔔 New Submission Requires Review</h1>
+    
+    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6;">
+      A new campaign submission has been received and is awaiting your review.
+    </p>
+    
+    <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin: 20px 0;">
+      <h2 style="color: #fff; font-size: 18px; margin: 0 0 15px 0;">${data.title}</h2>
+      <table width="100%" style="color: #94a3b8; font-size: 14px;">
+        <tr><td style="padding: 8px 0;">Submission ID:</td><td style="text-align: right; color: #fff;">${data.submissionId}</td></tr>
+        <tr><td style="padding: 8px 0;">Creator:</td><td style="text-align: right; color: #fff;">${data.creatorName || 'Not provided'}</td></tr>
+        <tr><td style="padding: 8px 0;">Email:</td><td style="text-align: right; color: #3b82f6;">${data.creatorEmail}</td></tr>
+        <tr><td style="padding: 8px 0;">Category:</td><td style="text-align: right; color: #fff;">${data.category}</td></tr>
+        ${data.goal ? `<tr><td style="padding: 8px 0;">Goal:</td><td style="text-align: right; color: #22c55e;">$${data.goal.toLocaleString()}</td></tr>` : ''}
+      </table>
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${adminUrl}" style="display: inline-block; background: #ef4444; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">Review in Admin Portal</a>
+    </div>
+    
+    <p style="color: #64748b; font-size: 12px; text-align: center;">
+      This is an automated notification. Please review and approve or reject this submission.
+    </p>
+  `
+  
+  return sendEmail({
+    to: adminEmail,
+    subject: `🔔 New Submission: ${data.title}`,
+    html: wrapEmail(content)
+  })
+}
+
 export async function sendProposalSubmitted(data: ProposalSubmittedData) {
   const content = `
     <h1 style="color: #fff; font-size: 24px; margin: 0 0 20px 0;">📋 Proposal Submitted</h1>
