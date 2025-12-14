@@ -131,7 +131,8 @@ export default function CommunityHubClient() {
   useEffect(() => {
     const loadCampaigns = async () => {
       try {
-        const res = await fetch('/api/marketplace/fundraisers')
+        // Request up to 50 campaigns (max allowed by API)
+        const res = await fetch('/api/marketplace/fundraisers?limit=50')
         if (res.ok) {
           const data = await res.json()
           // API returns 'items' array, not 'fundraisers'
