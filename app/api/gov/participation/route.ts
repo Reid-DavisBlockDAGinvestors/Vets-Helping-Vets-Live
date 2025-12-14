@@ -3,10 +3,12 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { ethers } from 'ethers'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 
+export const dynamic = 'force-dynamic'
+
 // GET: Get participation stats for a wallet address
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
+    const { searchParams } = req.nextUrl
     const wallet = searchParams.get('wallet')
     
     if (!wallet) {
