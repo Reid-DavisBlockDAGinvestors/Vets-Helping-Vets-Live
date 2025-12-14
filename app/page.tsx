@@ -390,16 +390,14 @@ export default async function HomePage() {
           <div className="lg:sticky lg:top-24 h-fit">
             <div className="rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 p-6">
               <h3 className="text-xl font-semibold text-white mb-4">📺 Video Tutorial</h3>
-              <div className="aspect-video rounded-xl bg-black/50 overflow-hidden flex items-center justify-center" data-testid="demo-video">
-                <div className="text-center p-6">
-                  <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-4 cursor-pointer hover:bg-white/20 transition-all">
-                    <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </div>
-                  <p className="text-white/50 mb-2">Video tutorial coming soon</p>
-                  <p className="text-sm text-white/30">Watch the complete walkthrough of setting up MetaMask and purchasing your first NFT</p>
-                </div>
+              <div className="aspect-video rounded-xl bg-black/50 overflow-hidden" data-testid="demo-video">
+                <iframe
+                  src="https://www.youtube.com/embed/xkYcSQdnMXs"
+                  title="PatriotPledge NFTs Tutorial - How to Set Up MetaMask and Purchase NFTs"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
               </div>
               
               {/* Quick Links */}
