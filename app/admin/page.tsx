@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react'
 import AdminCampaignHub from '@/components/AdminCampaignHub'
 import AdminGovernance from '@/components/AdminGovernance'
+import AdminUsers from '@/components/AdminUsers'
+import AdminSubmitters from '@/components/AdminSubmitters'
 import { supabase } from '@/lib/supabase'
 
-type AdminTab = 'campaigns' | 'governance' | 'settings'
+type AdminTab = 'campaigns' | 'users' | 'submitters' | 'governance' | 'settings'
 
 export default function AdminPage() {
   const [email, setEmail] = useState('')
@@ -405,7 +407,7 @@ export default function AdminPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-2 border-b border-white/10 pb-4">
+        <div className="flex flex-wrap gap-2 border-b border-white/10 pb-4">
           <button
             onClick={() => setActiveTab('campaigns')}
             className={`px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
@@ -414,7 +416,27 @@ export default function AdminPage() {
                 : 'bg-white/5 text-white/70 hover:bg-white/10'
             }`}
           >
-            📋 Campaigns & Updates
+            📋 Campaigns
+          </button>
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
+              activeTab === 'users' 
+                ? 'bg-green-600 text-white' 
+                : 'bg-white/5 text-white/70 hover:bg-white/10'
+            }`}
+          >
+            👥 Users
+          </button>
+          <button
+            onClick={() => setActiveTab('submitters')}
+            className={`px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
+              activeTab === 'submitters' 
+                ? 'bg-orange-600 text-white' 
+                : 'bg-white/5 text-white/70 hover:bg-white/10'
+            }`}
+          >
+            📝 Submitters
           </button>
           <button
             onClick={() => setActiveTab('governance')}
@@ -440,6 +462,8 @@ export default function AdminPage() {
 
         {/* Tab Content */}
         {activeTab === 'campaigns' && <AdminCampaignHub />}
+        {activeTab === 'users' && <AdminUsers />}
+        {activeTab === 'submitters' && <AdminSubmitters />}
         {activeTab === 'governance' && <AdminGovernance />}
         {activeTab === 'settings' && (
           <>
