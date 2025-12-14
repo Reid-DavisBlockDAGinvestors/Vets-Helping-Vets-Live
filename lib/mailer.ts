@@ -414,10 +414,10 @@ export type AdminNewSubmissionData = {
   creatorEmail: string
   category: string
   goal?: number
+  adminEmails?: string[] // Optional: pass admin emails directly, otherwise will be fetched
 }
 
 export async function sendAdminNewSubmission(data: AdminNewSubmissionData) {
-  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'reid@blockdaginvestors.com'
   const adminUrl = `${SITE_URL}/admin`
   
   const content = `
@@ -447,11 +447,23 @@ export async function sendAdminNewSubmission(data: AdminNewSubmissionData) {
     </p>
   `
   
-  return sendEmail({
-    to: adminEmail,
-    subject: `🔔 New Submission: ${data.title}`,
-    html: wrapEmail(content)
-  })
+  // Get admin emails - use provided list or fallback
+  const adminEmails = data.adminEmails && data.adminEmails.length > 0 
+    ? data.adminEmails 
+    : [process.env.ADMIN_NOTIFICATION_EMAIL || 'reid@blockdaginvestors.com']
+  
+  // Send to all admins
+  const results = await Promise.all(
+    adminEmails.map(email => 
+      sendEmail({
+        to: email,
+        subject: `🔔 New Submission: ${data.title}`,
+        html: wrapEmail(content)
+      })
+    )
+  )
+  
+  return { sent: adminEmails.length, results }
 }
 
 export async function sendProposalSubmitted(data: ProposalSubmittedData) {

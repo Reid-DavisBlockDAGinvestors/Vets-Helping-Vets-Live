@@ -82,18 +82,41 @@ export async function POST(req: NextRequest) {
       console.error('[submissions] Failed to send confirmation email:', emailErr)
     }
     
-    // Send notification email to admin (best-effort)
+    // Send notification email to admins who can approve campaigns (best-effort)
     try {
-      console.log('[submissions] Sending admin notification email')
-      const adminEmailResult = await sendAdminNewSubmission({
-        submissionId: data.id,
-        title: title || 'Untitled Campaign',
-        creatorName: creator_name,
-        creatorEmail: creator_email,
-        category: category || 'general',
-        goal: typeof goal === 'number' ? goal : undefined
-      })
-      console.log('[submissions] Admin notification result:', adminEmailResult)
+      console.log('[submissions] Fetching admins with campaign approval permissions')
+      // Get all admins with canManageCampaigns permission (super_admin and admin roles)
+      const { data: admins } = await supabaseAdmin
+        .from('profiles')
+        .select('email')
+        .in('role', ['super_admin', 'admin'])
+        .not('email', 'is', null)
+      
+      const adminEmails = admins?.map(a => a.email).filter(Boolean) as string[] || []
+      console.log('[submissions] Found admins to notify:', adminEmails.length)
+      
+      if (adminEmails.length > 0) {
+        const adminEmailResult = await sendAdminNewSubmission({
+          submissionId: data.id,
+          title: title || 'Untitled Campaign',
+          creatorName: creator_name,
+          creatorEmail: creator_email,
+          category: category || 'general',
+          goal: typeof goal === 'number' ? goal : undefined,
+          adminEmails
+        })
+        console.log('[submissions] Admin notification result:', adminEmailResult)
+      } else {
+        console.log('[submissions] No admins found, using fallback email')
+        await sendAdminNewSubmission({
+          submissionId: data.id,
+          title: title || 'Untitled Campaign',
+          creatorName: creator_name,
+          creatorEmail: creator_email,
+          category: category || 'general',
+          goal: typeof goal === 'number' ? goal : undefined
+        })
+      }
     } catch (adminEmailErr) {
       console.error('[submissions] Failed to send admin notification:', adminEmailErr)
     }
