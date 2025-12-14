@@ -54,12 +54,14 @@ export default function AdminUsers() {
         headers: { authorization: `Bearer ${token}` }
       })
       const data = await res.json()
+      console.log('[AdminUsers] API response:', data)
       
       if (!res.ok) {
         setError(data?.error || 'Failed to load users')
         return
       }
       
+      console.log('[AdminUsers] Users count:', data?.users?.length, 'Total:', data?.total)
       setUsers(data?.users || [])
     } catch (e: any) {
       setError(e?.message || 'Failed to load users')
