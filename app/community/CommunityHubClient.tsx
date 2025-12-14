@@ -124,6 +124,12 @@ export default function CommunityHubClient() {
     const prefill = searchParams.get('prefill')
     if (prefill && !newPostContent) {
       setNewPostContent(prefill)
+      // Extract any campaign mentions from prefill and fetch their previews
+      const mentions = prefill.match(/@\[([^\]]+)\]/g) || []
+      const ids = mentions.map((m: string) => m.slice(2, -1)).filter(Boolean)
+      if (ids.length > 0) {
+        fetchCampaignPreviews(ids)
+      }
     }
   }, [searchParams, newPostContent])
 
@@ -456,6 +462,21 @@ export default function CommunityHubClient() {
     return d.toLocaleDateString()
   }
 
+  // Find campaign by ID, UUID, slug, or short_code
+  const findCampaign = (id: string): CampaignPreview | null => {
+    // First check campaignPreviews (fetched from API)
+    if (campaignPreviews[id]) return campaignPreviews[id]
+    
+    // Then check allCampaigns (loaded from marketplace)
+    const found = allCampaigns.find(c => 
+      c.id === id || 
+      c.slug === id || 
+      c.short_code === id ||
+      String(c.campaign_id) === id
+    )
+    return found || null
+  }
+
   // Render post content with campaign mentions as styled links
   const renderPostContent = (content: string) => {
     // Split content by @[id] mentions
@@ -465,7 +486,7 @@ export default function CommunityHubClient() {
       const mentionMatch = part.match(/^@\[([^\]]+)\]$/)
       if (mentionMatch) {
         const id = mentionMatch[1]
-        const campaign = campaignPreviews[id]
+        const campaign = findCampaign(id)
         if (campaign) {
           // Render as a styled campaign link
           return (
@@ -479,7 +500,10 @@ export default function CommunityHubClient() {
             </Link>
           )
         } else {
-          // Campaign not loaded yet, show loading state
+          // Campaign not found - fetch it asynchronously
+          if (!campaignPreviews[id]) {
+            fetchCampaignPreviews([id])
+          }
           return (
             <span key={index} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 text-white/50 text-sm">
               <span className="animate-pulse">🎗️</span>
@@ -737,6 +761,13 @@ export default function CommunityHubClient() {
                   )}
                 </div>
                 <div className="flex-1">
+                  {/* Show preview of mentions if content has @[...] */}
+                  {newPostContent.includes('@[') ? (
+                    <div className="mb-2 p-3 rounded-lg bg-white/5 border border-white/10">
+                      <p className="text-xs text-white/40 mb-1">Preview:</p>
+                      <div className="text-white text-sm">{renderPostContent(newPostContent)}</div>
+                    </div>
+                  ) : null}
                   <textarea
                     value={newPostContent}
                     onChange={e => setNewPostContent(e.target.value)}
