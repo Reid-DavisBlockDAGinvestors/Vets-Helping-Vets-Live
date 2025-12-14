@@ -11,10 +11,11 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
     const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim().toLowerCase()
 
     // V5: Look up by campaign_id first, then fall back to token_id for legacy
+    // Include both 'minted' and 'approved' status (approved = on-chain tx may have failed but submission exists)
     const { data: rows, error } = await supabaseAdmin
       .from('submissions')
       .select('*')
-      .eq('status', 'minted')
+      .in('status', ['minted', 'approved'])
       .or(`campaign_id.eq.${id},token_id.eq.${id}`)
       .order('created_at', { ascending: false })
 

@@ -118,6 +118,9 @@ export default async function StoryViewer({ params }: { params: { id: string } }
   const goalUsd = submission?.goal ? Number(submission.goal) : null
   const benchmarks: string[] = Array.isArray(submission?.benchmarks) ? submission.benchmarks : []
   
+  // Check if campaign is approved but not yet on-chain (pending blockchain confirmation)
+  const isPendingOnchain = submission?.status === 'approved' && !onchain
+  
   // V5 Edition NFT pricing info
   // Price per NFT = Goal ÷ Number of NFTs in the series
   const maxEditions = submission?.nft_editions 
@@ -214,6 +217,19 @@ export default async function StoryViewer({ params }: { params: { id: string } }
         </div>
       </div>
 
+      {/* Pending On-Chain Banner */}
+      {isPendingOnchain && (
+        <div className="container mb-4">
+          <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-4 flex items-center gap-3">
+            <span className="text-2xl">⏳</span>
+            <div>
+              <p className="text-yellow-300 font-medium">Campaign Pending Blockchain Confirmation</p>
+              <p className="text-yellow-300/70 text-sm">This campaign is approved but waiting for on-chain confirmation. Purchases will be available shortly.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container">
         {/* Top Section: Image + Donation Side by Side */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
@@ -258,7 +274,7 @@ export default async function StoryViewer({ params }: { params: { id: string } }
               <h2 className="text-lg font-semibold text-white mb-3">
                 {pricePerCopy ? 'Purchase NFT' : 'Make a Donation'}
               </h2>
-              <PurchasePanel campaignId={id} tokenId={id} pricePerNft={pricePerCopy} remainingCopies={remainingCopies} />
+              <PurchasePanel campaignId={id} tokenId={id} pricePerNft={pricePerCopy} remainingCopies={remainingCopies} isPendingOnchain={isPendingOnchain} />
             </div>
           </div>
         </div>

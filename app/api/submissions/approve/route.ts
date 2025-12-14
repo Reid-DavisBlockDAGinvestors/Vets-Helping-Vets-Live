@@ -238,9 +238,10 @@ export async function POST(req: NextRequest) {
           title: sub.title || 'Your Campaign',
           campaignId: campaignId,
           creatorName: sub.creator_name,
-          imageUrl: toHttpUrl(sub.image_uri) || undefined
+          imageUrl: toHttpUrl(sub.image_uri) || undefined,
+          txHash: txHash || undefined
         })
-        console.log(`[approve] Sent campaign approved email to ${sub.creator_email}`)
+        console.log(`[approve] Sent campaign approved email to ${sub.creator_email} with txHash: ${txHash}`)
       } catch (emailErr) {
         console.error('[approve] Failed to send campaign approved email:', emailErr)
       }

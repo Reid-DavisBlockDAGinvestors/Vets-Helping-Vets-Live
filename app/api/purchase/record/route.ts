@@ -30,8 +30,9 @@ export async function POST(req: NextRequest) {
       tipBDAG, 
       walletAddress,
       quantity,
-      editionMinted,
-      buyerEmail // NEW: email for receipt
+      editionMinted, // Token ID of the minted edition (or true for legacy)
+      mintedTokenIds, // Array of all token IDs if multiple minted
+      buyerEmail // Email for receipt
     } = body
 
     // V5: Accept either tokenId or campaignId
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
           tipBDAG,
           quantity: quantity ?? 1,
           editionMinted,
+          mintedTokenIds: mintedTokenIds || [],
           source: 'wallet_direct',
         }
       })
@@ -91,20 +93,31 @@ export async function POST(req: NextRequest) {
 
     // Send purchase receipt email if buyer provided email
     if (buyerEmail && sub) {
+      // Determine the token ID to include in the email
+      // Priority: explicit tokenId > editionMinted (if it's a number) > first from mintedTokenIds array
+      let emailTokenId: number | undefined = undefined
+      if (typeof tokenId === 'number' && tokenId > 0) {
+        emailTokenId = tokenId
+      } else if (typeof editionMinted === 'number' && editionMinted > 0) {
+        emailTokenId = editionMinted
+      } else if (Array.isArray(mintedTokenIds) && mintedTokenIds.length > 0) {
+        emailTokenId = mintedTokenIds[mintedTokenIds.length - 1] // Use last minted token
+      }
+      
       try {
         await sendPurchaseReceipt({
           email: buyerEmail,
           campaignTitle: sub.title || 'Campaign',
           campaignId: sub.campaign_id || effectiveId,
-          tokenId: tokenId || editionMinted,
-          editionNumber: editionMinted,
+          tokenId: emailTokenId,
+          editionNumber: typeof editionMinted === 'number' ? editionMinted : undefined,
           amountBDAG: amountBDAG || 0,
           amountUSD: amountUSD,
           txHash,
           walletAddress: walletAddress || '',
           imageUrl: toHttpUrl(sub.image_uri) || undefined
         })
-        console.log(`[purchase/record] Sent receipt email to ${buyerEmail}`)
+        console.log(`[purchase/record] Sent receipt email to ${buyerEmail} with tokenId=${emailTokenId}`)
       } catch (emailErr) {
         console.error('[purchase/record] Failed to send receipt email:', emailErr)
       }

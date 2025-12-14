@@ -15,6 +15,7 @@ const BDAG_USD_PRICE = 0.05 // Fixed test price: 1 BDAG = $0.05 USD
 const MINT_EDITION_ABI = [
   'function mintWithBDAG(uint256 campaignId) external payable returns (uint256)',
   'function mintWithBDAGAndTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
+  'event EditionMinted(uint256 indexed campaignId, uint256 indexed tokenId, address indexed buyer, uint256 editionNumber, uint256 amount)',
 ]
 
 type PurchasePanelProps = {
@@ -22,9 +23,10 @@ type PurchasePanelProps = {
   tokenId?: string    // Legacy support
   pricePerNft?: number | null
   remainingCopies?: number | null
+  isPendingOnchain?: boolean  // True if campaign is approved but not yet on-chain
 }
 
-export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remainingCopies }: PurchasePanelProps) {
+export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remainingCopies, isPendingOnchain }: PurchasePanelProps) {
   // V5: Use campaignId, fall back to tokenId for backwards compat
   const targetId = campaignId || tokenId || '0'
   const hasNftPrice = pricePerNft && pricePerNft > 0
@@ -125,6 +127,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       const txHashes: string[] = []
       
       // Mint each NFT separately (contract mints 1 per call)
+      const mintedTokenIds: number[] = []
       for (let i = 0; i < quantity; i++) {
         const isLast = i === quantity - 1
         setCryptoMsg(`Minting NFT ${i + 1} of ${quantity}... Please confirm in your wallet.`)
@@ -148,31 +151,55 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
         
         // Wait for each tx to confirm before the next (prevents nonce issues)
         setCryptoMsg(`Waiting for NFT ${i + 1} of ${quantity} to confirm...`)
-        await tx.wait(1)
+        const receipt = await tx.wait(1)
         console.log(`[PurchasePanel] Tx ${i + 1}/${quantity} confirmed`)
+        
+        // Extract token ID from EditionMinted event in the receipt
+        try {
+          const editionMintedEvent = receipt?.logs?.find((log: any) => {
+            try {
+              const parsed = contract.interface.parseLog({ topics: log.topics as string[], data: log.data })
+              return parsed?.name === 'EditionMinted'
+            } catch { return false }
+          })
+          if (editionMintedEvent) {
+            const parsed = contract.interface.parseLog({ topics: editionMintedEvent.topics as string[], data: editionMintedEvent.data })
+            const tokenId = Number(parsed?.args?.tokenId || parsed?.args?.[1])
+            if (tokenId > 0) {
+              mintedTokenIds.push(tokenId)
+              console.log(`[PurchasePanel] Minted token ID: ${tokenId}`)
+            }
+          }
+        } catch (e) {
+          console.warn('[PurchasePanel] Could not parse EditionMinted event:', e)
+        }
       }
       
       console.log(`[PurchasePanel] All ${quantity} NFTs minted!`)
       
       // Record the purchase in our backend (use last tx hash)
       const lastTxHash = txHashes[txHashes.length - 1]
+      const lastTokenId = mintedTokenIds.length > 0 ? mintedTokenIds[mintedTokenIds.length - 1] : null
       try {
         await fetch('/api/purchase/record', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             campaignId: targetId,
+            tokenId: lastTokenId, // The actual minted token ID for NFT import
             txHash: lastTxHash,
             amountUSD: totalAmount,
             tipUSD: tipAmount,
             amountBDAG: bdagAmount,
             tipBDAG: bdagTipAmount,
             walletAddress: wallet.address,
-            editionMinted: true,
+            editionMinted: lastTokenId, // Token ID or null
+            mintedTokenIds, // All token IDs if multiple minted
             quantity, // Track how many were minted
+            buyerEmail: email, // Pass email for receipt
           })
         })
-        console.log(`[PurchasePanel] Purchase recorded for campaign ${targetId}`)
+        console.log(`[PurchasePanel] Purchase recorded for campaign ${targetId}, tokenId=${lastTokenId}`)
       } catch (e) {
         // Non-critical - tx is already on-chain
         console.warn('Failed to record purchase:', e)
@@ -317,6 +344,21 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
               : `Donate $${totalAmount}${isMonthly ? '/month' : ''}`
           )}
         </button>
+      </div>
+    )
+  }
+
+  // If campaign is pending on-chain, show a message instead of purchase options
+  if (isPendingOnchain) {
+    return (
+      <div className="space-y-5">
+        <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/30 p-4 text-center">
+          <span className="text-3xl mb-2 block">⏳</span>
+          <p className="text-yellow-300 font-medium">Pending Blockchain Confirmation</p>
+          <p className="text-yellow-300/70 text-sm mt-2">
+            This campaign is being created on the blockchain. Please check back in a few minutes.
+          </p>
+        </div>
       </div>
     )
   }

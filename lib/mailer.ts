@@ -148,15 +148,40 @@ export async function sendPurchaseReceipt(data: PurchaseReceiptData) {
     </div>
     
     <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0;">
-      <h3 style="color: #a855f7; font-size: 16px; margin: 0 0 15px 0;">🦊 How to Import to MetaMask</h3>
-      <ol style="color: #94a3b8; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
-        <li>Open MetaMask and ensure you're on the BlockDAG network</li>
-        <li>Go to the <strong style="color: #fff;">NFTs</strong> tab</li>
-        <li>Click <strong style="color: #fff;">"Import NFT"</strong></li>
-        <li>Paste the contract address: <code style="color: #a855f7;">${CONTRACT_ADDRESS}</code></li>
-        ${data.tokenId ? `<li>Enter Token ID: <code style="color: #a855f7;">${data.tokenId}</code></li>` : '<li>Enter your Token ID (shown above)</li>'}
-        <li>Click <strong style="color: #fff;">"Import"</strong></li>
+      <h3 style="color: #a855f7; font-size: 16px; margin: 0 0 15px 0;">🦊 How to Import Your NFT to MetaMask</h3>
+      
+      <p style="color: #94a3b8; font-size: 13px; margin: 0 0 15px 0; font-style: italic;">Save these details - you'll need them to view your NFT in your wallet:</p>
+      
+      <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+        <p style="color: #fff; font-size: 13px; margin: 0 0 8px 0;"><strong>Contract Address:</strong></p>
+        <code style="display: block; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; color: #a855f7; font-size: 11px; word-break: break-all; margin-bottom: 10px;">${CONTRACT_ADDRESS}</code>
+        ${data.tokenId ? `
+        <p style="color: #fff; font-size: 13px; margin: 0 0 8px 0;"><strong>Token ID:</strong></p>
+        <code style="display: block; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; color: #a855f7; font-size: 14px;">${data.tokenId}</code>
+        ` : ''}
+      </div>
+      
+      <p style="color: #fff; font-size: 14px; margin: 0 0 10px 0;"><strong>Step-by-Step Instructions:</strong></p>
+      <ol style="color: #94a3b8; font-size: 13px; line-height: 1.8; margin: 0; padding-left: 20px;">
+        <li><strong style="color: #fff;">Add BlockDAG Network</strong> (if not already added):
+          <ul style="margin: 5px 0 10px 0; padding-left: 15px;">
+            <li>Open MetaMask → Click network dropdown → "Add Network"</li>
+            <li>Network Name: <code style="color: #a855f7;">BlockDAG</code></li>
+            <li>RPC URL: <code style="color: #a855f7;">https://rpc.primordial.bdagscan.com</code></li>
+            <li>Chain ID: <code style="color: #a855f7;">1043</code></li>
+            <li>Symbol: <code style="color: #a855f7;">BDAG</code></li>
+            <li>Explorer: <code style="color: #a855f7;">https://awakening.bdagscan.com</code></li>
+          </ul>
+        </li>
+        <li><strong style="color: #fff;">Switch to BlockDAG network</strong> in MetaMask</li>
+        <li>Go to the <strong style="color: #fff;">NFTs</strong> tab at the bottom</li>
+        <li>Tap <strong style="color: #fff;">"Import NFT"</strong> (or "+" button)</li>
+        <li>Paste the <strong style="color: #fff;">Contract Address</strong> shown above</li>
+        ${data.tokenId ? `<li>Enter <strong style="color: #fff;">Token ID: ${data.tokenId}</strong></li>` : '<li>Enter the <strong style="color: #fff;">Token ID</strong> shown above</li>'}
+        <li>Tap <strong style="color: #fff;">"Import"</strong> - Your NFT will appear!</li>
       </ol>
+      
+      <p style="color: #64748b; font-size: 12px; margin: 15px 0 0 0; font-style: italic;">💡 Tip: NFT images may take a moment to load as they're fetched from IPFS.</p>
     </div>
     
     <div style="text-align: center; margin: 30px 0;">
@@ -228,11 +253,14 @@ export type CampaignApprovedData = {
   campaignId: number
   creatorName?: string
   imageUrl?: string
+  txHash?: string
 }
 
 export async function sendCampaignApproved(data: CampaignApprovedData) {
   const storyUrl = `${SITE_URL}/story/${data.campaignId}`
   const marketplaceUrl = `${SITE_URL}/marketplace`
+  const explorerTxUrl = data.txHash ? `${EXPLORER_URL}/tx/${data.txHash}` : null
+  const explorerContractUrl = `${EXPLORER_URL}/address/${CONTRACT_ADDRESS}`
   
   const content = `
     <h1 style="color: #fff; font-size: 24px; margin: 0 0 20px 0;">🎉 Your Campaign is Live!</h1>
@@ -249,13 +277,27 @@ export async function sendCampaignApproved(data: CampaignApprovedData) {
     
     <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin: 20px 0;">
       <h2 style="color: #fff; font-size: 18px; margin: 0 0 15px 0;">${data.title}</h2>
-      <p style="color: #94a3b8; font-size: 14px; margin: 0;">
-        <strong style="color: #fff;">Campaign ID:</strong> #${data.campaignId}
-      </p>
+      <table width="100%" style="color: #94a3b8; font-size: 14px;">
+        <tr><td style="padding: 8px 0;">Campaign ID:</td><td style="text-align: right; color: #fff;">#${data.campaignId}</td></tr>
+      </table>
+      <p style="color: #94a3b8; font-size: 13px; margin: 15px 0 5px 0;"><strong style="color: #fff;">Contract Address:</strong></p>
+      <code style="display: block; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; color: #3b82f6; font-size: 11px; word-break: break-all;">${CONTRACT_ADDRESS}</code>
     </div>
     
+    ${data.txHash ? `
+    <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #22c55e; font-size: 16px; margin: 0 0 15px 0;">⛓️ On-Chain Verification</h3>
+      <p style="color: #94a3b8; font-size: 14px; margin: 0 0 10px 0;">Your campaign is recorded on the BlockDAG blockchain for full transparency.</p>
+      <p style="color: #94a3b8; font-size: 14px; margin: 0 0 10px 0;"><strong style="color: #fff;">Transaction Hash:</strong></p>
+      <code style="display: block; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; color: #22c55e; font-size: 11px; word-break: break-all;">${data.txHash}</code>
+      <div style="text-align: center; margin-top: 15px;">
+        <a href="${explorerTxUrl}" style="display: inline-block; background: #22c55e; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">View on BlockDAG Explorer</a>
+      </div>
+    </div>
+    ` : ''}
+    
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${storyUrl}" style="display: inline-block; background: #22c55e; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">View Your Campaign</a>
+      <a href="${storyUrl}" style="display: inline-block; background: #3b82f6; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">View Your Campaign</a>
     </div>
     
     <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0;">
