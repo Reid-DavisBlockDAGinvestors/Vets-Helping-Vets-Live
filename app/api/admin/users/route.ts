@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 import { ethers } from 'ethers'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 
+export const dynamic = 'force-dynamic'
+
 // GET - Get all platform users with their stats
 export async function GET(req: NextRequest) {
   try {
@@ -53,8 +55,7 @@ export async function GET(req: NextRequest) {
       console.error('[admin/users] profiles error:', profilesErr)
     }
 
-    // Query blockchain for NFT owners (primary source of truth)
-    const contractAddress = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
+    // Build purchase stats from multiple sources
     const userPurchaseStats: Record<string, { 
       count: number
       total: number
@@ -63,61 +64,67 @@ export async function GET(req: NextRequest) {
       first_purchase: string | null
     }> = {}
 
-    console.log('[admin/users] Contract address:', contractAddress)
-    if (contractAddress) {
-      try {
-        const provider = getProvider()
-        const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
-        
-        // Get total supply of NFTs
-        const totalSupply = await contract.totalSupply()
-        const total = Number(totalSupply)
-        console.log('[admin/users] Total NFTs on-chain:', total)
+    // 1. Query blockchain for NFT owners (primary source of truth)
+    let blockchainQueried = false
+    try {
+      // Get contract addresses from marketplace_contracts or env
+      const { data: mktRows } = await supabaseAdmin
+        .from('marketplace_contracts')
+        .select('contract_address')
+        .eq('enabled', true)
 
-        // Batch fetch token owners (parallel calls for speed)
-        const batchSize = 10
-        for (let start = 0; start < total; start += batchSize) {
-          const end = Math.min(start + batchSize, total)
-          const promises = []
-          
-          for (let i = start; i < end; i++) {
-            promises.push(
-              (async () => {
-                try {
-                  const tokenId = await contract.tokenByIndex(i)
-                  const owner = await contract.ownerOf(tokenId)
-                  return { tokenId: Number(tokenId), owner }
-                } catch {
-                  return null
+      const enabledAddrs = (mktRows || [])
+        .map(r => (r as any).contract_address?.trim())
+        .filter(Boolean) as string[]
+
+      const fallbackEnv = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
+      const targetContracts = enabledAddrs.length > 0 ? enabledAddrs : (fallbackEnv ? [fallbackEnv] : [])
+
+      console.log('[admin/users] Target contracts:', targetContracts)
+
+      if (targetContracts.length > 0) {
+        const provider = getProvider()
+        
+        for (const addr of targetContracts) {
+          try {
+            const contract = new ethers.Contract(addr, PatriotPledgeV5ABI, provider)
+            const totalSupply = await contract.totalSupply()
+            const total = Number(totalSupply)
+            console.log(`[admin/users] Contract ${addr}: ${total} NFTs`)
+
+            // Fetch owners in batches
+            for (let i = 0; i < total; i++) {
+              try {
+                const tokenId = await contract.tokenByIndex(i)
+                const owner = await contract.ownerOf(tokenId)
+                const ownerLower = owner.toLowerCase()
+                
+                if (!userPurchaseStats[ownerLower]) {
+                  userPurchaseStats[ownerLower] = {
+                    count: 0, total: 0, nfts: 0,
+                    wallet_address: owner,
+                    first_purchase: null
+                  }
                 }
-              })()
-            )
-          }
-          
-          const results = await Promise.all(promises)
-          for (const r of results) {
-            if (!r) continue
-            const ownerLower = r.owner.toLowerCase()
-            if (!userPurchaseStats[ownerLower]) {
-              userPurchaseStats[ownerLower] = {
-                count: 0,
-                total: 0,
-                nfts: 0,
-                wallet_address: r.owner,
-                first_purchase: null
+                userPurchaseStats[ownerLower].nfts += 1
+                userPurchaseStats[ownerLower].count += 1
+              } catch (tokenErr) {
+                console.error(`[admin/users] Token ${i} error:`, tokenErr)
               }
             }
-            userPurchaseStats[ownerLower].nfts += 1
-            userPurchaseStats[ownerLower].count += 1
+            blockchainQueried = true
+          } catch (contractErr: any) {
+            console.error(`[admin/users] Contract ${addr} error:`, contractErr?.message)
           }
         }
-        console.log('[admin/users] Unique wallet owners:', Object.keys(userPurchaseStats).length)
-      } catch (e: any) {
-        console.error('[admin/users] Error querying blockchain:', e?.message || e)
       }
+    } catch (e: any) {
+      console.error('[admin/users] Blockchain query failed:', e?.message)
     }
 
-    // Also check database tables for additional data
+    console.log('[admin/users] Blockchain queried:', blockchainQueried, 'Wallet owners:', Object.keys(userPurchaseStats).length)
+
+    // 2. Also check database tables for additional data
     const { data: contributions } = await supabaseAdmin
       .from('contributions')
       .select('buyer_wallet, amount_gross, amount_net, token_id, created_at')
@@ -127,6 +134,8 @@ export async function GET(req: NextRequest) {
       .from('events')
       .select('wallet_address, amount_usd, created_at')
       .eq('event_type', 'purchase')
+
+    console.log('[admin/users] DB: contributions:', contributions?.length, 'events:', purchaseEvents?.length)
 
     // Add contribution amounts to wallet stats
     for (const c of (contributions || [])) {
@@ -154,7 +163,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    console.log('[admin/users] profiles:', profiles?.length, 'wallet owners:', Object.keys(userPurchaseStats).length)
+    console.log('[admin/users] Final: profiles:', profiles?.length, 'wallet owners:', Object.keys(userPurchaseStats).length)
 
     // Get campaigns created per user (by email)
     const { data: submissions } = await supabaseAdmin
