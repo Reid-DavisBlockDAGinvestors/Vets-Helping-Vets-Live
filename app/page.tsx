@@ -285,33 +285,140 @@ export default async function HomePage() {
       </section>
 
       {/* Video Section - See How It Works */}
-      <section className="container py-16">
-        <div className="rounded-3xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/10 overflow-hidden">
-          <div className="grid md:grid-cols-2 gap-8 p-8 md:p-12">
-            <div className="flex flex-col justify-center">
-              <h2 className="text-3xl font-bold text-white mb-4">See How It Works</h2>
-              <p className="text-white/60 mb-6">
-                Watch our demo to understand how PatriotPledge NFTs revolutionizes charitable giving with blockchain transparency and dynamic NFTs.
+      <section className="container py-16" id="how-it-works">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">See How It Works</h2>
+          <p className="text-white/50 max-w-2xl mx-auto">Learn how to set up your wallet and support campaigns using BDAG tokens</p>
+        </div>
+
+        {/* Important Notice */}
+        <div className="rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 p-6 mb-8">
+          <div className="flex items-start gap-4">
+            <div className="text-3xl">⚠️</div>
+            <div>
+              <h3 className="text-lg font-semibold text-amber-400 mb-2">Testnet Phase - BDAG Only</h3>
+              <p className="text-white/70">
+                PatriotPledge NFTs is currently in <strong className="text-white">testnet phase</strong>. We are <strong className="text-white">not accepting credit cards, PayPal, Cash App, or Venmo</strong> at this time. 
+                All transactions are conducted using <strong className="text-amber-400">BDAG tokens</strong> native on the BlockDAG Awakening Testnet.
               </p>
-              <ul className="space-y-3">
-                {['Submit your story with KYC verification', 'Get approved and minted as an NFT', 'Supporters purchase your NFT to donate', 'Track every dollar on the blockchain'].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 text-white/70">
-                    <span className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
-                      {i + 1}
-                    </span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
             </div>
-            <div className="aspect-video rounded-2xl bg-black/50 overflow-hidden flex items-center justify-center" data-testid="demo-video">
-              <div className="text-center">
-                <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-4 cursor-pointer hover:bg-white/20 transition-all">
-                  <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Left Column - Instructions */}
+          <div className="space-y-6">
+            {/* Step 1: MetaMask Setup */}
+            <div className="rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold">1</div>
+                <h3 className="text-xl font-semibold text-white">Set Up MetaMask with Awakening Testnet</h3>
+              </div>
+              <div className="space-y-4 text-white/70">
+                <p>First, install <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">MetaMask</a> browser extension if you haven&apos;t already.</p>
+                
+                <div className="bg-black/30 rounded-xl p-4">
+                  <p className="text-sm text-white/50 mb-3">Add the Awakening Testnet with these settings:</p>
+                  <div className="space-y-2 font-mono text-sm">
+                    <div className="flex justify-between items-center py-1 border-b border-white/10">
+                      <span className="text-white/50">Network Name:</span>
+                      <span className="text-white">BlockDAG Awakening</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-white/10">
+                      <span className="text-white/50">RPC URL:</span>
+                      <span className="text-green-400 text-xs">https://rpc.primordial.bdagscan.com</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-white/10">
+                      <span className="text-white/50">Chain ID:</span>
+                      <span className="text-white">1043</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-white/10">
+                      <span className="text-white/50">Currency Symbol:</span>
+                      <span className="text-white">BDAG</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-white/50">Block Explorer:</span>
+                      <span className="text-blue-400 text-xs">https://awakening.bdagscan.com</span>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-white/50">Demo video coming soon</p>
+                
+                <p className="text-sm">
+                  <strong className="text-white">How to add:</strong> Open MetaMask → Click network dropdown → &quot;Add Network&quot; → &quot;Add a network manually&quot; → Enter the details above → Save
+                </p>
+              </div>
+            </div>
+
+            {/* Step 2: Get BDAG */}
+            <div className="rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">2</div>
+                <h3 className="text-xl font-semibold text-white">Get BDAG Tokens</h3>
+              </div>
+              <div className="space-y-3 text-white/70">
+                <p>You&apos;ll need BDAG tokens to purchase NFTs. During testnet, you can:</p>
+                <ul className="list-disc list-inside space-y-2 ml-2">
+                  <li>Request testnet BDAG from the <a href="https://t.me/BlockDAGBuildathon" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">BlockDAG Buildathon Telegram</a></li>
+                  <li>Contact the PatriotPledge team for testnet tokens</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Step 3: Buy NFT */}
+            <div className="rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold">3</div>
+                <h3 className="text-xl font-semibold text-white">Purchase an NFT</h3>
+              </div>
+              <div className="space-y-3 text-white/70">
+                <ol className="list-decimal list-inside space-y-2 ml-2">
+                  <li><strong className="text-white">Browse campaigns</strong> on the <Link href="/marketplace" className="text-blue-400 hover:underline">Marketplace</Link></li>
+                  <li><strong className="text-white">Click &quot;View Story&quot;</strong> on a campaign you want to support</li>
+                  <li><strong className="text-white">Connect your wallet</strong> by clicking &quot;Connect Wallet&quot;</li>
+                  <li><strong className="text-white">Select quantity</strong> and optionally add a tip</li>
+                  <li><strong className="text-white">Click &quot;Purchase with BDAG&quot;</strong> and confirm in MetaMask</li>
+                  <li><strong className="text-white">Your NFT will appear</strong> in your MetaMask NFT tab!</li>
+                </ol>
+                <p className="text-sm mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <span className="text-green-400">✓</span> Your NFT automatically appears in MetaMask after purchase. You can also view it on the <a href="https://awakening.bdagscan.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">BlockDAG Explorer</a>.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Video */}
+          <div className="lg:sticky lg:top-24 h-fit">
+            <div className="rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 p-6">
+              <h3 className="text-xl font-semibold text-white mb-4">📺 Video Tutorial</h3>
+              <div className="aspect-video rounded-xl bg-black/50 overflow-hidden flex items-center justify-center" data-testid="demo-video">
+                <div className="text-center p-6">
+                  <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-4 cursor-pointer hover:bg-white/20 transition-all">
+                    <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                  <p className="text-white/50 mb-2">Video tutorial coming soon</p>
+                  <p className="text-sm text-white/30">Watch the complete walkthrough of setting up MetaMask and purchasing your first NFT</p>
+                </div>
+              </div>
+              
+              {/* Quick Links */}
+              <div className="mt-6 pt-6 border-t border-white/10">
+                <h4 className="text-sm font-semibold text-white/70 mb-3">Quick Links</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all text-sm text-white/70 hover:text-white">
+                    <span>🦊</span> Get MetaMask
+                  </a>
+                  <a href="https://awakening.bdagscan.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all text-sm text-white/70 hover:text-white">
+                    <span>🔍</span> Block Explorer
+                  </a>
+                  <a href="https://t.me/BlockDAGBuildathon" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all text-sm text-white/70 hover:text-white">
+                    <span>💬</span> Telegram
+                  </a>
+                  <Link href="/marketplace" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all text-sm text-white/70 hover:text-white">
+                    <span>🛒</span> Marketplace
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
