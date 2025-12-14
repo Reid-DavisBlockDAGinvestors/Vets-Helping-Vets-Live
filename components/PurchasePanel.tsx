@@ -16,6 +16,8 @@ const BDAG_USD_PRICE = 0.05 // Fixed test price: 1 BDAG = $0.05 USD
 const MINT_EDITION_ABI = [
   'function mintWithBDAG(uint256 campaignId) external payable returns (uint256)',
   'function mintWithBDAGAndTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
+  'function getCampaign(uint256 campaignId) external view returns (string category, string baseURI, uint256 goal, uint256 grossRaised, uint256 netRaised, uint256 editionsMinted, uint256 maxEditions, uint256 pricePerEdition, bool active, bool closed)',
+  'function totalCampaigns() external view returns (uint256)',
   'event EditionMinted(uint256 indexed campaignId, uint256 indexed tokenId, address indexed buyer, uint256 editionNumber, uint256 amount)',
 ]
 
@@ -151,13 +153,55 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
 
     try {
       setLoading(true)
-      setCryptoMsg('Preparing transaction...')
+      setCryptoMsg('Verifying campaign on blockchain...')
       setTxHash(null)
 
       const ethereum = (window as any).ethereum
       const provider = new BrowserProvider(ethereum)
       const signer = await provider.getSigner()
       const contract = new Contract(CONTRACT_ADDRESS, MINT_EDITION_ABI, signer)
+
+      // Pre-flight check: Verify campaign exists and is active on-chain
+      console.log(`[PurchasePanel] Checking campaign ${targetId} on-chain...`)
+      try {
+        const totalCampaigns = await contract.totalCampaigns()
+        console.log(`[PurchasePanel] Total campaigns on-chain: ${totalCampaigns}`)
+        
+        if (Number(targetId) >= Number(totalCampaigns)) {
+          setCryptoMsg(`Campaign #${targetId} does not exist on-chain yet. Total campaigns: ${totalCampaigns}. Please wait for the transaction to confirm or contact admin.`)
+          setLoading(false)
+          return
+        }
+        
+        const campaign = await contract.getCampaign(BigInt(targetId))
+        console.log(`[PurchasePanel] Campaign ${targetId} data:`, {
+          category: campaign[0],
+          baseURI: campaign[1]?.slice(0, 50),
+          active: campaign[8],
+          closed: campaign[9],
+          editionsMinted: Number(campaign[5]),
+          maxEditions: Number(campaign[6])
+        })
+        
+        if (!campaign[8]) { // active is at index 8
+          setCryptoMsg(`Campaign #${targetId} is not active on-chain. The campaign may need to be fixed in the admin panel.`)
+          setLoading(false)
+          return
+        }
+        
+        if (campaign[9]) { // closed is at index 9
+          setCryptoMsg(`Campaign #${targetId} is closed and no longer accepting purchases.`)
+          setLoading(false)
+          return
+        }
+      } catch (verifyErr: any) {
+        console.error('[PurchasePanel] Campaign verification failed:', verifyErr)
+        setCryptoMsg(`Failed to verify campaign: ${verifyErr?.message?.slice(0, 100) || 'Unknown error'}`)
+        setLoading(false)
+        return
+      }
+
+      setCryptoMsg('Preparing transaction...')
 
       // Calculate per-NFT price in BDAG (contract mints 1 NFT per call)
       const pricePerNftBdag = hasNftPrice ? usdToBdag(pricePerNft!) : bdagAmount
