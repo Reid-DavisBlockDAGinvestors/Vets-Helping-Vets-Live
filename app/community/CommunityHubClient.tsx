@@ -1082,7 +1082,21 @@ export default function CommunityHubClient() {
                           {uniqueIds.map((id: string) => {
                             // Use findCampaign to check both campaignPreviews and allCampaigns
                             const campaign = findCampaign(id)
-                            if (!campaign) return null
+                            if (!campaign) {
+                              // Show loading placeholder while fetching
+                              return (
+                                <div
+                                  key={id}
+                                  className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 animate-pulse"
+                                >
+                                  <div className="w-16 h-16 rounded-lg bg-white/10"></div>
+                                  <div className="flex-1">
+                                    <div className="h-4 bg-white/10 rounded w-3/4 mb-2"></div>
+                                    <div className="h-3 bg-white/10 rounded w-1/2"></div>
+                                  </div>
+                                </div>
+                              )
+                            }
                             return (
                               <div
                                 key={id}
