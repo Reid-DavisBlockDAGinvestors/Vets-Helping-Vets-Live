@@ -447,7 +447,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
           {/* Optional Tip */}
           <div>
             <label className="block text-sm font-medium text-white/80 mb-2">Add a tip (optional)</label>
-            <div className="grid grid-cols-5 gap-2 mb-2">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-2">
               {[0, 5, 10, 25, 50].map(tip => (
                 <button
                   key={tip}
@@ -474,7 +474,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
         /* Donation Mode - No fixed NFT price */
         <div>
           <label className="block text-sm font-medium text-white/80 mb-3">Select Amount</label>
-          <div className="grid grid-cols-5 gap-2 mb-3">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-3">
             {presetAmounts.map(preset => (
               <button
                 key={preset}

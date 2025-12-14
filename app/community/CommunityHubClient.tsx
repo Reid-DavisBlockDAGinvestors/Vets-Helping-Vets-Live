@@ -601,17 +601,48 @@ export default function CommunityHubClient() {
     )
   }
 
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-patriotic-navy to-gray-900 flex">
+      {/* Mobile Sidebar Toggle */}
+      <button
+        onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+        className="lg:hidden fixed bottom-4 left-4 z-50 w-12 h-12 bg-blue-600 hover:bg-blue-500 rounded-full shadow-lg flex items-center justify-center text-white text-xl transition-colors"
+        aria-label="Toggle sidebar"
+      >
+        {mobileSidebarOpen ? '✕' : '☰'}
+      </button>
+
+      {/* Mobile Sidebar Backdrop */}
+      {mobileSidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/60 z-40"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar - Discord-like */}
-      <div className={`${sidebarCollapsed ? 'w-16' : 'w-72'} flex-shrink-0 bg-gray-900/80 border-r border-white/10 flex flex-col h-screen sticky top-0 transition-all duration-300`}>
+      <div className={`
+        ${sidebarCollapsed ? 'lg:w-16' : 'lg:w-72'} 
+        fixed lg:sticky top-0 left-0 h-screen z-40
+        w-72 transform transition-transform duration-300 ease-in-out
+        ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        flex-shrink-0 bg-gray-900 lg:bg-gray-900/80 border-r border-white/10 flex flex-col
+      `}>
         {/* Sidebar Header */}
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           {!sidebarCollapsed && (
             <h2 className="text-lg font-bold text-white">🏛️ Community</h2>
           )}
           <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onClick={() => {
+              if (window.innerWidth < 1024) {
+                setMobileSidebarOpen(false)
+              } else {
+                setSidebarCollapsed(!sidebarCollapsed)
+              }
+            }}
             className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
