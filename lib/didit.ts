@@ -54,9 +54,14 @@ export async function createVerificationSession(options: CreateSessionOptions): 
   }
 
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000'
+    // Determine base URL for callback - prioritize explicit config
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL 
+      || process.env.NEXT_PUBLIC_BASE_URL 
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+      || (process.env.URL ? process.env.URL : null) // Netlify sets URL
+      || 'https://patriotpledgenfts.netlify.app'
+    
+    console.log('[Didit] Using base URL for callback:', baseUrl)
     
     const body: Record<string, any> = {
       workflow_id: DIDIT_WORKFLOW_ID,

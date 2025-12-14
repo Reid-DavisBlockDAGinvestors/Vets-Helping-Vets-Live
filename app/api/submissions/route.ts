@@ -65,13 +65,17 @@ export async function POST(req: NextRequest) {
     } catch {}
     // Send receipt email (best-effort)
     try {
-      await sendSubmissionConfirmation({
+      console.log('[submissions] Sending confirmation email to:', creator_email)
+      const emailResult = await sendSubmissionConfirmation({
         email: creator_email,
         submissionId: data.id,
         title: title || 'Your Campaign',
         creatorName: creator_name
       })
-    } catch {}
+      console.log('[submissions] Email result:', emailResult)
+    } catch (emailErr) {
+      console.error('[submissions] Failed to send confirmation email:', emailErr)
+    }
     return NextResponse.json({ id: data.id, status: data.status })
   } catch (e:any) {
     return NextResponse.json({ error: 'SUBMISSION_CREATE_ERROR', details: e?.message || String(e) }, { status: 500 })
