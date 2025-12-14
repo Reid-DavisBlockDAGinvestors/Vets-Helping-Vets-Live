@@ -89,8 +89,12 @@ export default function StoryForm() {
 
   // Load saved draft on mount
   useEffect(() => {
+    if (draftLoaded) return // Only run once
+    
     const draft = getStoredDraft()
-    if (draft && !draftLoaded) {
+    console.log('[StoryForm] Loading draft:', draft ? 'found' : 'none')
+    
+    if (draft) {
       if (draft.category) setCategory(draft.category)
       if (draft.title) setTitle(draft.title)
       if (draft.background) setBackground(draft.background)
@@ -111,8 +115,9 @@ export default function StoryForm() {
       if (draft.diditSessionId) setDiditSessionId(draft.diditSessionId)
       if (draft.diditStatus) setDiditStatus(draft.diditStatus)
       if (draft.verificationComplete) setVerificationComplete(draft.verificationComplete)
-      setDraftLoaded(true)
     }
+    // Always mark as loaded so saving can begin
+    setDraftLoaded(true)
   }, [draftLoaded])
 
   // Auto-save draft when form fields change
