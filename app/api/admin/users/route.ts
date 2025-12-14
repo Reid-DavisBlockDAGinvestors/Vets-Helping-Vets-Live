@@ -51,8 +51,13 @@ export async function GET(req: NextRequest) {
       console.error('[admin/users] profiles error:', profilesErr)
     }
 
-    // Get ALL purchases to find users (including those without profiles)
-    // The purchases table only has wallet_address, not email or user_id
+    // Get ALL contributions (the actual purchase records)
+    const { data: contributions, error: contribErr } = await supabaseAdmin
+      .from('contributions')
+      .select('buyer_wallet, amount_gross, amount_net, token_id, created_at')
+      .order('created_at', { ascending: false })
+
+    // Also check purchases table (may have some records)
     const { data: allPurchases, error: purchasesErr } = await supabaseAdmin
       .from('purchases')
       .select('wallet_address, amount_usd, created_at, campaign_id')
@@ -65,17 +70,12 @@ export async function GET(req: NextRequest) {
       .eq('event_type', 'purchase')
       .order('created_at', { ascending: false })
 
-    console.log('[admin/users] profiles:', profiles?.length, 'purchases:', allPurchases?.length, 'events:', purchaseEvents?.length)
+    console.log('[admin/users] profiles:', profiles?.length, 'contributions:', contributions?.length, 'purchases:', allPurchases?.length, 'events:', purchaseEvents?.length)
+    if (contribErr) console.error('[admin/users] contributions error:', contribErr)
     if (purchasesErr) console.error('[admin/users] purchases error:', purchasesErr)
     if (eventsErr) console.error('[admin/users] events error:', eventsErr)
 
-    // Combine purchases from both tables
-    const combinedPurchases = [
-      ...(allPurchases || []).map(p => ({ ...p, source: 'purchases' })),
-      ...(purchaseEvents || []).map(p => ({ ...p, source: 'events' }))
-    ]
-
-    // Build purchase stats map by wallet address
+    // Build purchase stats map by wallet address from all sources
     const userPurchaseStats: Record<string, { 
       count: number
       total: number
@@ -84,7 +84,26 @@ export async function GET(req: NextRequest) {
       first_purchase: string | null
     }> = {}
     
-    for (const p of combinedPurchases) {
+    // Process contributions (primary source)
+    for (const c of (contributions || [])) {
+      const key = c.buyer_wallet?.toLowerCase()
+      if (!key) continue
+      if (!userPurchaseStats[key]) {
+        userPurchaseStats[key] = { 
+          count: 0, 
+          total: 0, 
+          nfts: 0, 
+          wallet_address: c.buyer_wallet,
+          first_purchase: c.created_at
+        }
+      }
+      userPurchaseStats[key].count += 1
+      userPurchaseStats[key].total += parseFloat(c.amount_gross) || parseFloat(c.amount_net) || 0
+      userPurchaseStats[key].nfts += 1
+    }
+
+    // Process purchases table
+    for (const p of (allPurchases || [])) {
       const key = p.wallet_address?.toLowerCase()
       if (!key) continue
       if (!userPurchaseStats[key]) {
@@ -98,6 +117,24 @@ export async function GET(req: NextRequest) {
       }
       userPurchaseStats[key].count += 1
       userPurchaseStats[key].total += parseFloat(p.amount_usd) || 0
+      userPurchaseStats[key].nfts += 1
+    }
+
+    // Process events table
+    for (const e of (purchaseEvents || [])) {
+      const key = e.wallet_address?.toLowerCase()
+      if (!key) continue
+      if (!userPurchaseStats[key]) {
+        userPurchaseStats[key] = { 
+          count: 0, 
+          total: 0, 
+          nfts: 0, 
+          wallet_address: e.wallet_address,
+          first_purchase: e.created_at
+        }
+      }
+      userPurchaseStats[key].count += 1
+      userPurchaseStats[key].total += parseFloat(e.amount_usd) || 0
       userPurchaseStats[key].nfts += 1
     }
 
