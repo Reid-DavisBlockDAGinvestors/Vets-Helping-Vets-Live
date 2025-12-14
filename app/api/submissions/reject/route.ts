@@ -39,10 +39,7 @@ export async function POST(req: NextRequest) {
       .from('submissions')
       .update({
         status: 'rejected',
-        admin_notes: reason,
-        reviewed_by: uid,
-        reviewed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        reviewer_notes: reason
       })
       .eq('id', id)
 
