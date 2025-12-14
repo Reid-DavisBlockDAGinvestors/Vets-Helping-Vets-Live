@@ -165,11 +165,18 @@ export async function GET(req: NextRequest) {
 
     console.log('[admin/users] Final: profiles:', profiles?.length, 'wallet owners:', Object.keys(userPurchaseStats).length)
 
-    // Get campaigns created per user (by email)
+    // Get campaigns created per user (by email) and also get sold_count data
     const { data: submissions } = await supabaseAdmin
       .from('submissions')
-      .select('creator_email')
+      .select('creator_email, campaign_id, sold_count, status')
       .in('status', ['minted', 'approved', 'pending'])
+
+    // Log minted campaigns with sales for debugging
+    const mintedWithSales = (submissions || []).filter((s: any) => s.status === 'minted' && s.sold_count > 0)
+    console.log('[admin/users] Minted campaigns with sales:', mintedWithSales.map((s: any) => ({
+      campaign_id: s.campaign_id,
+      sold_count: s.sold_count
+    })))
 
     const campaignsCreated: Record<string, number> = {}
     for (const s of (submissions || [])) {
