@@ -237,7 +237,15 @@ export async function GET(req: NextRequest) {
       return bDate - aDate
     })
 
-    return NextResponse.json({ users, total: users.length })
+    return NextResponse.json({ 
+      users, 
+      total: users.length,
+      debug: {
+        profilesCount: profiles?.length || 0,
+        walletOwnersCount: Object.keys(userPurchaseStats).length,
+        mintedCampaignsWithSales: mintedWithSales.length
+      }
+    })
   } catch (e: any) {
     console.error('[admin/users] Error:', e)
     return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
