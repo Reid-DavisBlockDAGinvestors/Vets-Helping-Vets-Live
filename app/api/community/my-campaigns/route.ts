@@ -33,20 +33,8 @@ export async function GET(req: NextRequest) {
       { auth: { persistSession: false } }
     )
 
-    // 1. Campaigns user created (by user_id or email)
-    // Try by user_id first
+    // 1. Campaigns user created (by creator_email - submissions table uses email, not user_id)
     let createdCampaigns: any[] = []
-    const { data: byUserId, error: byUserIdErr } = await supabaseAdmin
-      .from('submissions')
-      .select('id, title, image_uri, slug, short_code, campaign_id, category, status')
-      .eq('user_id', userId)
-      .in('status', ['minted', 'approved', 'pending'])
-      .order('created_at', { ascending: false })
-    
-    if (byUserIdErr) console.error('[my-campaigns] byUserId error:', byUserIdErr)
-    createdCampaigns = byUserId || []
-    
-    // Also try by email if we have one
     if (userEmail) {
       const { data: byEmail, error: byEmailErr } = await supabaseAdmin
         .from('submissions')
@@ -56,11 +44,7 @@ export async function GET(req: NextRequest) {
         .order('created_at', { ascending: false })
       
       if (byEmailErr) console.error('[my-campaigns] byEmail error:', byEmailErr)
-      // Merge, avoiding duplicates
-      const existingIds = new Set(createdCampaigns.map(c => c.id))
-      for (const c of (byEmail || [])) {
-        if (!existingIds.has(c.id)) createdCampaigns.push(c)
-      }
+      createdCampaigns = byEmail || []
     }
     
     console.log('[my-campaigns] createdCampaigns:', createdCampaigns?.length, 'for user:', userId, userEmail)
