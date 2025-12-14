@@ -90,9 +90,11 @@ export default function CommunityHubClient() {
   const [filterCampaign, setFilterCampaign] = useState<CampaignPreview | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [allCampaigns, setAllCampaigns] = useState<CampaignPreview[]>([])
+  const [myCampaigns, setMyCampaigns] = useState<(CampaignPreview & { interactionTypes?: string[] })[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['all']))
+  const [myExpanded, setMyExpanded] = useState(true)
   
   // Categories for fundraisers
   const categories: Category[] = [
@@ -204,8 +206,25 @@ export default function CommunityHubClient() {
         const adminData = await adminRes.json()
         setIsAdmin(!!adminData?.admin)
       }
+      // Fetch user's campaigns
+      fetchMyCampaigns(accessToken)
     } catch (e) {
       console.error('Failed to fetch user profile:', e)
+    }
+  }
+
+  // Fetch campaigns the user has interacted with
+  const fetchMyCampaigns = async (accessToken: string) => {
+    try {
+      const res = await fetch('/api/community/my-campaigns', {
+        headers: { authorization: `Bearer ${accessToken}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setMyCampaigns(data?.campaigns || [])
+      }
+    } catch (e) {
+      console.error('Failed to fetch my campaigns:', e)
     }
   }
 
@@ -593,6 +612,64 @@ export default function CommunityHubClient() {
 
         {/* Categories with nested campaigns */}
         <div className="flex-1 overflow-y-auto">
+          {/* Your Campaigns Section - only show if logged in and has campaigns */}
+          {user && myCampaigns.length > 0 && !sidebarCollapsed && (
+            <div className="border-b border-white/10 pb-2 mb-2">
+              <button
+                onClick={() => setMyExpanded(!myExpanded)}
+                className="w-full flex items-center gap-2 px-4 py-2 text-left"
+              >
+                <span className={`text-xs transition-transform ${myExpanded ? 'rotate-90' : ''}`}>▶</span>
+                <span className="text-lg">⭐</span>
+                <span className="flex-1 text-sm font-medium text-yellow-400">Your Campaigns</span>
+                <span className="text-xs text-white/40 bg-yellow-500/20 px-2 py-0.5 rounded-full">
+                  {myCampaigns.length}
+                </span>
+              </button>
+              {myExpanded && (
+                <div className="ml-4 mt-1 space-y-0.5 border-l border-yellow-500/30 pl-2">
+                  {myCampaigns.map(campaign => (
+                    <button
+                      key={campaign.id}
+                      onClick={() => {
+                        setFilterCampaign(campaign)
+                        setSelectedCategory(null)
+                      }}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${
+                        filterCampaign?.id === campaign.id
+                          ? 'bg-yellow-500/20 text-yellow-300'
+                          : 'text-white/60 hover:bg-white/5 hover:text-white'
+                      }`}
+                    >
+                      {/* NFT Thumbnail */}
+                      <div className="w-6 h-6 rounded overflow-hidden bg-white/10 flex-shrink-0">
+                        {campaign.image_uri ? (
+                          <img
+                            src={toHttpUrl(campaign.image_uri) || ''}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs">⭐</div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <span className="text-sm truncate block">{campaign.title}</span>
+                        {campaign.interactionTypes && campaign.interactionTypes.length > 0 && (
+                          <span className="text-xs text-white/40">
+                            {campaign.interactionTypes.includes('created') && '👤 Creator'}
+                            {campaign.interactionTypes.includes('purchased') && '🛒 Supporter'}
+                            {campaign.interactionTypes.includes('commented') && '💬 Engaged'}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {!sidebarCollapsed && (
             <p className="text-xs text-white/40 uppercase tracking-wider px-4 py-2">Browse Campaigns</p>
           )}
