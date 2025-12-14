@@ -938,8 +938,7 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
               phone={phone}
               submissionId={submittedId || undefined}
               onUploadsChange={(docs) => setVerificationDocs(docs as VerificationDocs)}
-              onPersonaStatusChange={(status) => setDiditStatus(status)}
-              onPersonaInquiryCreated={(sessionId) => setDiditSessionId(sessionId)}
+              onVerificationStatusChange={(status) => setDiditStatus(status)}
               onVerificationComplete={(verified) => setVerificationComplete(verified)}
             />
             
