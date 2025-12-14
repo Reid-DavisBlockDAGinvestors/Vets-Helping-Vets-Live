@@ -120,25 +120,30 @@ export default function VerificationCompleteClient() {
           </p>
         )}
         
+        {/* Primary action: Close this tab and return to original form */}
+        <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-4 mb-6">
+          <p className="text-green-400 font-medium mb-2">✓ You can close this tab</p>
+          <p className="text-sm text-gray-400">
+            Your verification status has been saved. Return to your original submission tab to continue.
+          </p>
+        </div>
+        
         <div className="space-y-3">
-          <Link 
-            href="/submit"
-            className="block w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+          <button 
+            onClick={() => window.close()}
+            className="block w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors cursor-pointer"
           >
-            Back to Submissions
-          </Link>
+            Close This Tab
+          </button>
           
-          <Link 
-            href="/"
-            className="block w-full py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
-          >
-            Go to Home
-          </Link>
+          <p className="text-xs text-gray-500">
+            If the tab doesn't close, simply close it manually and return to your submission.
+          </p>
         </div>
         
         {status === 'pending' && (
           <p className="mt-6 text-sm text-gray-400">
-            You will receive an email notification once your verification is complete.
+            Your verification is being reviewed. You can still submit your campaign - we'll update your verification status automatically.
           </p>
         )}
         
