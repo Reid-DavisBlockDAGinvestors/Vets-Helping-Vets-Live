@@ -1,17 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ipfsToHttp } from '@/lib/ipfs'
 import VerificationUploader from './VerificationUploader'
 
 const SUPPORTED_FORMATS = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
 const HEIC_FORMATS = ['image/heic', 'image/heif']
+const FORM_STORAGE_KEY = 'patriotpledge_submission_draft'
 
 interface VerificationDocs {
   selfie?: { path: string; filename: string }
   idFront?: { path: string; filename: string }
   idBack?: { path: string; filename: string }
   supporting: { path: string; filename: string; category: string }[]
+}
+
+// Helper to safely access localStorage
+const getStoredDraft = () => {
+  if (typeof window === 'undefined') return null
+  try {
+    const stored = localStorage.getItem(FORM_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
+  }
+}
+
+const saveDraft = (data: any) => {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(data))
+  } catch {}
+}
+
+const clearDraft = () => {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.removeItem(FORM_STORAGE_KEY)
+  } catch {}
 }
 
 export default function StoryForm() {
@@ -59,6 +85,55 @@ export default function StoryForm() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [submittedId, setSubmittedId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [draftLoaded, setDraftLoaded] = useState(false)
+
+  // Load saved draft on mount
+  useEffect(() => {
+    const draft = getStoredDraft()
+    if (draft && !draftLoaded) {
+      if (draft.category) setCategory(draft.category)
+      if (draft.title) setTitle(draft.title)
+      if (draft.background) setBackground(draft.background)
+      if (draft.need) setNeed(draft.need)
+      if (draft.fundsUsage) setFundsUsage(draft.fundsUsage)
+      if (draft.goal) setGoal(draft.goal)
+      if (draft.fullName) setFullName(draft.fullName)
+      if (draft.phone) setPhone(draft.phone)
+      if (draft.streetAddress) setStreetAddress(draft.streetAddress)
+      if (draft.city) setCity(draft.city)
+      if (draft.stateProvince) setStateProvince(draft.stateProvince)
+      if (draft.zipCode) setZipCode(draft.zipCode)
+      if (draft.country) setCountry(draft.country)
+      if (draft.wallet) setWallet(draft.wallet)
+      if (draft.email) setEmail(draft.email)
+      if (draft.image) setImage(draft.image)
+      if (draft.mediaMime) setMediaMime(draft.mediaMime)
+      if (draft.diditSessionId) setDiditSessionId(draft.diditSessionId)
+      if (draft.diditStatus) setDiditStatus(draft.diditStatus)
+      if (draft.verificationComplete) setVerificationComplete(draft.verificationComplete)
+      setDraftLoaded(true)
+    }
+  }, [draftLoaded])
+
+  // Auto-save draft when form fields change
+  useEffect(() => {
+    if (!draftLoaded) return // Don't save until we've loaded
+    if (isSubmitted) return // Don't save after submission
+    
+    const draft = {
+      category, title, background, need, fundsUsage, goal,
+      fullName, phone, streetAddress, city, stateProvince, zipCode, country,
+      wallet, email, image, mediaMime,
+      diditSessionId, diditStatus, verificationComplete
+    }
+    saveDraft(draft)
+  }, [
+    category, title, background, need, fundsUsage, goal,
+    fullName, phone, streetAddress, city, stateProvince, zipCode, country,
+    wallet, email, image, mediaMime,
+    diditSessionId, diditStatus, verificationComplete,
+    draftLoaded, isSubmitted
+  ])
 
   // Combine story sections into full story
   const getFullStory = () => {
@@ -252,9 +327,10 @@ export default function StoryForm() {
         return 
       }
       
-      // Mark as submitted
+      // Mark as submitted and clear draft
       setIsSubmitted(true)
       setSubmittedId(data?.id || null)
+      clearDraft() // Clear saved draft after successful submission
       showMsg('', 'success') // Clear message, we'll show a full confirmation screen
     } catch (e:any) {
       showMsg(e?.message || 'Submit failed', 'error')
