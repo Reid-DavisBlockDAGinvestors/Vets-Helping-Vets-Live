@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { ethers } from 'ethers'
+import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 
 // GET - Get all platform users with their stats
 export async function GET(req: NextRequest) {
@@ -51,31 +53,8 @@ export async function GET(req: NextRequest) {
       console.error('[admin/users] profiles error:', profilesErr)
     }
 
-    // Get ALL contributions (the actual purchase records)
-    const { data: contributions, error: contribErr } = await supabaseAdmin
-      .from('contributions')
-      .select('buyer_wallet, amount_gross, amount_net, token_id, created_at')
-      .order('created_at', { ascending: false })
-
-    // Also check purchases table (may have some records)
-    const { data: allPurchases, error: purchasesErr } = await supabaseAdmin
-      .from('purchases')
-      .select('wallet_address, amount_usd, created_at, campaign_id')
-      .order('created_at', { ascending: false })
-
-    // Also check events table for purchase events
-    const { data: purchaseEvents, error: eventsErr } = await supabaseAdmin
-      .from('events')
-      .select('wallet_address, amount_usd, created_at')
-      .eq('event_type', 'purchase')
-      .order('created_at', { ascending: false })
-
-    console.log('[admin/users] profiles:', profiles?.length, 'contributions:', contributions?.length, 'purchases:', allPurchases?.length, 'events:', purchaseEvents?.length)
-    if (contribErr) console.error('[admin/users] contributions error:', contribErr)
-    if (purchasesErr) console.error('[admin/users] purchases error:', purchasesErr)
-    if (eventsErr) console.error('[admin/users] events error:', eventsErr)
-
-    // Build purchase stats map by wallet address from all sources
+    // Query blockchain for NFT owners (primary source of truth)
+    const contractAddress = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
     const userPurchaseStats: Record<string, { 
       count: number
       total: number
@@ -83,60 +62,83 @@ export async function GET(req: NextRequest) {
       wallet_address: string
       first_purchase: string | null
     }> = {}
-    
-    // Process contributions (primary source)
+
+    if (contractAddress) {
+      try {
+        const provider = getProvider()
+        const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
+        
+        // Get total supply of NFTs
+        const totalSupply = await contract.totalSupply()
+        const total = Number(totalSupply)
+        console.log('[admin/users] Total NFTs on-chain:', total)
+
+        // Get owner of each token
+        for (let i = 0; i < total; i++) {
+          try {
+            const tokenId = await contract.tokenByIndex(i)
+            const owner = await contract.ownerOf(tokenId)
+            const ownerLower = owner.toLowerCase()
+            
+            if (!userPurchaseStats[ownerLower]) {
+              userPurchaseStats[ownerLower] = {
+                count: 0,
+                total: 0,
+                nfts: 0,
+                wallet_address: owner,
+                first_purchase: null
+              }
+            }
+            userPurchaseStats[ownerLower].nfts += 1
+            userPurchaseStats[ownerLower].count += 1
+          } catch (e) {
+            console.error(`[admin/users] Error getting token ${i}:`, e)
+          }
+        }
+        console.log('[admin/users] Unique wallet owners:', Object.keys(userPurchaseStats).length)
+      } catch (e) {
+        console.error('[admin/users] Error querying blockchain:', e)
+      }
+    }
+
+    // Also check database tables for additional data
+    const { data: contributions } = await supabaseAdmin
+      .from('contributions')
+      .select('buyer_wallet, amount_gross, amount_net, token_id, created_at')
+      .order('created_at', { ascending: false })
+
+    const { data: purchaseEvents } = await supabaseAdmin
+      .from('events')
+      .select('wallet_address, amount_usd, created_at')
+      .eq('event_type', 'purchase')
+
+    // Add contribution amounts to wallet stats
     for (const c of (contributions || [])) {
       const key = c.buyer_wallet?.toLowerCase()
       if (!key) continue
       if (!userPurchaseStats[key]) {
         userPurchaseStats[key] = { 
-          count: 0, 
-          total: 0, 
-          nfts: 0, 
+          count: 0, total: 0, nfts: 0, 
           wallet_address: c.buyer_wallet,
           first_purchase: c.created_at
         }
       }
-      userPurchaseStats[key].count += 1
       userPurchaseStats[key].total += parseFloat(c.amount_gross) || parseFloat(c.amount_net) || 0
-      userPurchaseStats[key].nfts += 1
-    }
-
-    // Process purchases table
-    for (const p of (allPurchases || [])) {
-      const key = p.wallet_address?.toLowerCase()
-      if (!key) continue
-      if (!userPurchaseStats[key]) {
-        userPurchaseStats[key] = { 
-          count: 0, 
-          total: 0, 
-          nfts: 0, 
-          wallet_address: p.wallet_address,
-          first_purchase: p.created_at
-        }
+      if (!userPurchaseStats[key].first_purchase) {
+        userPurchaseStats[key].first_purchase = c.created_at
       }
-      userPurchaseStats[key].count += 1
-      userPurchaseStats[key].total += parseFloat(p.amount_usd) || 0
-      userPurchaseStats[key].nfts += 1
     }
 
-    // Process events table
+    // Add event amounts
     for (const e of (purchaseEvents || [])) {
       const key = e.wallet_address?.toLowerCase()
       if (!key) continue
-      if (!userPurchaseStats[key]) {
-        userPurchaseStats[key] = { 
-          count: 0, 
-          total: 0, 
-          nfts: 0, 
-          wallet_address: e.wallet_address,
-          first_purchase: e.created_at
-        }
+      if (userPurchaseStats[key]) {
+        userPurchaseStats[key].total += parseFloat(e.amount_usd) || 0
       }
-      userPurchaseStats[key].count += 1
-      userPurchaseStats[key].total += parseFloat(e.amount_usd) || 0
-      userPurchaseStats[key].nfts += 1
     }
+
+    console.log('[admin/users] profiles:', profiles?.length, 'wallet owners:', Object.keys(userPurchaseStats).length)
 
     // Get campaigns created per user (by email)
     const { data: submissions } = await supabaseAdmin
