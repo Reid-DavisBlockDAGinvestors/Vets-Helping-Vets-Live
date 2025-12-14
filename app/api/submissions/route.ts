@@ -5,8 +5,10 @@ import { sendSubmissionConfirmation } from '@/lib/mailer'
 
 // POST /api/submissions  -> create a new creator submission (status=pending)
 export async function POST(req: NextRequest) {
+  console.log('[submissions] POST request received')
   try {
     const body = await req.json().catch(()=>null)
+    console.log('[submissions] Body parsed:', body ? 'success' : 'failed')
     if (!body) return NextResponse.json({ error: 'INVALID_JSON' }, { status: 400 })
     const { 
       title, story, category, goal, 
@@ -48,10 +50,13 @@ export async function POST(req: NextRequest) {
       persona_inquiry_id: persona_inquiry_id || null,
       persona_status: persona_status || 'not_started',
     }
+    console.log('[submissions] Inserting submission for:', creator_email)
     const { data, error } = await supabaseAdmin.from('submissions').insert(payload).select('*').single()
     if (error) {
+      console.error('[submissions] Insert failed:', error.code, error.message)
       return NextResponse.json({ error: 'SUBMISSION_INSERT_FAILED', code: error.code, details: error.message }, { status: 500 })
     }
+    console.log('[submissions] Insert successful, id:', data.id)
     // Best-effort: ensure a profiles row exists for this email (for wallet-only users)
     try {
       // Try update-by-email if such row exists
