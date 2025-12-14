@@ -52,23 +52,40 @@ export async function GET(req: NextRequest) {
     }
 
     // Get ALL purchases to find users (including those without profiles)
-    const { data: allPurchases } = await supabaseAdmin
+    // The purchases table only has wallet_address, not email or user_id
+    const { data: allPurchases, error: purchasesErr } = await supabaseAdmin
       .from('purchases')
-      .select('user_id, email, wallet_address, amount_usd, quantity, created_at')
+      .select('wallet_address, amount_usd, created_at, campaign_id')
       .order('created_at', { ascending: false })
 
-    // Build purchase stats map by email/wallet
+    // Also check events table for purchase events
+    const { data: purchaseEvents, error: eventsErr } = await supabaseAdmin
+      .from('events')
+      .select('wallet_address, amount_usd, created_at')
+      .eq('event_type', 'purchase')
+      .order('created_at', { ascending: false })
+
+    console.log('[admin/users] profiles:', profiles?.length, 'purchases:', allPurchases?.length, 'events:', purchaseEvents?.length)
+    if (purchasesErr) console.error('[admin/users] purchases error:', purchasesErr)
+    if (eventsErr) console.error('[admin/users] events error:', eventsErr)
+
+    // Combine purchases from both tables
+    const combinedPurchases = [
+      ...(allPurchases || []).map(p => ({ ...p, source: 'purchases' })),
+      ...(purchaseEvents || []).map(p => ({ ...p, source: 'events' }))
+    ]
+
+    // Build purchase stats map by wallet address
     const userPurchaseStats: Record<string, { 
       count: number
       total: number
       nfts: number
-      wallet_address: string | null
+      wallet_address: string
       first_purchase: string | null
     }> = {}
     
-    for (const p of (allPurchases || [])) {
-      // Use email as primary key, fallback to wallet
-      const key = p.email?.toLowerCase() || p.wallet_address?.toLowerCase()
+    for (const p of combinedPurchases) {
+      const key = p.wallet_address?.toLowerCase()
       if (!key) continue
       if (!userPurchaseStats[key]) {
         userPurchaseStats[key] = { 
@@ -80,11 +97,8 @@ export async function GET(req: NextRequest) {
         }
       }
       userPurchaseStats[key].count += 1
-      userPurchaseStats[key].total += p.amount_usd || 0
-      userPurchaseStats[key].nfts += p.quantity || 1
-      if (!userPurchaseStats[key].wallet_address && p.wallet_address) {
-        userPurchaseStats[key].wallet_address = p.wallet_address
-      }
+      userPurchaseStats[key].total += parseFloat(p.amount_usd) || 0
+      userPurchaseStats[key].nfts += 1
     }
 
     // Get campaigns created per user (by email)
@@ -100,15 +114,12 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Build user list from profiles
-    const profileEmails = new Set<string>()
+    // Build user list from profiles (registered users)
     const users: any[] = []
+    const addedWallets = new Set<string>()
     
     for (const p of (profiles || [])) {
       const emailKey = p.email?.toLowerCase()
-      if (emailKey) profileEmails.add(emailKey)
-      
-      const stats = userPurchaseStats[emailKey] || { count: 0, total: 0, nfts: 0, wallet_address: null }
       users.push({
         id: p.id,
         email: p.email,
@@ -117,36 +128,33 @@ export async function GET(req: NextRequest) {
         role: p.role || 'user',
         created_at: p.created_at,
         last_sign_in_at: p.last_sign_in_at,
-        wallet_address: stats.wallet_address,
-        purchases_count: stats.count,
-        nfts_owned: stats.nfts,
-        total_spent_usd: stats.total,
+        wallet_address: null,
+        purchases_count: 0,
+        nfts_owned: 0,
+        total_spent_usd: 0,
         campaigns_created: campaignsCreated[emailKey] || 0,
         source: 'profile'
       })
     }
 
-    // Add purchasers who don't have profiles (wallet-only users)
-    for (const [key, stats] of Object.entries(userPurchaseStats)) {
-      // Skip if this email already has a profile
-      if (profileEmails.has(key)) continue
-      
-      // Check if it's an email or wallet address
-      const isEmail = key.includes('@')
+    // Add ALL wallet-based purchasers (these are separate from profile users)
+    for (const [walletKey, stats] of Object.entries(userPurchaseStats)) {
+      if (addedWallets.has(walletKey)) continue
+      addedWallets.add(walletKey)
       
       users.push({
-        id: key,
-        email: isEmail ? key : null,
-        display_name: isEmail ? null : `Wallet: ${key.slice(0, 6)}...${key.slice(-4)}`,
+        id: walletKey,
+        email: null,
+        display_name: `${walletKey.slice(0, 6)}...${walletKey.slice(-4)}`,
         avatar_url: null,
-        role: 'user',
+        role: 'buyer',
         created_at: stats.first_purchase,
         last_sign_in_at: null,
-        wallet_address: isEmail ? stats.wallet_address : key,
+        wallet_address: stats.wallet_address,
         purchases_count: stats.count,
         nfts_owned: stats.nfts,
         total_spent_usd: stats.total,
-        campaigns_created: isEmail ? (campaignsCreated[key] || 0) : 0,
+        campaigns_created: 0,
         source: 'purchase'
       })
     }
