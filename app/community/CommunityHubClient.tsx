@@ -35,6 +35,15 @@ interface CampaignPreview {
   image_uri: string | null
   slug?: string
   short_code?: string
+  campaign_id?: number
+  category?: string
+}
+
+interface Category {
+  id: string
+  name: string
+  icon: string
+  count: number
 }
 
 interface Comment {
@@ -80,6 +89,16 @@ export default function CommunityHubClient() {
   const [deletingPost, setDeletingPost] = useState<string | null>(null)
   const [filterCampaign, setFilterCampaign] = useState<CampaignPreview | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [allCampaigns, setAllCampaigns] = useState<CampaignPreview[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  
+  // Categories for fundraisers
+  const categories: Category[] = [
+    { id: 'all', name: 'All Campaigns', icon: '🏠', count: allCampaigns.length },
+    { id: 'veteran', name: 'Veterans', icon: '🎖️', count: allCampaigns.filter(c => c.category === 'veteran').length },
+    { id: 'general', name: 'General', icon: '💝', count: allCampaigns.filter(c => c.category === 'general').length },
+  ]
 
   useEffect(() => {
     const prefill = searchParams.get('prefill')
@@ -87,6 +106,31 @@ export default function CommunityHubClient() {
       setNewPostContent(prefill)
     }
   }, [searchParams, newPostContent])
+
+  // Load all campaigns for sidebar
+  useEffect(() => {
+    const loadCampaigns = async () => {
+      try {
+        const res = await fetch('/api/marketplace/fundraisers')
+        if (res.ok) {
+          const data = await res.json()
+          const campaigns = (data?.fundraisers || []).map((f: any) => ({
+            id: f.id,
+            title: f.title,
+            image_uri: f.image,
+            slug: f.slug,
+            short_code: f.short_code,
+            campaign_id: f.campaignId,
+            category: f.causeType || 'general'
+          }))
+          setAllCampaigns(campaigns)
+        }
+      } catch (e) {
+        console.error('Failed to load campaigns for sidebar:', e)
+      }
+    }
+    loadCampaigns()
+  }, [])
 
   // Check auth on mount
   useEffect(() => {
@@ -444,18 +488,167 @@ export default function CommunityHubClient() {
     )
   }
 
+  // Filter campaigns by selected category
+  const filteredCampaigns = selectedCategory && selectedCategory !== 'all'
+    ? allCampaigns.filter(c => c.category === selectedCategory)
+    : allCampaigns
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-patriotic-navy to-gray-900">
-      {/* Header */}
-      <div className="border-b border-white/10 bg-white/5 backdrop-blur-xl sticky top-0 z-10">
-        <div className="container py-6">
-          <h1 className="text-3xl font-bold text-white mb-2">🏛️ Community Hub</h1>
-          <p className="text-white/60">Connect with creators, donors, and supporters</p>
+    <div className="min-h-screen bg-gradient-to-b from-patriotic-navy to-gray-900 flex">
+      {/* Left Sidebar - Discord-like */}
+      <div className={`${sidebarCollapsed ? 'w-16' : 'w-72'} flex-shrink-0 bg-gray-900/80 border-r border-white/10 flex flex-col h-screen sticky top-0 transition-all duration-300`}>
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+          {!sidebarCollapsed && (
+            <h2 className="text-lg font-bold text-white">🏛️ Community</h2>
+          )}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? '→' : '←'}
+          </button>
         </div>
+
+        {/* Categories */}
+        <div className="p-2 border-b border-white/10">
+          {!sidebarCollapsed && (
+            <p className="text-xs text-white/40 uppercase tracking-wider px-2 mb-2">Categories</p>
+          )}
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => {
+                setSelectedCategory(cat.id === 'all' ? null : cat.id)
+                setFilterCampaign(null)
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                (cat.id === 'all' && !selectedCategory && !filterCampaign) || selectedCategory === cat.id
+                  ? 'bg-blue-600/20 text-blue-400'
+                  : 'text-white/60 hover:bg-white/5 hover:text-white'
+              }`}
+              title={sidebarCollapsed ? cat.name : undefined}
+            >
+              <span className="text-lg">{cat.icon}</span>
+              {!sidebarCollapsed && (
+                <>
+                  <span className="flex-1 text-left text-sm">{cat.name}</span>
+                  <span className="text-xs text-white/40">{cat.count}</span>
+                </>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Fundraisers List */}
+        <div className="flex-1 overflow-y-auto">
+          {!sidebarCollapsed && (
+            <p className="text-xs text-white/40 uppercase tracking-wider px-4 py-2">Fundraisers</p>
+          )}
+          <div className="space-y-1 px-2">
+            {filteredCampaigns.map(campaign => (
+              <button
+                key={campaign.id}
+                onClick={() => {
+                  setFilterCampaign(campaign)
+                  setSelectedCategory(null)
+                }}
+                className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors ${
+                  filterCampaign?.id === campaign.id
+                    ? 'bg-purple-600/20 text-purple-400'
+                    : 'text-white/60 hover:bg-white/5 hover:text-white'
+                }`}
+                title={sidebarCollapsed ? campaign.title : undefined}
+              >
+                {/* NFT Thumbnail */}
+                <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/10 flex-shrink-0">
+                  {campaign.image_uri ? (
+                    <img
+                      src={toHttpUrl(campaign.image_uri) || ''}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-sm">
+                      {campaign.category === 'veteran' ? '🎖️' : '💝'}
+                    </div>
+                  )}
+                </div>
+                {!sidebarCollapsed && (
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm truncate">{campaign.title}</p>
+                    <p className="text-xs text-white/40 capitalize">{campaign.category}</p>
+                  </div>
+                )}
+              </button>
+            ))}
+            {filteredCampaigns.length === 0 && !sidebarCollapsed && (
+              <p className="text-sm text-white/40 text-center py-4">No campaigns found</p>
+            )}
+          </div>
+        </div>
+
+        {/* Sidebar Footer */}
+        {!sidebarCollapsed && (
+          <div className="p-4 border-t border-white/10">
+            <Link
+              href="/marketplace"
+              className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors"
+            >
+              <span>🛒</span>
+              <span>View Marketplace</span>
+            </Link>
+          </div>
+        )}
       </div>
 
-      <div className="container py-8">
-        <div className="max-w-3xl mx-auto">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Header */}
+        <div className="border-b border-white/10 bg-white/5 backdrop-blur-xl sticky top-0 z-10">
+          <div className="px-6 py-4">
+            <div className="flex items-center gap-4">
+              {filterCampaign ? (
+                <>
+                  {filterCampaign.image_uri && (
+                    <img
+                      src={toHttpUrl(filterCampaign.image_uri) || ''}
+                      alt=""
+                      className="w-12 h-12 rounded-xl object-cover"
+                    />
+                  )}
+                  <div>
+                    <h1 className="text-xl font-bold text-white">{filterCampaign.title}</h1>
+                    <p className="text-white/60 text-sm">Campaign discussions and updates</p>
+                  </div>
+                  <Link
+                    href={`/story/${filterCampaign.id}`}
+                    className="ml-auto px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    View Campaign →
+                  </Link>
+                </>
+              ) : selectedCategory ? (
+                <div>
+                  <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                    {categories.find(c => c.id === selectedCategory)?.icon}
+                    {categories.find(c => c.id === selectedCategory)?.name}
+                  </h1>
+                  <p className="text-white/60 text-sm">Browse {selectedCategory} campaigns and discussions</p>
+                </div>
+              ) : (
+                <div>
+                  <h1 className="text-xl font-bold text-white">🏛️ Community Hub</h1>
+                  <p className="text-white/60 text-sm">Connect with creators, donors, and supporters</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-6 py-8">
           {/* Create Post */}
           {user ? (
             <div className="rounded-2xl bg-white/5 border border-white/10 p-4 mb-6">
@@ -852,6 +1045,7 @@ export default function CommunityHubClient() {
               ))}
             </div>
           )}
+          </div>
         </div>
       </div>
 
