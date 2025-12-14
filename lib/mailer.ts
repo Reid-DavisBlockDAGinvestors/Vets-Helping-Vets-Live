@@ -10,7 +10,7 @@ const EXPLORER_URL = 'https://awakening.bdagscan.com'
 
 export async function sendEmail(payload: EmailPayload) {
   const apiKey = process.env.RESEND_API_KEY
-  const from = process.env.FROM_EMAIL || 'PatriotPledgeNFTs@VetsHelpingVets.Life'
+  const from = process.env.FROM_EMAIL || 'PatriotPledgeNFTs@vetshelpingvets.life'
   
   console.log('[mailer] Attempting to send email:', {
     to: payload.to,
