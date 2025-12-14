@@ -351,6 +351,45 @@ export default function AdminCampaignHub() {
     })
   }
 
+  // Fix campaign ID mismatch
+  const [fixing, setFixing] = useState<string | null>(null)
+  const fixCampaign = async (campaign: Campaign) => {
+    setFixing(campaign.id)
+    setError('')
+    
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) throw new Error('Not authenticated')
+
+      const res = await fetch('/api/admin/fix-campaign', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ submissionId: campaign.id })
+      })
+      
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || data?.details || 'Fix failed')
+      
+      // Update local state with correct campaign ID
+      setCampaigns(prev => prev.map(c => 
+        c.id === campaign.id 
+          ? { ...c, campaign_id: data.newCampaignId, status: 'minted' } 
+          : c
+      ))
+      
+      alert(`✓ Campaign fixed!\n\nOld ID: ${data.oldCampaignId}\nNew ID: ${data.newCampaignId}\n\nThe campaign should now be purchasable.`)
+    } catch (e: any) {
+      setError(e?.message || 'Fix failed')
+      alert(`❌ Fix failed: ${e?.message || 'Unknown error'}`)
+    } finally {
+      setFixing(null)
+    }
+  }
+
   // Approve and create campaign on-chain
   const [approving, setApproving] = useState<string | null>(null)
   const approveCampaign = async (campaign: Campaign, formValues?: typeof approvalForm) => {
@@ -1254,7 +1293,7 @@ export default function AdminCampaignHub() {
                         )}
                         {/* Minted campaigns show their on-chain ID and explorer link */}
                         {campaign.status === 'minted' && campaign.campaign_id != null && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <div className="px-4 py-2 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-300 text-sm">
                               🎨 On-Chain Campaign #{campaign.campaign_id}
                             </div>
@@ -1269,6 +1308,22 @@ export default function AdminCampaignHub() {
                                 🔗 View on Explorer
                               </a>
                             )}
+                            {/* Fix Campaign button - for campaigns that may have wrong ID */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); fixCampaign(campaign); }}
+                              disabled={fixing === campaign.id}
+                              className="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:bg-orange-600/50 text-white text-sm font-medium transition-colors flex items-center gap-2"
+                              title="Fix campaign ID if purchases are failing"
+                            >
+                              {fixing === campaign.id ? (
+                                <>
+                                  <span className="animate-spin">⏳</span>
+                                  Fixing...
+                                </>
+                              ) : (
+                                <>🔧 Fix Campaign</>
+                              )}
+                            </button>
                           </div>
                         )}
                         
