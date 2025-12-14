@@ -1075,7 +1075,8 @@ export default function CommunityHubClient() {
                       return uniqueIds.length > 0 && (
                         <div className="mt-3 space-y-2">
                           {uniqueIds.map((id: string) => {
-                            const campaign = campaignPreviews[id]
+                            // Use findCampaign to check both campaignPreviews and allCampaigns
+                            const campaign = findCampaign(id)
                             if (!campaign) return null
                             return (
                               <div

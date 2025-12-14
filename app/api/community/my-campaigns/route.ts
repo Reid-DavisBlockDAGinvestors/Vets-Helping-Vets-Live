@@ -34,18 +34,23 @@ export async function GET(req: NextRequest) {
     )
 
     // 1. Campaigns user created (by user_id or email)
-    const { data: createdCampaigns } = await supabaseAdmin
+    const { data: createdCampaigns, error: createdErr } = await supabaseAdmin
       .from('submissions')
       .select('id, title, image_uri, slug, short_code, campaign_id, category, status')
-      .or(`user_id.eq.${userId},email.ilike.${userEmail}`)
+      .or(`user_id.eq.${userId},email.ilike.%${userEmail}%`)
       .in('status', ['minted', 'approved', 'pending'])
       .order('created_at', { ascending: false })
+    
+    if (createdErr) console.error('[my-campaigns] createdCampaigns error:', createdErr)
+    console.log('[my-campaigns] createdCampaigns:', createdCampaigns?.length, 'for user:', userId, userEmail)
 
     // 2. Campaigns user purchased NFTs for (from purchases table)
-    const { data: purchases } = await supabaseAdmin
+    const { data: purchases, error: purchasesErr } = await supabaseAdmin
       .from('purchases')
       .select('campaign_id, submission_id')
-      .or(`user_id.eq.${userId},email.ilike.${userEmail}`)
+      .or(`user_id.eq.${userId},email.ilike.%${userEmail}%`)
+    
+    if (purchasesErr) console.error('[my-campaigns] purchases error:', purchasesErr)
 
     const purchasedSubmissionIds = [...new Set(purchases?.map(p => p.submission_id).filter(Boolean) || [])]
     
