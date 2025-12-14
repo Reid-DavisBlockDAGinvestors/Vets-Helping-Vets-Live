@@ -141,7 +141,8 @@ export async function POST(req: NextRequest) {
     let txHash: string | null = null
 
     // Create campaign with retry on nonce/gas errors
-    async function createCampaignWithRetry(maxRetries = 5): Promise<{ hash: string; campaignId: number | null }> {
+    // IMPORTANT: Wait for tx confirmation and extract campaignId from CampaignCreated event
+    async function createCampaignWithRetry(maxRetries = 5): Promise<{ hash: string; campaignId: number }> {
       let lastError: any = null
       const provider = signer.provider!
       
@@ -155,13 +156,6 @@ export async function POST(req: NextRequest) {
           const multiplier = 100n + BigInt(attempt * 20)
           const gasPrice = (baseGasPrice * multiplier) / 100n
           
-          // Predict campaignId from totalCampaigns
-          let predictedId: number | null = null
-          try {
-            const total: bigint = await (contract as any).totalCampaigns()
-            predictedId = Number(total)
-          } catch {}
-          
           console.log(`[createCampaign] Attempt ${attempt + 1}: nonce=${nonce}, gasPrice=${gasPrice}`)
           const tx = await contract.createCampaign(
             category,
@@ -173,20 +167,70 @@ export async function POST(req: NextRequest) {
             creatorWallet, // submitter address
             { nonce, gasPrice }
           )
-          return { hash: tx.hash, campaignId: predictedId }
+          
+          console.log(`[createCampaign] Tx submitted: ${tx.hash}, waiting for confirmation...`)
+          
+          // Wait for transaction confirmation (with timeout)
+          const receipt = await Promise.race([
+            tx.wait(1), // Wait for 1 confirmation
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Tx confirmation timeout')), 120000)) // 2 min timeout
+          ]) as any
+          
+          if (!receipt) {
+            throw new Error('No receipt received')
+          }
+          
+          console.log(`[createCampaign] Tx confirmed in block ${receipt.blockNumber}`)
+          
+          // Extract campaignId from CampaignCreated event in the receipt
+          let confirmedCampaignId: number | null = null
+          
+          // Parse logs to find CampaignCreated event
+          const iface = contract.interface
+          for (const log of receipt.logs || []) {
+            try {
+              const parsed = iface.parseLog({ topics: log.topics as string[], data: log.data })
+              if (parsed && parsed.name === 'CampaignCreated') {
+                confirmedCampaignId = Number(parsed.args[0]) // First arg is campaignId
+                console.log(`[createCampaign] Extracted campaignId from event: ${confirmedCampaignId}`)
+                break
+              }
+            } catch {
+              // Not our event, skip
+            }
+          }
+          
+          // Fallback: query totalCampaigns - 1 if event parsing failed
+          if (confirmedCampaignId === null) {
+            console.log(`[createCampaign] Event parsing failed, falling back to totalCampaigns query`)
+            try {
+              const total: bigint = await (contract as any).totalCampaigns()
+              confirmedCampaignId = Number(total) - 1 // Just created, so it's total - 1
+              console.log(`[createCampaign] Fallback campaignId: ${confirmedCampaignId}`)
+            } catch (e) {
+              console.error(`[createCampaign] Failed to get totalCampaigns:`, e)
+              throw new Error('Could not determine campaignId after tx confirmation')
+            }
+          }
+          
+          return { hash: tx.hash, campaignId: confirmedCampaignId }
         } catch (err: any) {
           lastError = err
           const msg = err?.message || ''
           const code = err?.code || ''
           
           if (msg.includes('already known')) {
-            console.log(`[createCampaign] Tx already in mempool, treating as success`)
-            let predictedId: number | null = null
+            console.log(`[createCampaign] Tx already in mempool, waiting for it to confirm...`)
+            // Wait a bit and then query for the latest campaign
+            await new Promise(r => setTimeout(r, 10000))
             try {
               const total: bigint = await (contract as any).totalCampaigns()
-              predictedId = Number(total)
-            } catch {}
-            return { hash: '(pending in mempool)', campaignId: predictedId }
+              const latestId = Number(total) - 1
+              console.log(`[createCampaign] After mempool wait, latest campaignId: ${latestId}`)
+              return { hash: '(confirmed from mempool)', campaignId: latestId }
+            } catch {
+              throw new Error('Tx in mempool but could not determine campaignId')
+            }
           }
           
           if (msg.includes('nonce') || msg.includes('NONCE') || 
