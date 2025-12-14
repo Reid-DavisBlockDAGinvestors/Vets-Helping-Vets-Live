@@ -63,6 +63,7 @@ export async function GET(req: NextRequest) {
       first_purchase: string | null
     }> = {}
 
+    console.log('[admin/users] Contract address:', contractAddress)
     if (contractAddress) {
       try {
         const provider = getProvider()
@@ -73,31 +74,46 @@ export async function GET(req: NextRequest) {
         const total = Number(totalSupply)
         console.log('[admin/users] Total NFTs on-chain:', total)
 
-        // Get owner of each token
-        for (let i = 0; i < total; i++) {
-          try {
-            const tokenId = await contract.tokenByIndex(i)
-            const owner = await contract.ownerOf(tokenId)
-            const ownerLower = owner.toLowerCase()
-            
+        // Batch fetch token owners (parallel calls for speed)
+        const batchSize = 10
+        for (let start = 0; start < total; start += batchSize) {
+          const end = Math.min(start + batchSize, total)
+          const promises = []
+          
+          for (let i = start; i < end; i++) {
+            promises.push(
+              (async () => {
+                try {
+                  const tokenId = await contract.tokenByIndex(i)
+                  const owner = await contract.ownerOf(tokenId)
+                  return { tokenId: Number(tokenId), owner }
+                } catch {
+                  return null
+                }
+              })()
+            )
+          }
+          
+          const results = await Promise.all(promises)
+          for (const r of results) {
+            if (!r) continue
+            const ownerLower = r.owner.toLowerCase()
             if (!userPurchaseStats[ownerLower]) {
               userPurchaseStats[ownerLower] = {
                 count: 0,
                 total: 0,
                 nfts: 0,
-                wallet_address: owner,
+                wallet_address: r.owner,
                 first_purchase: null
               }
             }
             userPurchaseStats[ownerLower].nfts += 1
             userPurchaseStats[ownerLower].count += 1
-          } catch (e) {
-            console.error(`[admin/users] Error getting token ${i}:`, e)
           }
         }
         console.log('[admin/users] Unique wallet owners:', Object.keys(userPurchaseStats).length)
-      } catch (e) {
-        console.error('[admin/users] Error querying blockchain:', e)
+      } catch (e: any) {
+        console.error('[admin/users] Error querying blockchain:', e?.message || e)
       }
     }
 
