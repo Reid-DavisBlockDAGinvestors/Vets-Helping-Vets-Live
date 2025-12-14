@@ -351,9 +351,9 @@ export default function AdminCampaignHub() {
     })
   }
 
-  // Fix campaign ID mismatch
+  // Verify and fix campaign on-chain status
   const [fixing, setFixing] = useState<string | null>(null)
-  const fixCampaign = async (campaign: Campaign) => {
+  const verifyCampaign = async (campaign: Campaign) => {
     setFixing(campaign.id)
     setError('')
     
@@ -362,7 +362,7 @@ export default function AdminCampaignHub() {
       const token = session?.session?.access_token
       if (!token) throw new Error('Not authenticated')
 
-      const res = await fetch('/api/admin/fix-campaign', {
+      const res = await fetch('/api/admin/verify-campaign', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -372,29 +372,31 @@ export default function AdminCampaignHub() {
       })
       
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || data?.details || 'Fix failed')
+      if (!res.ok) throw new Error(data?.error || data?.details || 'Verification failed')
       
-      // Handle different fix actions
-      if (data.action === 'reset') {
+      // Handle different verification results
+      if (data.status === 'valid') {
+        alert(`✓ Campaign verified!\n\nCampaign ID: ${data.campaignId}\nActive: ${data.active}\nClosed: ${data.closed}\n\n${data.message}`)
+      } else if (data.status === 'fixed') {
+        // Campaign ID was corrected
+        setCampaigns(prev => prev.map(c => 
+          c.id === campaign.id 
+            ? { ...c, campaign_id: data.newCampaignId, status: 'minted' } 
+            : c
+        ))
+        alert(`✓ Campaign fixed!\n\nOld ID: ${data.oldCampaignId}\nNew ID: ${data.newCampaignId}\nActive: ${data.active}\n\n${data.message}`)
+      } else if (data.status === 'reset') {
         // Campaign was not on-chain, status reset to approved
         setCampaigns(prev => prev.map(c => 
           c.id === campaign.id 
             ? { ...c, campaign_id: null, status: 'approved' } 
             : c
         ))
-        alert(`⚠️ Campaign was not found on-chain!\n\n${data.message}`)
-      } else {
-        // Campaign ID was fixed
-        setCampaigns(prev => prev.map(c => 
-          c.id === campaign.id 
-            ? { ...c, campaign_id: data.newCampaignId, status: 'minted' } 
-            : c
-        ))
-        alert(`✓ Campaign fixed!\n\nOld ID: ${data.oldCampaignId}\nNew ID: ${data.newCampaignId}\n\nThe campaign should now be purchasable.`)
+        alert(`⚠️ Campaign not found on-chain!\n\nTotal campaigns: ${data.totalCampaigns}\n\n${data.message}`)
       }
     } catch (e: any) {
-      setError(e?.message || 'Fix failed')
-      alert(`❌ Fix failed: ${e?.message || 'Unknown error'}`)
+      setError(e?.message || 'Verification failed')
+      alert(`❌ Verification failed: ${e?.message || 'Unknown error'}`)
     } finally {
       setFixing(null)
     }
@@ -1320,7 +1322,7 @@ export default function AdminCampaignHub() {
                             )}
                             {/* Fix Campaign button - for campaigns that may have wrong ID */}
                             <button
-                              onClick={(e) => { e.stopPropagation(); fixCampaign(campaign); }}
+                              onClick={(e) => { e.stopPropagation(); verifyCampaign(campaign); }}
                               disabled={fixing === campaign.id}
                               className="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:bg-orange-600/50 text-white text-sm font-medium transition-colors flex items-center gap-2"
                               title="Fix campaign ID if purchases are failing"
