@@ -5,6 +5,7 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import { loadStripe } from '@stripe/stripe-js'
 import { useWallet } from '@/hooks/useWallet'
 import { BrowserProvider, Contract, parseEther, formatEther } from 'ethers'
+import { supabase } from '@/lib/supabase'
 
 type PaymentTab = 'card' | 'crypto' | 'other'
 
@@ -47,6 +48,44 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
   // Wallet connection
   const wallet = useWallet()
   
+  // Auth - get logged-in user's email
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
+  
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setIsLoggedIn(true)
+        setUserEmail(session.user.email || null)
+        // Pre-fill email field with user's email
+        if (session.user.email && !email) {
+          setEmail(session.user.email)
+        }
+      } else {
+        setIsLoggedIn(false)
+        setUserEmail(null)
+      }
+    }
+    checkAuth()
+    
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
+      if (session?.user) {
+        setIsLoggedIn(true)
+        setUserEmail(session.user.email || null)
+        if (session.user.email && !email) {
+          setEmail(session.user.email)
+        }
+      } else {
+        setIsLoggedIn(false)
+        setUserEmail(null)
+      }
+    })
+    
+    return () => subscription.unsubscribe()
+  }, [])
+  
   // Calculate total based on whether this is an NFT purchase or donation
   const nftSubtotal = hasNftPrice ? pricePerNft * quantity : 0
   const totalAmount = hasNftPrice ? nftSubtotal + tipAmount : customAmount
@@ -88,6 +127,12 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
 
   // Purchase with connected wallet (direct on-chain)
   const purchaseWithWallet = async () => {
+    // Require login for NFT purchases to ensure we have email for receipt
+    if (!isLoggedIn || !userEmail) {
+      setCryptoMsg('Please log in to purchase NFTs. Your email is required for the purchase receipt.')
+      return
+    }
+    
     if (!wallet.isConnected || !wallet.address) {
       setCryptoMsg('Please connect your wallet first')
       return
@@ -196,7 +241,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
             editionMinted: lastTokenId, // Token ID or null
             mintedTokenIds, // All token IDs if multiple minted
             quantity, // Track how many were minted
-            buyerEmail: email, // Pass email for receipt
+            buyerEmail: userEmail || email, // Use logged-in user's email, fallback to manual entry
           })
         })
         console.log(`[PurchasePanel] Purchase recorded for campaign ${targetId}, tokenId=${lastTokenId}`)
