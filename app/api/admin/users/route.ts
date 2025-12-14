@@ -66,6 +66,7 @@ export async function GET(req: NextRequest) {
 
     // 1. Query blockchain for NFT owners (primary source of truth)
     let blockchainQueried = false
+    let blockchainError = ''
     try {
       // Get contract addresses from marketplace_contracts or env
       const { data: mktRows } = await supabaseAdmin
@@ -81,6 +82,7 @@ export async function GET(req: NextRequest) {
       const targetContracts = enabledAddrs.length > 0 ? enabledAddrs : (fallbackEnv ? [fallbackEnv] : [])
 
       console.log('[admin/users] Target contracts:', targetContracts)
+      console.log('[admin/users] RPC URL:', process.env.BLOCKDAG_RPC ? 'set' : 'not set')
 
       if (targetContracts.length > 0) {
         const provider = getProvider()
@@ -88,41 +90,74 @@ export async function GET(req: NextRequest) {
         for (const addr of targetContracts) {
           try {
             const contract = new ethers.Contract(addr, PatriotPledgeV5ABI, provider)
-            const totalSupply = await contract.totalSupply()
+            
+            // Add timeout for totalSupply call
+            const totalSupplyPromise = contract.totalSupply()
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('RPC timeout')), 10000)
+            )
+            
+            const totalSupply = await Promise.race([totalSupplyPromise, timeoutPromise]) as bigint
             const total = Number(totalSupply)
             console.log(`[admin/users] Contract ${addr}: ${total} NFTs`)
 
-            // Fetch owners in batches
-            for (let i = 0; i < total; i++) {
-              try {
-                const tokenId = await contract.tokenByIndex(i)
-                const owner = await contract.ownerOf(tokenId)
-                const ownerLower = owner.toLowerCase()
-                
+            // Fetch owners in parallel batches with timeout
+            const batchSize = 5
+            for (let start = 0; start < total; start += batchSize) {
+              const end = Math.min(start + batchSize, total)
+              const promises: Promise<{ owner: string } | null>[] = []
+              
+              for (let i = start; i < end; i++) {
+                promises.push(
+                  (async () => {
+                    try {
+                      const tokenId = await contract.tokenByIndex(i)
+                      const owner = await contract.ownerOf(tokenId)
+                      return { owner }
+                    } catch {
+                      return null
+                    }
+                  })()
+                )
+              }
+              
+              // Race batch against timeout
+              const batchTimeout = new Promise<({ owner: string } | null)[]>((resolve) => 
+                setTimeout(() => resolve(promises.map(() => null)), 8000)
+              )
+              
+              const results = await Promise.race([
+                Promise.all(promises),
+                batchTimeout
+              ])
+              
+              for (const r of results) {
+                if (!r) continue
+                const ownerLower = r.owner.toLowerCase()
                 if (!userPurchaseStats[ownerLower]) {
                   userPurchaseStats[ownerLower] = {
                     count: 0, total: 0, nfts: 0,
-                    wallet_address: owner,
+                    wallet_address: r.owner,
                     first_purchase: null
                   }
                 }
                 userPurchaseStats[ownerLower].nfts += 1
                 userPurchaseStats[ownerLower].count += 1
-              } catch (tokenErr) {
-                console.error(`[admin/users] Token ${i} error:`, tokenErr)
               }
             }
             blockchainQueried = true
           } catch (contractErr: any) {
-            console.error(`[admin/users] Contract ${addr} error:`, contractErr?.message)
+            blockchainError = contractErr?.message || 'Unknown error'
+            console.error(`[admin/users] Contract ${addr} error:`, blockchainError)
           }
         }
       }
     } catch (e: any) {
-      console.error('[admin/users] Blockchain query failed:', e?.message)
+      blockchainError = e?.message || 'Unknown error'
+      console.error('[admin/users] Blockchain query failed:', blockchainError)
     }
 
-    console.log('[admin/users] Blockchain queried:', blockchainQueried, 'Wallet owners:', Object.keys(userPurchaseStats).length)
+    console.log('[admin/users] Blockchain queried:', blockchainQueried, 'Wallet owners:', Object.keys(userPurchaseStats).length, 'Error:', blockchainError)
 
     // 2. Also check database tables for additional data
     const { data: contributions } = await supabaseAdmin
@@ -243,7 +278,9 @@ export async function GET(req: NextRequest) {
       debug: {
         profilesCount: profiles?.length || 0,
         walletOwnersCount: Object.keys(userPurchaseStats).length,
-        mintedCampaignsWithSales: mintedWithSales.length
+        mintedCampaignsWithSales: mintedWithSales.length,
+        blockchainQueried,
+        blockchainError: blockchainError || null
       }
     })
   } catch (e: any) {
