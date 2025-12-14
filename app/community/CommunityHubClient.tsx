@@ -134,14 +134,17 @@ export default function CommunityHubClient() {
         const res = await fetch('/api/marketplace/fundraisers')
         if (res.ok) {
           const data = await res.json()
-          const campaigns = (data?.fundraisers || []).map((f: any) => ({
+          // API returns 'items' array, not 'fundraisers'
+          const fundraisers = data?.items || data?.fundraisers || []
+          console.log('[Community] Loaded campaigns:', fundraisers.length, fundraisers.map((f: any) => ({ title: f.title, category: f.category })))
+          const campaigns = fundraisers.map((f: any) => ({
             id: f.id,
             title: f.title,
             image_uri: f.image,
             slug: f.slug,
             short_code: f.short_code,
             campaign_id: f.campaignId,
-            category: f.causeType || 'general'
+            category: f.category || 'general'  // API returns 'category', not 'causeType'
           }))
           setAllCampaigns(campaigns)
         }
