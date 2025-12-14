@@ -57,6 +57,7 @@
     "dotenv": "^17.2.3",
     "eslint": "8.57.0",
     "eslint-config-next": "14.2.5",
+    "eslint-plugin-tailwindcss": "^3.18.2",
     "hardhat": "^2.26.0",
     "hardhat-gas-reporter": "^2.3.0",
     "solidity-coverage": "^0.8.16",
