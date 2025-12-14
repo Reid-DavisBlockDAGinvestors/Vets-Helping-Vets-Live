@@ -11,8 +11,17 @@ const EXPLORER_URL = 'https://awakening.bdagscan.com'
 export async function sendEmail(payload: EmailPayload) {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.FROM_EMAIL || 'PatriotPledgeNFTs@VetsHelpingVets.Life'
+  
+  console.log('[mailer] Attempting to send email:', {
+    to: payload.to,
+    subject: payload.subject,
+    from,
+    hasApiKey: !!apiKey,
+    apiKeyPrefix: apiKey ? apiKey.substring(0, 10) + '...' : 'NOT SET'
+  })
+  
   if (!apiKey) {
-    console.log('[mailer] RESEND_API_KEY not set, skipping email', payload)
+    console.log('[mailer] RESEND_API_KEY not set, skipping email')
     return { skipped: true }
   }
   try {
@@ -30,10 +39,12 @@ export async function sendEmail(payload: EmailPayload) {
       })
     })
     const data = await res.json().catch(()=>({}))
-    if (!res.ok) throw new Error(data?.message || 'RESEND_ERROR')
+    console.log('[mailer] Resend API response:', { status: res.status, data })
+    if (!res.ok) throw new Error(data?.message || `RESEND_ERROR: ${res.status}`)
+    console.log('[mailer] Email sent successfully, id:', data?.id)
     return { id: data?.id }
   } catch (e) {
-    console.error('[mailer] error', e)
+    console.error('[mailer] error sending email:', e)
     return { error: (e as any)?.message || String(e) }
   }
 }
