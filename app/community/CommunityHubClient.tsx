@@ -92,6 +92,7 @@ export default function CommunityHubClient() {
   const [allCampaigns, setAllCampaigns] = useState<CampaignPreview[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['all']))
   
   // Categories for fundraisers
   const categories: Category[] = [
@@ -99,6 +100,25 @@ export default function CommunityHubClient() {
     { id: 'veteran', name: 'Veterans', icon: '🎖️', count: allCampaigns.filter(c => c.category === 'veteran').length },
     { id: 'general', name: 'General', icon: '💝', count: allCampaigns.filter(c => c.category === 'general').length },
   ]
+  
+  // Toggle category expansion
+  const toggleCategoryExpand = (catId: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(catId)) {
+        newSet.delete(catId)
+      } else {
+        newSet.add(catId)
+      }
+      return newSet
+    })
+  }
+  
+  // Get campaigns for a specific category
+  const getCampaignsForCategory = (catId: string) => {
+    if (catId === 'all') return allCampaigns
+    return allCampaigns.filter(c => c.category === catId)
+  }
 
   useEffect(() => {
     const prefill = searchParams.get('prefill')
@@ -488,11 +508,6 @@ export default function CommunityHubClient() {
     )
   }
 
-  // Filter campaigns by selected category
-  const filteredCampaigns = selectedCategory && selectedCategory !== 'all'
-    ? allCampaigns.filter(c => c.category === selectedCategory)
-    : allCampaigns
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-patriotic-navy to-gray-900 flex">
       {/* Left Sidebar - Discord-like */}
@@ -511,81 +526,101 @@ export default function CommunityHubClient() {
           </button>
         </div>
 
-        {/* Categories */}
-        <div className="p-2 border-b border-white/10">
-          {!sidebarCollapsed && (
-            <p className="text-xs text-white/40 uppercase tracking-wider px-2 mb-2">Categories</p>
-          )}
-          {categories.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => {
-                setSelectedCategory(cat.id === 'all' ? null : cat.id)
-                setFilterCampaign(null)
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                (cat.id === 'all' && !selectedCategory && !filterCampaign) || selectedCategory === cat.id
-                  ? 'bg-blue-600/20 text-blue-400'
-                  : 'text-white/60 hover:bg-white/5 hover:text-white'
-              }`}
-              title={sidebarCollapsed ? cat.name : undefined}
-            >
-              <span className="text-lg">{cat.icon}</span>
-              {!sidebarCollapsed && (
-                <>
-                  <span className="flex-1 text-left text-sm">{cat.name}</span>
-                  <span className="text-xs text-white/40">{cat.count}</span>
-                </>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Fundraisers List */}
+        {/* Categories with nested campaigns */}
         <div className="flex-1 overflow-y-auto">
           {!sidebarCollapsed && (
-            <p className="text-xs text-white/40 uppercase tracking-wider px-4 py-2">Fundraisers</p>
+            <p className="text-xs text-white/40 uppercase tracking-wider px-4 py-2">Browse Campaigns</p>
           )}
           <div className="space-y-1 px-2">
-            {filteredCampaigns.map(campaign => (
-              <button
-                key={campaign.id}
-                onClick={() => {
-                  setFilterCampaign(campaign)
-                  setSelectedCategory(null)
-                }}
-                className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors ${
-                  filterCampaign?.id === campaign.id
-                    ? 'bg-purple-600/20 text-purple-400'
-                    : 'text-white/60 hover:bg-white/5 hover:text-white'
-                }`}
-                title={sidebarCollapsed ? campaign.title : undefined}
-              >
-                {/* NFT Thumbnail */}
-                <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/10 flex-shrink-0">
-                  {campaign.image_uri ? (
-                    <img
-                      src={toHttpUrl(campaign.image_uri) || ''}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-sm">
-                      {campaign.category === 'veteran' ? '🎖️' : '💝'}
+            {categories.map(cat => {
+              const campaignsInCategory = getCampaignsForCategory(cat.id)
+              const isExpanded = expandedCategories.has(cat.id)
+              const hasActiveCampaign = filterCampaign && (
+                cat.id === 'all' || filterCampaign.category === cat.id
+              )
+              
+              return (
+                <div key={cat.id}>
+                  {/* Category Header */}
+                  <button
+                    onClick={() => {
+                      if (sidebarCollapsed) {
+                        setSelectedCategory(cat.id === 'all' ? null : cat.id)
+                        setFilterCampaign(null)
+                      } else {
+                        toggleCategoryExpand(cat.id)
+                      }
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                      (selectedCategory === cat.id) || (cat.id === 'all' && !selectedCategory && !filterCampaign)
+                        ? 'bg-blue-600/20 text-blue-400'
+                        : hasActiveCampaign
+                          ? 'bg-purple-600/10 text-purple-300'
+                          : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    }`}
+                    title={sidebarCollapsed ? cat.name : undefined}
+                  >
+                    {!sidebarCollapsed && (
+                      <span className={`text-xs transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
+                        ▶
+                      </span>
+                    )}
+                    <span className="text-lg">{cat.icon}</span>
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="flex-1 text-left text-sm font-medium">{cat.name}</span>
+                        <span className="text-xs text-white/40 bg-white/10 px-2 py-0.5 rounded-full">
+                          {cat.count}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                  
+                  {/* Campaigns under this category */}
+                  {!sidebarCollapsed && isExpanded && campaignsInCategory.length > 0 && (
+                    <div className="ml-4 mt-1 space-y-0.5 border-l border-white/10 pl-2">
+                      {campaignsInCategory.map(campaign => (
+                        <button
+                          key={campaign.id}
+                          onClick={() => {
+                            setFilterCampaign(campaign)
+                            setSelectedCategory(null)
+                          }}
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${
+                            filterCampaign?.id === campaign.id
+                              ? 'bg-purple-600/20 text-purple-400'
+                              : 'text-white/60 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          {/* NFT Thumbnail */}
+                          <div className="w-6 h-6 rounded overflow-hidden bg-white/10 flex-shrink-0">
+                            {campaign.image_uri ? (
+                              <img
+                                src={toHttpUrl(campaign.image_uri) || ''}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs">
+                                {campaign.category === 'veteran' ? '🎖️' : '💝'}
+                              </div>
+                            )}
+                          </div>
+                          <span className="flex-1 text-left text-sm truncate">{campaign.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Empty state for category */}
+                  {!sidebarCollapsed && isExpanded && campaignsInCategory.length === 0 && (
+                    <div className="ml-6 py-2 text-xs text-white/40">
+                      No active campaigns
                     </div>
                   )}
                 </div>
-                {!sidebarCollapsed && (
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm truncate">{campaign.title}</p>
-                    <p className="text-xs text-white/40 capitalize">{campaign.category}</p>
-                  </div>
-                )}
-              </button>
-            ))}
-            {filteredCampaigns.length === 0 && !sidebarCollapsed && (
-              <p className="text-sm text-white/40 text-center py-4">No campaigns found</p>
-            )}
+              )
+            })}
           </div>
         </div>
 
