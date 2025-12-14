@@ -406,58 +406,60 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex flex-wrap gap-2 border-b border-white/10 pb-4">
-          <button
-            onClick={() => setActiveTab('campaigns')}
-            className={`px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'campaigns' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white/5 text-white/70 hover:bg-white/10'
-            }`}
-          >
-            📋 Campaigns
-          </button>
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'users' 
-                ? 'bg-green-600 text-white' 
-                : 'bg-white/5 text-white/70 hover:bg-white/10'
-            }`}
-          >
-            👥 Users
-          </button>
-          <button
-            onClick={() => setActiveTab('submitters')}
-            className={`px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'submitters' 
-                ? 'bg-orange-600 text-white' 
-                : 'bg-white/5 text-white/70 hover:bg-white/10'
-            }`}
-          >
-            📝 Submitters
-          </button>
-          <button
-            onClick={() => setActiveTab('governance')}
-            className={`px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'governance' 
-                ? 'bg-purple-600 text-white' 
-                : 'bg-white/5 text-white/70 hover:bg-white/10'
-            }`}
-          >
-            🗳️ Governance
-          </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'settings' 
-                ? 'bg-gray-600 text-white' 
-                : 'bg-white/5 text-white/70 hover:bg-white/10'
-            }`}
-          >
-            ⚙️ Settings
-          </button>
+        {/* Tab Navigation - Scrollable on mobile */}
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex gap-2 border-b border-white/10 pb-4 min-w-max sm:min-w-0 sm:flex-wrap">
+            <button
+              onClick={() => setActiveTab('campaigns')}
+              className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap ${
+                activeTab === 'campaigns' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              }`}
+            >
+              📋 <span className="hidden xs:inline">Campaigns</span><span className="xs:hidden">Camp</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap ${
+                activeTab === 'users' 
+                  ? 'bg-green-600 text-white' 
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              }`}
+            >
+              👥 Users
+            </button>
+            <button
+              onClick={() => setActiveTab('submitters')}
+              className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap ${
+                activeTab === 'submitters' 
+                  ? 'bg-orange-600 text-white' 
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              }`}
+            >
+              📝 <span className="hidden xs:inline">Submitters</span><span className="xs:hidden">Subs</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('governance')}
+              className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap ${
+                activeTab === 'governance' 
+                  ? 'bg-purple-600 text-white' 
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              }`}
+            >
+              🗳️ <span className="hidden xs:inline">Governance</span><span className="xs:hidden">Gov</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap ${
+                activeTab === 'settings' 
+                  ? 'bg-gray-600 text-white' 
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              }`}
+            >
+              ⚙️ <span className="hidden xs:inline">Settings</span><span className="xs:hidden">Set</span>
+            </button>
+          </div>
         </div>
 
         {/* Tab Content */}

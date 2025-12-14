@@ -168,7 +168,7 @@ export default function AdminSubmitters() {
       )}
 
       {/* Search and Sort */}
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-3">
         <input
           type="text"
           placeholder="Search by email or name..."
@@ -176,25 +176,27 @@ export default function AdminSubmitters() {
           onChange={e => setSearchTerm(e.target.value)}
           className="flex-1 rounded-lg bg-white/10 border border-white/10 px-4 py-2 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
         />
-        <select
-          value={sortBy}
-          onChange={e => setSortBy(e.target.value as any)}
-          className="rounded-lg bg-white/10 border border-white/10 px-4 py-2 text-white focus:outline-none"
-        >
-          <option value="last_submission" className="bg-gray-800">Sort by Last Submission</option>
-          <option value="campaigns_count" className="bg-gray-800">Sort by Campaigns</option>
-          <option value="total_raised_usd" className="bg-gray-800">Sort by Total Raised</option>
-        </select>
-        <button
-          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-          className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors"
-        >
-          {sortOrder === 'asc' ? '↑' : '↓'}
-        </button>
+        <div className="flex gap-2">
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as any)}
+            className="flex-1 sm:flex-none rounded-lg bg-white/10 border border-white/10 px-3 py-2 text-white text-sm focus:outline-none"
+          >
+            <option value="last_submission" className="bg-gray-800">Last Submission</option>
+            <option value="campaigns_count" className="bg-gray-800">Campaigns</option>
+            <option value="total_raised_usd" className="bg-gray-800">Total Raised</option>
+          </select>
+          <button
+            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors"
+          >
+            {sortOrder === 'asc' ? '↑' : '↓'}
+          </button>
+        </div>
       </div>
 
-      {/* Submitters Table */}
-      <div className="rounded-xl bg-white/5 border border-white/10 overflow-hidden">
+      {/* Submitters - Desktop Table */}
+      <div className="hidden md:block rounded-xl bg-white/5 border border-white/10 overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-white/10 bg-white/5">
@@ -256,6 +258,58 @@ export default function AdminSubmitters() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Submitters - Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {filteredSubmitters.map(submitter => (
+          <div key={submitter.email} className="rounded-xl bg-white/5 border border-white/10 p-4">
+            <div className="mb-3">
+              <div className="font-medium text-white">{submitter.name || 'No name'}</div>
+              <div className="text-sm text-white/50 truncate">{submitter.email}</div>
+              {submitter.phone && (
+                <div className="text-xs text-white/40">{submitter.phone}</div>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="bg-white/5 rounded-lg p-2">
+                <div className="text-lg font-bold text-white">{submitter.campaigns_count || 0}</div>
+                <div className="text-xs text-white/50">Campaigns</div>
+                {submitter.pending_count > 0 && (
+                  <div className="text-xs text-yellow-400">{submitter.pending_count} pending</div>
+                )}
+              </div>
+              <div className="bg-white/5 rounded-lg p-2">
+                <div className="text-lg font-bold text-green-400">{submitter.minted_count || 0}</div>
+                <div className="text-xs text-white/50">Minted</div>
+              </div>
+              <div className="bg-white/5 rounded-lg p-2">
+                <div className="text-lg font-bold text-purple-400">{submitter.total_nfts_sold || 0}</div>
+                <div className="text-xs text-white/50">NFTs Sold</div>
+              </div>
+              <div className="bg-white/5 rounded-lg p-2">
+                <div className="text-lg font-bold text-green-400">${(submitter.total_raised_usd || 0).toFixed(0)}</div>
+                <div className="text-xs text-white/50">Raised</div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/10">
+              <span className="text-xs text-white/50">
+                Last: {submitter.last_submission ? new Date(submitter.last_submission).toLocaleDateString() : 'N/A'}
+              </span>
+              <button
+                onClick={() => setSelectedSubmitter(submitter)}
+                className="px-4 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-sm font-medium transition-colors"
+              >
+                View Campaigns
+              </button>
+            </div>
+          </div>
+        ))}
+        {filteredSubmitters.length === 0 && (
+          <div className="rounded-xl bg-white/5 border border-white/10 p-8 text-center text-white/40">
+            {searchTerm ? 'No submitters match your search' : 'No submitters found'}
+          </div>
+        )}
       </div>
 
       {/* Submitter Detail Modal */}
