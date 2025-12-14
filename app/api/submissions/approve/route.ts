@@ -140,11 +140,23 @@ export async function POST(req: NextRequest) {
     let campaignId: number | null = null
     let txHash: string | null = null
 
-    // Create campaign with retry on nonce/gas errors
-    // IMPORTANT: Wait for tx confirmation and extract campaignId from CampaignCreated event
-    async function createCampaignWithRetry(maxRetries = 5): Promise<{ hash: string; campaignId: number }> {
+    // Create campaign - optimized for Netlify's 10-second timeout
+    // We predict the campaignId and don't wait for confirmation
+    // The fix-campaign endpoint can correct the ID if needed
+    async function createCampaignFast(maxRetries = 3): Promise<{ hash: string; campaignId: number }> {
       let lastError: any = null
       const provider = signer.provider!
+      
+      // Get predicted campaign ID first (before tx)
+      let predictedCampaignId: number
+      try {
+        const total: bigint = await (contract as any).totalCampaigns()
+        predictedCampaignId = Number(total) // Next ID will be current total
+        console.log(`[createCampaign] Predicted campaignId: ${predictedCampaignId}`)
+      } catch (e) {
+        console.error(`[createCampaign] Failed to get totalCampaigns:`, e)
+        throw new Error('Could not predict campaignId')
+      }
       
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
@@ -168,76 +180,26 @@ export async function POST(req: NextRequest) {
             { nonce, gasPrice }
           )
           
-          console.log(`[createCampaign] Tx submitted: ${tx.hash}, waiting for confirmation...`)
+          console.log(`[createCampaign] Tx submitted: ${tx.hash}`)
           
-          // Wait for transaction confirmation (with timeout)
-          const receipt = await Promise.race([
-            tx.wait(1), // Wait for 1 confirmation
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Tx confirmation timeout')), 120000)) // 2 min timeout
-          ]) as any
-          
-          if (!receipt) {
-            throw new Error('No receipt received')
-          }
-          
-          console.log(`[createCampaign] Tx confirmed in block ${receipt.blockNumber}`)
-          
-          // Extract campaignId from CampaignCreated event in the receipt
-          let confirmedCampaignId: number | null = null
-          
-          // Parse logs to find CampaignCreated event
-          const iface = contract.interface
-          for (const log of receipt.logs || []) {
-            try {
-              const parsed = iface.parseLog({ topics: log.topics as string[], data: log.data })
-              if (parsed && parsed.name === 'CampaignCreated') {
-                confirmedCampaignId = Number(parsed.args[0]) // First arg is campaignId
-                console.log(`[createCampaign] Extracted campaignId from event: ${confirmedCampaignId}`)
-                break
-              }
-            } catch {
-              // Not our event, skip
-            }
-          }
-          
-          // Fallback: query totalCampaigns - 1 if event parsing failed
-          if (confirmedCampaignId === null) {
-            console.log(`[createCampaign] Event parsing failed, falling back to totalCampaigns query`)
-            try {
-              const total: bigint = await (contract as any).totalCampaigns()
-              confirmedCampaignId = Number(total) - 1 // Just created, so it's total - 1
-              console.log(`[createCampaign] Fallback campaignId: ${confirmedCampaignId}`)
-            } catch (e) {
-              console.error(`[createCampaign] Failed to get totalCampaigns:`, e)
-              throw new Error('Could not determine campaignId after tx confirmation')
-            }
-          }
-          
-          return { hash: tx.hash, campaignId: confirmedCampaignId }
+          // Don't wait for confirmation - Netlify has a 10-second timeout
+          // Return immediately with predicted campaignId
+          return { hash: tx.hash, campaignId: predictedCampaignId }
         } catch (err: any) {
           lastError = err
           const msg = err?.message || ''
           const code = err?.code || ''
           
           if (msg.includes('already known')) {
-            console.log(`[createCampaign] Tx already in mempool, waiting for it to confirm...`)
-            // Wait a bit and then query for the latest campaign
-            await new Promise(r => setTimeout(r, 10000))
-            try {
-              const total: bigint = await (contract as any).totalCampaigns()
-              const latestId = Number(total) - 1
-              console.log(`[createCampaign] After mempool wait, latest campaignId: ${latestId}`)
-              return { hash: '(confirmed from mempool)', campaignId: latestId }
-            } catch {
-              throw new Error('Tx in mempool but could not determine campaignId')
-            }
+            console.log(`[createCampaign] Tx already in mempool`)
+            return { hash: '(pending in mempool)', campaignId: predictedCampaignId }
           }
           
           if (msg.includes('nonce') || msg.includes('NONCE') || 
               msg.includes('replacement') || code === 'REPLACEMENT_UNDERPRICED' ||
               code === 'NONCE_EXPIRED') {
             console.log(`[createCampaign] Tx error on attempt ${attempt + 1}: ${code || msg.slice(0, 50)}... retrying...`)
-            await new Promise(r => setTimeout(r, 2000 * (attempt + 1)))
+            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)))
             continue
           }
           throw err
@@ -246,7 +208,7 @@ export async function POST(req: NextRequest) {
       throw lastError
     }
 
-    const result = await createCampaignWithRetry()
+    const result = await createCampaignFast()
     campaignId = result.campaignId
     txHash = result.hash
 
