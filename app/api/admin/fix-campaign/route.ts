@@ -98,11 +98,32 @@ export async function POST(req: NextRequest) {
     }
 
     if (matchedCampaignId === null) {
+      // Campaign doesn't exist on-chain - reset status so it can be re-approved
+      console.log(`[fix-campaign] No matching campaign found. Resetting submission to 'approved' status for re-creation.`)
+      
+      const { error: resetErr } = await supabaseAdmin
+        .from('submissions')
+        .update({ 
+          status: 'approved',  // Reset to approved so it can be re-created
+          campaign_id: null,   // Clear the invalid campaign ID
+          tx_hash: null        // Clear any invalid tx hash
+        })
+        .eq('id', submissionId)
+      
+      if (resetErr) {
+        return NextResponse.json({ 
+          error: 'Failed to reset submission', 
+          details: resetErr.message 
+        }, { status: 500 })
+      }
+      
       return NextResponse.json({ 
-        error: 'No matching campaign found on-chain',
+        ok: true,
+        action: 'reset',
+        message: 'Campaign was not found on-chain. Status has been reset to "approved". Please use the "Retry Create Campaign" button to create it on-chain.',
         searched: totalCampaigns,
         metadataUri 
-      }, { status: 404 })
+      })
     }
 
     // Check if campaign is active

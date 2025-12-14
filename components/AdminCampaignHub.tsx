@@ -374,14 +374,24 @@ export default function AdminCampaignHub() {
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || data?.details || 'Fix failed')
       
-      // Update local state with correct campaign ID
-      setCampaigns(prev => prev.map(c => 
-        c.id === campaign.id 
-          ? { ...c, campaign_id: data.newCampaignId, status: 'minted' } 
-          : c
-      ))
-      
-      alert(`✓ Campaign fixed!\n\nOld ID: ${data.oldCampaignId}\nNew ID: ${data.newCampaignId}\n\nThe campaign should now be purchasable.`)
+      // Handle different fix actions
+      if (data.action === 'reset') {
+        // Campaign was not on-chain, status reset to approved
+        setCampaigns(prev => prev.map(c => 
+          c.id === campaign.id 
+            ? { ...c, campaign_id: null, status: 'approved' } 
+            : c
+        ))
+        alert(`⚠️ Campaign was not found on-chain!\n\n${data.message}`)
+      } else {
+        // Campaign ID was fixed
+        setCampaigns(prev => prev.map(c => 
+          c.id === campaign.id 
+            ? { ...c, campaign_id: data.newCampaignId, status: 'minted' } 
+            : c
+        ))
+        alert(`✓ Campaign fixed!\n\nOld ID: ${data.oldCampaignId}\nNew ID: ${data.newCampaignId}\n\nThe campaign should now be purchasable.`)
+      }
     } catch (e: any) {
       setError(e?.message || 'Fix failed')
       alert(`❌ Fix failed: ${e?.message || 'Unknown error'}`)
