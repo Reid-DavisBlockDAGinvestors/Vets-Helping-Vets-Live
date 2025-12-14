@@ -12,6 +12,9 @@ type Submission = {
   goal?: number
   creator_wallet: string
   creator_email: string
+  creator_name?: string
+  creator_phone?: string
+  creator_address?: { street?: string; city?: string; state?: string; zip?: string; country?: string }
   image_uri?: string
   metadata_uri: string
   status: 'pending'|'approved'|'rejected'|'minted'
@@ -24,6 +27,15 @@ type Submission = {
   benchmarks?: string[] | null
   contract_address?: string | null
   visible_on_marketplace?: boolean
+  // Verification documents
+  verification_selfie?: string | null
+  verification_id_front?: string | null
+  verification_id_back?: string | null
+  verification_documents?: { path: string; filename: string; category?: string }[] | null
+  verification_status?: string
+  // KYC (Didit)
+  didit_session_id?: string | null
+  didit_status?: string | null
 }
 
 export default function AdminSubmissions() {
@@ -520,6 +532,100 @@ export default function AdminSubmissions() {
                 <label className="text-xs opacity-70">Reviewer Notes</label>
                 <textarea className="w-full rounded bg-white/10 p-2 h-24" value={selected.reviewer_notes || ''} onChange={e=>setSelected({ ...selected, reviewer_notes: e.target.value })} />
               </div>
+
+              {/* KYC Verification Status */}
+              <div className="rounded bg-white/5 border border-white/10 p-3">
+                <div className="text-xs font-medium mb-2">🔐 KYC Verification</div>
+                <div className="grid md:grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="opacity-70">Status: </span>
+                    <span className={
+                      selected.didit_status === 'Approved' ? 'text-green-400' :
+                      selected.didit_status === 'Declined' ? 'text-red-400' :
+                      'text-yellow-400'
+                    }>
+                      {selected.didit_status || 'Not Started'}
+                    </span>
+                  </div>
+                  {selected.didit_session_id && (
+                    <div>
+                      <span className="opacity-70">Session: </span>
+                      <span className="font-mono text-[10px]">{selected.didit_session_id.slice(0, 12)}...</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Verification Documents */}
+              <div className="rounded bg-white/5 border border-white/10 p-3">
+                <div className="text-xs font-medium mb-2">📄 Verification Documents</div>
+                {(!selected.verification_selfie && !selected.verification_id_front && !selected.verification_id_back && (!selected.verification_documents || selected.verification_documents.length === 0)) ? (
+                  <div className="text-xs opacity-50">No documents uploaded</div>
+                ) : (
+                  <div className="space-y-2">
+                    {selected.verification_selfie && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs opacity-70">Selfie:</span>
+                        <a href={ipfsToHttp(selected.verification_selfie)} target="_blank" className="text-xs text-blue-400 underline">View</a>
+                      </div>
+                    )}
+                    {selected.verification_id_front && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs opacity-70">ID Front:</span>
+                        <a href={ipfsToHttp(selected.verification_id_front)} target="_blank" className="text-xs text-blue-400 underline">View</a>
+                      </div>
+                    )}
+                    {selected.verification_id_back && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs opacity-70">ID Back:</span>
+                        <a href={ipfsToHttp(selected.verification_id_back)} target="_blank" className="text-xs text-blue-400 underline">View</a>
+                      </div>
+                    )}
+                    {selected.verification_documents && selected.verification_documents.length > 0 && (
+                      <div>
+                        <div className="text-xs opacity-70 mb-1">Supporting Documents ({selected.verification_documents.length}):</div>
+                        <div className="space-y-1 pl-2">
+                          {selected.verification_documents.map((doc, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <span className="text-xs opacity-50">{doc.category || 'Document'}:</span>
+                              <a href={ipfsToHttp(doc.path)} target="_blank" className="text-xs text-blue-400 underline">
+                                {doc.filename || `Document ${idx + 1}`}
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Contact Information */}
+              {(selected.creator_name || selected.creator_phone || selected.creator_address) && (
+                <div className="rounded bg-white/5 border border-white/10 p-3">
+                  <div className="text-xs font-medium mb-2">👤 Contact Information</div>
+                  <div className="grid md:grid-cols-2 gap-2 text-xs">
+                    {selected.creator_name && (
+                      <div><span className="opacity-70">Name: </span>{selected.creator_name}</div>
+                    )}
+                    {selected.creator_phone && (
+                      <div><span className="opacity-70">Phone: </span>{selected.creator_phone}</div>
+                    )}
+                    {selected.creator_address && (
+                      <div className="md:col-span-2">
+                        <span className="opacity-70">Address: </span>
+                        {[
+                          selected.creator_address.street,
+                          selected.creator_address.city,
+                          selected.creator_address.state,
+                          selected.creator_address.zip,
+                          selected.creator_address.country
+                        ].filter(Boolean).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <button disabled={busy} onClick={saveEdits} className="rounded bg-white/10 px-3 py-2">Save</button>

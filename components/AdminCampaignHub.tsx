@@ -126,7 +126,8 @@ export default function AdminCampaignHub() {
     nft_editions: number
     nft_price: number
     creator_wallet: string
-  }>({ goal: 100, nft_editions: 100, nft_price: 1, creator_wallet: '' })
+    benchmarks: string
+  }>({ goal: 100, nft_editions: 100, nft_price: 1, creator_wallet: '', benchmarks: '' })
 
   useEffect(() => {
     const timer = setTimeout(() => loadData(), 300)
@@ -353,10 +354,10 @@ export default function AdminCampaignHub() {
     setApprovalForm({
       goal: campaign.goal || 100,
       nft_editions: campaign.nft_editions || campaign.num_copies || 100,
-      nft_price: campaign.nft_price || (campaign.goal && (campaign.nft_editions || campaign.num_copies) 
-        ? campaign.goal / (campaign.nft_editions || campaign.num_copies || 100) 
-        : 1),
-      creator_wallet: campaign.creator_wallet || ''
+      nft_price: campaign.nft_price || (campaign.goal && (campaign.nft_editions || campaign.num_copies)
+        ? campaign.goal / (campaign.nft_editions || campaign.num_copies || 100) : 1),
+      creator_wallet: campaign.creator_wallet || '',
+      benchmarks: ''
     })
   }
 
@@ -371,7 +372,8 @@ export default function AdminCampaignHub() {
       goal: campaign.goal,
       nft_editions: campaign.nft_editions || campaign.num_copies || 100,
       nft_price: campaign.nft_price || null,
-      creator_wallet: campaign.creator_wallet
+      creator_wallet: campaign.creator_wallet,
+      benchmarks: ''
     }
     
     try {
@@ -393,7 +395,11 @@ export default function AdminCampaignHub() {
             goal: values.goal,
             num_copies: values.nft_editions,
             price_per_copy: values.nft_price,
-            creator_wallet: values.creator_wallet || campaign.creator_wallet
+            creator_wallet: values.creator_wallet || campaign.creator_wallet,
+            // Convert benchmarks text (one per line) to array
+            benchmarks: values.benchmarks?.trim() 
+              ? values.benchmarks.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean)
+              : null
           }
         })
       })
@@ -1986,6 +1992,20 @@ export default function AdminCampaignHub() {
                     ⚠️ No wallet set - will use relayer address as fallback
                   </p>
                 )}
+              </div>
+
+              {/* Benchmarks / Milestones */}
+              <div>
+                <label className="block text-sm text-white/70 mb-1">Benchmarks / Milestones (one per line)</label>
+                <textarea
+                  value={approvalForm.benchmarks}
+                  onChange={e => setApprovalForm({ ...approvalForm, benchmarks: e.target.value })}
+                  placeholder="e.g.&#10;25% - Initial medical consultation&#10;50% - Surgery scheduled&#10;75% - Post-op recovery&#10;100% - Full recovery"
+                  className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white text-sm h-28"
+                />
+                <p className="text-xs text-white/40 mt-1">
+                  Define milestones that will be shown on the campaign page to track progress
+                </p>
               </div>
 
               {/* Summary */}
