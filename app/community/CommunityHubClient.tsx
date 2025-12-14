@@ -230,27 +230,36 @@ export default function CommunityHubClient() {
 
   // Fetch campaign previews for mentions
   const fetchCampaignPreviews = async (ids: string[]) => {
+    console.log('[Community] Fetching campaign previews for:', ids)
     const newPreviews: Record<string, CampaignPreview> = {}
     for (const id of ids) {
+      // Skip if already fetching or fetched
+      if (campaignPreviews[id]) continue
       try {
         const res = await fetch(`/api/community/campaigns/${id}`)
+        console.log(`[Community] Fetch campaign ${id}: status=${res.status}`)
         if (res.ok) {
           const data = await res.json()
+          console.log(`[Community] Campaign ${id} data:`, data?.campaign?.title, data?.campaign?.image_uri)
           if (data?.campaign) {
             newPreviews[id] = {
               id: data.campaign.id,
               title: data.campaign.title,
               image_uri: data.campaign.image_uri,
               slug: data.campaign.slug,
-              short_code: data.campaign.short_code
+              short_code: data.campaign.short_code,
+              campaign_id: data.campaign.campaign_id
             }
           }
+        } else {
+          console.error(`[Community] Failed to fetch campaign ${id}: ${res.status}`)
         }
       } catch (e) {
         console.error(`Failed to fetch campaign ${id}:`, e)
       }
     }
     if (Object.keys(newPreviews).length > 0) {
+      console.log('[Community] Setting campaign previews:', Object.keys(newPreviews))
       setCampaignPreviews(prev => ({ ...prev, ...newPreviews }))
     }
   }
