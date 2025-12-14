@@ -46,11 +46,6 @@ type Campaign = {
   verification_id_front: string | null
   verification_id_back: string | null
   verification_documents: any[] | null
-  persona_status: string | null
-  persona_face_match: boolean | null
-  persona_doc_verified: boolean | null
-  persona_extracted_data: any | null
-  persona_verified_at: string | null
   // Admin fields
   admin_notes: string | null
   reviewed_by: string | null
@@ -199,11 +194,6 @@ export default function AdminCampaignHub() {
           verification_id_front: sub.verification_id_front || null,
           verification_id_back: sub.verification_id_back || null,
           verification_documents: sub.verification_documents || null,
-          persona_status: sub.persona_status || null,
-          persona_face_match: sub.persona_face_match,
-          persona_doc_verified: sub.persona_doc_verified,
-          persona_extracted_data: sub.persona_extracted_data || null,
-          persona_verified_at: sub.persona_verified_at || null,
           // Admin fields
           admin_notes: sub.admin_notes || null,
           reviewed_by: sub.reviewed_by || null,
@@ -1135,42 +1125,6 @@ export default function AdminCampaignHub() {
                               {campaign.verification_status || 'pending'}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-white/50">Persona:</span>
-                            <span className={`px-2 py-0.5 text-xs rounded-full ${
-                              campaign.persona_status === 'completed' 
-                                ? 'bg-green-500/20 text-green-400'
-                                : campaign.persona_status === 'failed'
-                                  ? 'bg-red-500/20 text-red-400'
-                                  : 'bg-white/10 text-white/50'
-                            }`}>
-                              {campaign.persona_status || 'not started'}
-                            </span>
-                          </div>
-                          {campaign.persona_status === 'completed' && (
-                            <>
-                              <div className="flex items-center gap-2">
-                                <span className="text-white/50">Face Match:</span>
-                                <span className={campaign.persona_face_match ? 'text-green-400' : 'text-red-400'}>
-                                  {campaign.persona_face_match ? '✓ Passed' : '✗ Failed'}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-white/50">ID Verified:</span>
-                                <span className={campaign.persona_doc_verified ? 'text-green-400' : 'text-red-400'}>
-                                  {campaign.persona_doc_verified ? '✓ Verified' : '✗ Failed'}
-                                </span>
-                              </div>
-                              {campaign.persona_verified_at && (
-                                <div>
-                                  <span className="text-white/50">Verified:</span>
-                                  <span className="text-white ml-2 text-xs">
-                                    {new Date(campaign.persona_verified_at).toLocaleDateString()}
-                                  </span>
-                                </div>
-                              )}
-                            </>
-                          )}
                           {/* Manual documents */}
                           <div className="pt-2 border-t border-white/10 mt-2">
                             <span className="text-white/50 text-xs">Documents:</span>
@@ -1239,39 +1193,6 @@ export default function AdminCampaignHub() {
                         <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed">
                           {campaign.story}
                         </p>
-                      </div>
-                    )}
-
-                    {/* Persona Extracted Data */}
-                    {campaign.persona_extracted_data && (
-                      <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-4">
-                        <h4 className="text-sm font-medium text-green-400 mb-2">🔍 Persona Extracted Data</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          {campaign.persona_extracted_data.firstName && (
-                            <div>
-                              <span className="text-white/50">First Name:</span>
-                              <span className="text-white ml-2">{campaign.persona_extracted_data.firstName}</span>
-                            </div>
-                          )}
-                          {campaign.persona_extracted_data.lastName && (
-                            <div>
-                              <span className="text-white/50">Last Name:</span>
-                              <span className="text-white ml-2">{campaign.persona_extracted_data.lastName}</span>
-                            </div>
-                          )}
-                          {campaign.persona_extracted_data.dateOfBirth && (
-                            <div>
-                              <span className="text-white/50">DOB:</span>
-                              <span className="text-white ml-2">{campaign.persona_extracted_data.dateOfBirth}</span>
-                            </div>
-                          )}
-                          {campaign.persona_extracted_data.documentType && (
-                            <div>
-                              <span className="text-white/50">ID Type:</span>
-                              <span className="text-white ml-2">{campaign.persona_extracted_data.documentType}</span>
-                            </div>
-                          )}
-                        </div>
                       </div>
                     )}
 
@@ -1813,7 +1734,6 @@ export default function AdminCampaignHub() {
                   <li>• The submission record</li>
                   <li>• All campaign updates</li>
                   <li>• Uploaded verification documents</li>
-                  <li>• Persona verification data (redacted)</li>
                 </ul>
               </div>
               

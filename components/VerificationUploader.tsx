@@ -13,8 +13,8 @@ interface UploadedDoc {
 interface VerificationUploaderProps {
   walletAddress?: string  // Optional - can use email instead
   email?: string          // Email as fallback identifier
-  name?: string           // Full name for Persona
-  phone?: string          // Phone for Persona
+  name?: string           // Full name for verification
+  phone?: string          // Phone for verification
   submissionId?: string
   onUploadsChange?: (uploads: {
     selfie?: UploadedDoc
@@ -22,8 +22,7 @@ interface VerificationUploaderProps {
     idBack?: UploadedDoc
     supporting: UploadedDoc[]
   }) => void
-  onPersonaStatusChange?: (status: string) => void
-  onPersonaInquiryCreated?: (inquiryId: string) => void  // When Persona inquiry is created
+  onVerificationStatusChange?: (status: string) => void
   onVerificationComplete?: (verified: boolean) => void   // When verification is done
 }
 
@@ -47,15 +46,14 @@ export default function VerificationUploader({
   phone,
   submissionId,
   onUploadsChange,
-  onPersonaStatusChange,
-  onPersonaInquiryCreated,
+  onVerificationStatusChange,
   onVerificationComplete
 }: VerificationUploaderProps) {
   // Use wallet address if available, otherwise use email as the unique identifier
   const uniqueId = walletAddress || email || ''
   
-  // Persona verification status
-  const [personaStatus, setPersonaStatus] = useState<string>('not_started')
+  // Verification status
+  const [verificationStatus, setVerificationStatus] = useState<string>('not_started')
   
   // Supporting documents (DD-214, etc.)
   const [supporting, setSupporting] = useState<UploadedDoc[]>([])
@@ -69,7 +67,7 @@ export default function VerificationUploader({
     supporting: UploadedDoc[]
   }>) => {
     if (onUploadsChange) {
-      // Persona handles ID verification now, so we only pass supporting docs
+      // Didit handles ID verification now, so we only pass supporting docs
       onUploadsChange({
         selfie: undefined,
         idFront: undefined,
@@ -81,7 +79,7 @@ export default function VerificationUploader({
 
   const uploadFile = async (
     file: File, 
-    category: 'supporting',  // Only supporting docs now, Persona handles ID
+    category: 'supporting',  // Only supporting docs now, Didit handles ID
     docName?: string
   ) => {
     setError(null)
@@ -152,10 +150,10 @@ export default function VerificationUploader({
     notifyChange({ supporting: newSupporting })
   }
 
-  // Handle Persona status updates
-  const handlePersonaStatus = (status: string) => {
-    setPersonaStatus(status)
-    onPersonaStatusChange?.(status)
+  // Handle verification status updates
+  const handleVerificationStatus = (status: string) => {
+    setVerificationStatus(status)
+    onVerificationStatusChange?.(status)
     
     // Notify parent when verification completes
     if (status === 'completed') {
@@ -181,7 +179,7 @@ export default function VerificationUploader({
           <div className="flex-1">
             <h4 className="font-semibold text-white flex items-center gap-2">
               Identity Verification
-              {personaStatus === 'completed' && <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">✓ Complete</span>}
+              {verificationStatus === 'completed' && <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">✓ Complete</span>}
             </h4>
             <p className="text-sm text-white/60 mt-1">
               Quick automated ID check using your phone camera (~2 minutes)
@@ -193,10 +191,10 @@ export default function VerificationUploader({
           submissionId={submissionId}
           email={email}
           phone={phone}
-          onStatusChange={handlePersonaStatus}
+          onStatusChange={handleVerificationStatus}
           onComplete={(status: 'completed' | 'failed' | 'cancelled') => {
             if (status === 'completed') {
-              handlePersonaStatus('completed')
+              handleVerificationStatus('completed')
             }
           }}
         />

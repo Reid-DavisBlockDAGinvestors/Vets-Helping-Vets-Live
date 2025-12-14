@@ -15,10 +15,8 @@ export async function POST(req: NextRequest) {
       creator_wallet, creator_email, creator_name, creator_phone, creator_address,
       image_uri, metadata_uri,
       verification_selfie, verification_id_front, verification_id_back, verification_documents,
-      // Didit KYC verification (new)
-      didit_session_id, didit_status,
-      // Legacy Persona fields (for backwards compat)
-      persona_inquiry_id, persona_status
+      // Didit KYC verification
+      didit_session_id, didit_status
     } = body
     // Wallet is optional - email is required
     if (!creator_email) return NextResponse.json({ error: 'MISSING_EMAIL' }, { status: 400 })
@@ -46,9 +44,6 @@ export async function POST(req: NextRequest) {
       // Didit KYC verification
       didit_session_id: didit_session_id || null,
       didit_status: didit_status || 'Not Started',
-      // Legacy Persona fields
-      persona_inquiry_id: persona_inquiry_id || null,
-      persona_status: persona_status || 'not_started',
     }
     console.log('[submissions] Inserting submission for:', creator_email)
     const { data, error } = await supabaseAdmin.from('submissions').insert(payload).select('*').single()
@@ -153,7 +148,6 @@ export async function PUT(req: NextRequest) {
       'image_uri', 'metadata_uri',
       'verification_status', 'verification_selfie', 'verification_id_front', 'verification_id_back',
       'verification_documents',
-      'persona_status', 'persona_face_match', 'persona_doc_verified', 'persona_extracted_data',
       // NFT/Campaign settings
       'nft_price', 'nft_editions', 'nft_editions_remaining',
       'num_copies', 'price_per_copy', // legacy field names
@@ -230,26 +224,6 @@ export async function DELETE(req: NextRequest) {
     if (updatesError) {
       console.error('[DELETE] Failed to delete campaign updates:', updatesError)
       // Continue anyway - updates might not exist
-    }
-
-    // Archive Persona inquiry if exists (Persona doesn't allow deletion, but we can mark it)
-    if (submission.persona_inquiry_id) {
-      try {
-        // Note: Persona API doesn't support deletion, but we can redact the inquiry
-        const personaApiKey = process.env.PERSONA_API_KEY
-        if (personaApiKey) {
-          await fetch(`https://withpersona.com/api/v1/inquiries/${submission.persona_inquiry_id}/redact`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${personaApiKey}`,
-              'Persona-Version': '2023-01-05'
-            }
-          })
-        }
-      } catch (personaErr) {
-        console.error('[DELETE] Persona redact failed (non-critical):', personaErr)
-        // Continue - this is best-effort
-      }
     }
 
     // Delete any uploaded files from storage (if using Supabase storage)
