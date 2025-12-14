@@ -180,6 +180,12 @@ export default function AdminSubmissions() {
       const token = session?.session?.access_token
       const headers: Record<string,string> = { 'Content-Type': 'application/json' }
       if (token) headers['authorization'] = `Bearer ${token}`
+      // Convert benchmarks text to array
+      const trimmedBenchmarks = benchmarksText.trim()
+      const benchmarksArray = trimmedBenchmarks 
+        ? trimmedBenchmarks.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+        : null
+      
       const res = await fetch('/api/submissions/approve', {
         method: 'POST', headers, body: JSON.stringify({ id: selected.id, updates: {
           title: selected.title,
@@ -187,7 +193,11 @@ export default function AdminSubmissions() {
           category: selected.category,
           image_uri: selected.image_uri,
           metadata_uri: selected.metadata_uri,
-          reviewer_notes: selected.reviewer_notes || ''
+          reviewer_notes: selected.reviewer_notes || '',
+          benchmarks: benchmarksArray,
+          num_copies: selected.num_copies,
+          price_per_copy: selected.price_per_copy,
+          goal: selected.goal
         }})
       })
       const data = await res.json().catch(()=>({}))

@@ -84,15 +84,19 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Mark approved and email
+    // Mark approved and save all edits including benchmarks
     await supabaseAdmin.from('submissions').update({ 
       status: 'approved', 
       reviewer_notes: merged.reviewer_notes || sub.reviewer_notes, 
       title: merged.title, 
       story: merged.story, 
       category: merged.category, 
+      goal: merged.goal,
       image_uri: merged.image_uri, 
-      metadata_uri: merged.metadata_uri 
+      metadata_uri: merged.metadata_uri,
+      benchmarks: merged.benchmarks || null,
+      num_copies: merged.num_copies || null,
+      price_per_copy: merged.price_per_copy || null
     }).eq('id', id)
     
     // Email will be sent after campaign is created on-chain with campaignId
