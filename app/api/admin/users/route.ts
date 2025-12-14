@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
     }
 
-    // Get all profiles
+    // Get all profiles (registered users)
     const { data: profiles, error: profilesErr } = await supabaseAdmin
       .from('profiles')
       .select('*')
@@ -49,25 +49,42 @@ export async function GET(req: NextRequest) {
 
     if (profilesErr) {
       console.error('[admin/users] profiles error:', profilesErr)
-      return NextResponse.json({ error: 'QUERY_FAILED' }, { status: 500 })
     }
 
-    // Get purchase stats per user
-    const { data: purchaseStats } = await supabaseAdmin
+    // Get ALL purchases to find users (including those without profiles)
+    const { data: allPurchases } = await supabaseAdmin
       .from('purchases')
-      .select('user_id, email, amount_usd, quantity')
+      .select('user_id, email, wallet_address, amount_usd, quantity, created_at')
+      .order('created_at', { ascending: false })
 
-    // Build purchase stats map
-    const userPurchaseStats: Record<string, { count: number; total: number; nfts: number }> = {}
-    for (const p of (purchaseStats || [])) {
-      const key = p.user_id || p.email
+    // Build purchase stats map by email/wallet
+    const userPurchaseStats: Record<string, { 
+      count: number
+      total: number
+      nfts: number
+      wallet_address: string | null
+      first_purchase: string | null
+    }> = {}
+    
+    for (const p of (allPurchases || [])) {
+      // Use email as primary key, fallback to wallet
+      const key = p.email?.toLowerCase() || p.wallet_address?.toLowerCase()
       if (!key) continue
       if (!userPurchaseStats[key]) {
-        userPurchaseStats[key] = { count: 0, total: 0, nfts: 0 }
+        userPurchaseStats[key] = { 
+          count: 0, 
+          total: 0, 
+          nfts: 0, 
+          wallet_address: p.wallet_address,
+          first_purchase: p.created_at
+        }
       }
       userPurchaseStats[key].count += 1
       userPurchaseStats[key].total += p.amount_usd || 0
       userPurchaseStats[key].nfts += p.quantity || 1
+      if (!userPurchaseStats[key].wallet_address && p.wallet_address) {
+        userPurchaseStats[key].wallet_address = p.wallet_address
+      }
     }
 
     // Get campaigns created per user (by email)
@@ -83,10 +100,16 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Combine data
-    const users = (profiles || []).map(p => {
-      const stats = userPurchaseStats[p.id] || userPurchaseStats[p.email] || { count: 0, total: 0, nfts: 0 }
-      return {
+    // Build user list from profiles
+    const profileEmails = new Set<string>()
+    const users: any[] = []
+    
+    for (const p of (profiles || [])) {
+      const emailKey = p.email?.toLowerCase()
+      if (emailKey) profileEmails.add(emailKey)
+      
+      const stats = userPurchaseStats[emailKey] || { count: 0, total: 0, nfts: 0, wallet_address: null }
+      users.push({
         id: p.id,
         email: p.email,
         display_name: p.display_name,
@@ -94,14 +117,48 @@ export async function GET(req: NextRequest) {
         role: p.role || 'user',
         created_at: p.created_at,
         last_sign_in_at: p.last_sign_in_at,
+        wallet_address: stats.wallet_address,
         purchases_count: stats.count,
         nfts_owned: stats.nfts,
         total_spent_usd: stats.total,
-        campaigns_created: campaignsCreated[p.email?.toLowerCase()] || 0
-      }
+        campaigns_created: campaignsCreated[emailKey] || 0,
+        source: 'profile'
+      })
+    }
+
+    // Add purchasers who don't have profiles (wallet-only users)
+    for (const [key, stats] of Object.entries(userPurchaseStats)) {
+      // Skip if this email already has a profile
+      if (profileEmails.has(key)) continue
+      
+      // Check if it's an email or wallet address
+      const isEmail = key.includes('@')
+      
+      users.push({
+        id: key,
+        email: isEmail ? key : null,
+        display_name: isEmail ? null : `Wallet: ${key.slice(0, 6)}...${key.slice(-4)}`,
+        avatar_url: null,
+        role: 'user',
+        created_at: stats.first_purchase,
+        last_sign_in_at: null,
+        wallet_address: isEmail ? stats.wallet_address : key,
+        purchases_count: stats.count,
+        nfts_owned: stats.nfts,
+        total_spent_usd: stats.total,
+        campaigns_created: isEmail ? (campaignsCreated[key] || 0) : 0,
+        source: 'purchase'
+      })
+    }
+
+    // Sort by created_at descending
+    users.sort((a, b) => {
+      const aDate = new Date(a.created_at || 0).getTime()
+      const bDate = new Date(b.created_at || 0).getTime()
+      return bDate - aDate
     })
 
-    return NextResponse.json({ users })
+    return NextResponse.json({ users, total: users.length })
   } catch (e: any) {
     console.error('[admin/users] Error:', e)
     return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })

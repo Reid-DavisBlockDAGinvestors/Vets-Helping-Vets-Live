@@ -5,16 +5,18 @@ import { supabase } from '@/lib/supabase'
 
 interface UserData {
   id: string
-  email: string
+  email: string | null
   display_name: string | null
   avatar_url: string | null
   role: string
   created_at: string
   last_sign_in_at: string | null
+  wallet_address: string | null
   purchases_count: number
   nfts_owned: number
   total_spent_usd: number
   campaigns_created: number
+  source?: 'profile' | 'purchase'
 }
 
 interface Purchase {
@@ -198,12 +200,17 @@ export default function AdminUsers() {
                       {user.avatar_url ? (
                         <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        (user.display_name?.[0] || user.email?.[0] || '?').toUpperCase()
+                        (user.display_name?.[0] || user.email?.[0] || '💳').toUpperCase()
                       )}
                     </div>
                     <div>
-                      <div className="font-medium text-white">{user.display_name || 'No name'}</div>
-                      <div className="text-sm text-white/50">{user.email}</div>
+                      <div className="font-medium text-white">{user.display_name || (user.email ? 'No name' : 'Wallet User')}</div>
+                      <div className="text-sm text-white/50">{user.email || 'No email'}</div>
+                      {user.wallet_address && (
+                        <div className="text-xs text-white/40 font-mono">
+                          {user.wallet_address.slice(0, 6)}...{user.wallet_address.slice(-4)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </td>
