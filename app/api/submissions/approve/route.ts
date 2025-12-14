@@ -218,9 +218,7 @@ export async function POST(req: NextRequest) {
         visible_on_marketplace: true,
         // Save NFT settings that were used for on-chain campaign
         num_copies: copiesNum || null,
-        price_per_copy: priceUSD || null,
-        nft_editions: copiesNum || null,
-        nft_price: priceUSD || null
+        price_per_copy: priceUSD || null
       })
       .eq('id', id)
     
