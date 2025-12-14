@@ -55,6 +55,7 @@ export default function AdminUsers() {
       })
       const data = await res.json()
       console.log('[AdminUsers] API response:', data)
+      console.log('[AdminUsers] Debug info:', data?.debug)
       
       if (!res.ok) {
         setError(data?.error || 'Failed to load users')
@@ -62,6 +63,10 @@ export default function AdminUsers() {
       }
       
       console.log('[AdminUsers] Users count:', data?.users?.length, 'Total:', data?.total)
+      // Show debug info in error message if no wallet owners found
+      if (data?.debug?.walletOwnersCount === 0 && data?.debug?.mintedCampaignsWithSales > 0) {
+        console.warn('[AdminUsers] Blockchain query may have failed - minted campaigns exist but no wallet owners found')
+      }
       setUsers(data?.users || [])
     } catch (e: any) {
       setError(e?.message || 'Failed to load users')
