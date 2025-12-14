@@ -40,7 +40,11 @@ const clearDraft = () => {
   } catch {}
 }
 
-export default function StoryForm() {
+interface StoryFormProps {
+  editSubmissionId?: string
+}
+
+export default function StoryForm({ editSubmissionId }: StoryFormProps) {
   // Form fields - now sectioned
   const [category, setCategory] = useState<'veteran' | 'general'>('veteran')
   const [title, setTitle] = useState('')
@@ -48,6 +52,9 @@ export default function StoryForm() {
   const [need, setNeed] = useState('')              // What you need help with
   const [fundsUsage, setFundsUsage] = useState('')  // How funds will be used
   const [goal, setGoal] = useState<number>(1000)
+  const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null)
+  const [loadingEdit, setLoadingEdit] = useState(false)
+  const [editLoadError, setEditLoadError] = useState<string | null>(null)
   
   // Contact information
   const [fullName, setFullName] = useState('')
@@ -87,9 +94,104 @@ export default function StoryForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [draftLoaded, setDraftLoaded] = useState(false)
 
-  // Load saved draft on mount
+  // Load submission for editing if editSubmissionId is provided
+  useEffect(() => {
+    if (!editSubmissionId || editingSubmissionId === editSubmissionId) return
+    
+    const loadSubmission = async () => {
+      setLoadingEdit(true)
+      setEditLoadError(null)
+      
+      try {
+        // Get auth token from supabase
+        const { supabase } = await import('@/lib/supabase')
+        const { data: session } = await supabase.auth.getSession()
+        const token = session?.session?.access_token
+        
+        if (!token) {
+          setEditLoadError('Please log in to edit your submission')
+          setLoadingEdit(false)
+          return
+        }
+        
+        const res = await fetch(`/api/submissions/${editSubmissionId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        
+        const data = await res.json()
+        
+        if (!res.ok) {
+          setEditLoadError(data.message || data.error || 'Failed to load submission')
+          setLoadingEdit(false)
+          return
+        }
+        
+        const sub = data.submission
+        console.log('[StoryForm] Loaded submission for editing:', sub.id)
+        
+        // Populate form fields from submission
+        if (sub.category) setCategory(sub.category)
+        if (sub.title) setTitle(sub.title)
+        if (sub.goal) setGoal(sub.goal)
+        if (sub.creator_name) setFullName(sub.creator_name)
+        if (sub.creator_phone) setPhone(sub.creator_phone)
+        if (sub.creator_wallet) setWallet(sub.creator_wallet)
+        if (sub.creator_email) setEmail(sub.creator_email)
+        if (sub.image_uri) setImage(sub.image_uri)
+        
+        // Parse story back into sections if possible
+        if (sub.story) {
+          const story = sub.story as string
+          // Try to extract sections from formatted story
+          const aboutMatch = story.match(/About Me:\n([\s\S]*?)(?=\n\nWhat I Need:|$)/)
+          const needMatch = story.match(/What I Need:\n([\s\S]*?)(?=\n\nHow Funds Will Be Used:|$)/)
+          const fundsMatch = story.match(/How Funds Will Be Used:\n([\s\S]*)$/)
+          
+          if (aboutMatch) setBackground(aboutMatch[1].trim())
+          if (needMatch) setNeed(needMatch[1].trim())
+          if (fundsMatch) setFundsUsage(fundsMatch[1].trim())
+          
+          // If no sections found, put entire story in background
+          if (!aboutMatch && !needMatch && !fundsMatch) {
+            setBackground(story)
+          }
+        }
+        
+        // Parse address if available
+        if (sub.creator_address) {
+          const addr = sub.creator_address
+          if (addr.street) setStreetAddress(addr.street)
+          if (addr.city) setCity(addr.city)
+          if (addr.state) setStateProvince(addr.state)
+          if (addr.zip) setZipCode(addr.zip)
+          if (addr.country) setCountry(addr.country)
+        }
+        
+        // Set KYC status if available
+        if (sub.didit_session_id) setDiditSessionId(sub.didit_session_id)
+        if (sub.didit_status === 'Approved') {
+          setDiditStatus('completed')
+          setVerificationComplete(true)
+        }
+        
+        setEditingSubmissionId(editSubmissionId)
+        setDraftLoaded(true) // Mark as loaded so auto-save can begin
+        
+      } catch (err: any) {
+        console.error('[StoryForm] Error loading submission:', err)
+        setEditLoadError(err.message || 'Failed to load submission')
+      } finally {
+        setLoadingEdit(false)
+      }
+    }
+    
+    loadSubmission()
+  }, [editSubmissionId, editingSubmissionId])
+
+  // Load saved draft on mount (only if not editing)
   useEffect(() => {
     if (draftLoaded) return // Only run once
+    if (editSubmissionId) return // Don't load draft if editing
     
     const draft = getStoredDraft()
     console.log('[StoryForm] Loading draft:', draft ? 'found' : 'none')
@@ -118,7 +220,7 @@ export default function StoryForm() {
     }
     // Always mark as loaded so saving can begin
     setDraftLoaded(true)
-  }, [draftLoaded])
+  }, [draftLoaded, editSubmissionId])
 
   // Auto-save draft when form fields change
   useEffect(() => {
@@ -394,8 +496,48 @@ export default function StoryForm() {
     }
   }
 
+  // Show loading state when loading submission for editing
+  if (loadingEdit) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="animate-spin h-10 w-10 border-3 border-white/30 border-t-white rounded-full mb-4" />
+        <p className="text-white/70">Loading your submission...</p>
+      </div>
+    )
+  }
+
+  // Show error state if loading failed
+  if (editLoadError) {
+    return (
+      <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-8 text-center">
+        <div className="text-4xl mb-4">⚠️</div>
+        <h3 className="text-xl font-semibold text-white mb-2">Unable to Load Submission</h3>
+        <p className="text-white/70 mb-4">{editLoadError}</p>
+        <a 
+          href="/submit" 
+          className="inline-block px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+        >
+          Start a New Submission
+        </a>
+      </div>
+    )
+  }
+
   return (
     <form className="space-y-6 max-w-4xl">
+      {/* Edit mode banner */}
+      {editingSubmissionId && (
+        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-4 flex items-start gap-3">
+          <span className="text-2xl">✏️</span>
+          <div>
+            <h3 className="font-semibold text-amber-400">Editing Previous Submission</h3>
+            <p className="text-sm text-white/70">
+              Make the requested changes and resubmit. Your previous data has been loaded.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Section 1: Campaign Type */}
       <div className="rounded-xl bg-white/5 border border-white/10 p-6">
         <div className="flex items-center gap-3 mb-4">

@@ -1,6 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
+// GET /api/submissions/[id] - Fetch a submission by ID
+// Creators can fetch their own submissions (by email match), admins can fetch any
+export async function GET(req: NextRequest, context: { params: { id: string } }) {
+  try {
+    const { id } = context.params
+    if (!id) return NextResponse.json({ error: 'INVALID_REQUEST' }, { status: 400 })
+
+    // Get auth token
+    const auth = req.headers.get('authorization') || ''
+    const token = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7) : ''
+    
+    let userEmail: string | null = null
+    let isAdmin = false
+    
+    if (token) {
+      const { data: userData } = await supabaseAdmin.auth.getUser(token)
+      const uid = userData?.user?.id
+      userEmail = userData?.user?.email || null
+      
+      if (uid) {
+        const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', uid).single()
+        isAdmin = (profile?.role || '') === 'admin'
+      }
+    }
+
+    // Fetch the submission
+    const { data: submission, error } = await supabaseAdmin
+      .from('submissions')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error || !submission) {
+      return NextResponse.json({ error: 'SUBMISSION_NOT_FOUND' }, { status: 404 })
+    }
+
+    // Check authorization: admin or creator (by email match)
+    const isCreator = userEmail && submission.creator_email && 
+      userEmail.toLowerCase() === submission.creator_email.toLowerCase()
+    
+    if (!isAdmin && !isCreator) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'You can only view your own submissions' }, { status: 403 })
+    }
+
+    return NextResponse.json({ ok: true, submission })
+  } catch (e: any) {
+    return NextResponse.json({ error: 'SUBMISSION_FETCH_ERROR', details: e?.message || String(e) }, { status: 500 })
+  }
+}
+
 export async function PATCH(req: NextRequest, context: { params: { id: string } }) {
   try {
     const { id } = context.params
