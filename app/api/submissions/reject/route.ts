@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       <p>We're here to help veterans and their families, and we want your campaign to succeed! If you have any questions about the feedback, please don't hesitate to reach out.</p>
       
       <center>
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://patriotpledge.org'}/submit" class="cta-button">
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://patriotpledgenfts.netlify.app'}/submit" class="cta-button">
           Edit & Resubmit Your Campaign
         </a>
       </center>
