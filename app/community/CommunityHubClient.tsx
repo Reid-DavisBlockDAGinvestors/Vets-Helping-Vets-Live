@@ -1072,6 +1072,11 @@ export default function CommunityHubClient() {
                     {(() => {
                       const mentions = post.content.match(/@\[([^\]]+)\]/g) || []
                       const uniqueIds = Array.from(new Set(mentions.map((m: string) => m.slice(2, -1))))
+                      // Trigger fetch for any campaigns not yet loaded
+                      const missingIds = uniqueIds.filter(id => !findCampaign(id) && !campaignPreviews[id])
+                      if (missingIds.length > 0) {
+                        fetchCampaignPreviews(missingIds)
+                      }
                       return uniqueIds.length > 0 && (
                         <div className="mt-3 space-y-2">
                           {uniqueIds.map((id: string) => {
