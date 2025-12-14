@@ -370,39 +370,39 @@ export default function AdminPage() {
 
       <div className="container py-8 space-y-8">
         {/* Quick Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/10 border border-green-500/20 p-5">
-            <div className="text-3xl font-bold text-green-400">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+          <div className="rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/10 border border-green-500/20 p-3 md:p-5">
+            <div className="text-xl md:text-3xl font-bold text-green-400">
               ${summary?.fundsRaised?.toLocaleString?.() || 0}
             </div>
-            <div className="text-sm text-green-400/70 mt-1">Total Raised</div>
+            <div className="text-xs md:text-sm text-green-400/70 mt-1">Total Raised</div>
           </div>
-          <div className="rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/10 border border-blue-500/20 p-5">
-            <div className="text-3xl font-bold text-blue-400">
+          <div className="rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/10 border border-blue-500/20 p-3 md:p-5">
+            <div className="text-xl md:text-3xl font-bold text-blue-400">
               {summary?.purchases?.toLocaleString?.() || 0}
             </div>
-            <div className="text-sm text-blue-400/70 mt-1">Purchases</div>
+            <div className="text-xs md:text-sm text-blue-400/70 mt-1">Purchases</div>
           </div>
-          <div className="rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/20 p-5">
-            <div className="text-3xl font-bold text-purple-400">
+          <div className="rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/20 p-3 md:p-5">
+            <div className="text-xl md:text-3xl font-bold text-purple-400">
               {summary?.mints?.toLocaleString?.() || 0}
             </div>
-            <div className="text-sm text-purple-400/70 mt-1">NFTs Minted</div>
+            <div className="text-xs md:text-sm text-purple-400/70 mt-1">NFTs Minted</div>
           </div>
           <button
             onClick={() => setShowMilestoneModal(true)}
-            className="rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/10 border border-orange-500/20 p-5 text-left hover:border-orange-500/40 transition-colors cursor-pointer"
+            className="rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/10 border border-orange-500/20 p-3 md:p-5 text-left hover:border-orange-500/40 transition-colors cursor-pointer"
           >
-            <div className="text-3xl font-bold text-orange-400">
+            <div className="text-xl md:text-3xl font-bold text-orange-400">
               {summary?.milestones?.toLocaleString?.() || 0}
             </div>
-            <div className="text-sm text-orange-400/70 mt-1">Milestones <span className="text-orange-400/50">→ Click to view</span></div>
+            <div className="text-xs md:text-sm text-orange-400/70 mt-1">Milestones <span className="hidden sm:inline text-orange-400/50">→ Click</span></div>
           </button>
-          <div className="rounded-xl bg-gradient-to-br from-cyan-500/20 to-teal-500/10 border border-cyan-500/20 p-5">
-            <div className="text-3xl font-bold text-cyan-400">
+          <div className="rounded-xl bg-gradient-to-br from-cyan-500/20 to-teal-500/10 border border-cyan-500/20 p-3 md:p-5">
+            <div className="text-xl md:text-3xl font-bold text-cyan-400">
               {summary?.donorRetention || 0}%
             </div>
-            <div className="text-sm text-cyan-400/70 mt-1">Donor Retention</div>
+            <div className="text-xs md:text-sm text-cyan-400/70 mt-1">Retention</div>
           </div>
         </div>
 
