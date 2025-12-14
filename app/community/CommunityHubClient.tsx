@@ -456,6 +456,43 @@ export default function CommunityHubClient() {
     return d.toLocaleDateString()
   }
 
+  // Render post content with campaign mentions as styled links
+  const renderPostContent = (content: string) => {
+    // Split content by @[id] mentions
+    const parts = content.split(/(@\[[^\]]+\])/g)
+    
+    return parts.map((part, index) => {
+      const mentionMatch = part.match(/^@\[([^\]]+)\]$/)
+      if (mentionMatch) {
+        const id = mentionMatch[1]
+        const campaign = campaignPreviews[id]
+        if (campaign) {
+          // Render as a styled campaign link
+          return (
+            <Link
+              key={index}
+              href={`/story/${campaign.id}`}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 hover:text-purple-200 transition-colors text-sm font-medium"
+            >
+              <span>🎗️</span>
+              <span>{campaign.title}</span>
+            </Link>
+          )
+        } else {
+          // Campaign not loaded yet, show loading state
+          return (
+            <span key={index} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 text-white/50 text-sm">
+              <span className="animate-pulse">🎗️</span>
+              <span>Loading...</span>
+            </span>
+          )
+        }
+      }
+      // Regular text
+      return <span key={index}>{part}</span>
+    })
+  }
+
   const renderMedia = (urls: string[], types: string[]) => {
     if (!urls.length) return null
 
@@ -921,7 +958,7 @@ export default function CommunityHubClient() {
                     </div>
 
                     {/* Post Content */}
-                    <div className="mt-3 text-white whitespace-pre-wrap">{post.content}</div>
+                    <div className="mt-3 text-white whitespace-pre-wrap">{renderPostContent(post.content)}</div>
 
                     {/* Campaign Preview Cards */}
                     {(() => {
