@@ -167,3 +167,124 @@ export async function GET(req: NextRequest) {
     )
   }
 }
+
+// PATCH - Update a bug report (admin only)
+export async function PATCH(req: NextRequest) {
+  try {
+    // Verify admin access
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+    }
+
+    const token = authHeader.slice(7)
+    const { data: { user } } = await supabaseAdmin.auth.getUser(token)
+    if (!user) {
+      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
+    }
+
+    const body = await req.json()
+    const { id, status, priority, resolution_notes, assigned_to } = body
+
+    if (!id) {
+      return NextResponse.json({ error: 'Report ID is required' }, { status: 400 })
+    }
+
+    const updates: any = {
+      updated_at: new Date().toISOString()
+    }
+
+    if (status) updates.status = status
+    if (priority) updates.priority = priority
+    if (resolution_notes !== undefined) updates.resolution_notes = resolution_notes
+    if (assigned_to !== undefined) updates.assigned_to = assigned_to
+
+    // If resolving, set resolved_at and resolved_by
+    if (status === 'resolved' || status === 'wont_fix' || status === 'duplicate') {
+      updates.resolved_at = new Date().toISOString()
+      updates.resolved_by = user.id
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('bug_reports')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[bug-reports] Update error:', error)
+      return NextResponse.json({ error: 'Failed to update bug report', details: error.message }, { status: 500 })
+    }
+
+    console.log(`[bug-reports] Report ${id} updated by ${user.email}: status=${status || 'unchanged'}`)
+
+    return NextResponse.json({ success: true, report: data })
+  } catch (e: any) {
+    console.error('[bug-reports] PATCH error:', e)
+    return NextResponse.json({ error: 'Failed to update bug report', details: e?.message }, { status: 500 })
+  }
+}
+
+// DELETE - Delete a bug report (admin only)
+export async function DELETE(req: NextRequest) {
+  try {
+    // Verify admin access
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+    }
+
+    const token = authHeader.slice(7)
+    const { data: { user } } = await supabaseAdmin.auth.getUser(token)
+    if (!user) {
+      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json({ error: 'Report ID is required' }, { status: 400 })
+    }
+
+    const { error } = await supabaseAdmin
+      .from('bug_reports')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('[bug-reports] Delete error:', error)
+      return NextResponse.json({ error: 'Failed to delete bug report', details: error.message }, { status: 500 })
+    }
+
+    console.log(`[bug-reports] Report ${id} deleted by ${user.email}`)
+
+    return NextResponse.json({ success: true })
+  } catch (e: any) {
+    console.error('[bug-reports] DELETE error:', e)
+    return NextResponse.json({ error: 'Failed to delete bug report', details: e?.message }, { status: 500 })
+  }
+}

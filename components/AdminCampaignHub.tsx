@@ -126,6 +126,37 @@ export default function AdminCampaignHub() {
     benchmarks: string
   }>({ goal: 100, nft_editions: 100, nft_price: 1, creator_wallet: '', benchmarks: '' })
 
+  // View document with signed URL
+  const viewDocument = async (path: string) => {
+    try {
+      // Get session for auth
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) {
+        alert('Please log in to view documents')
+        return
+      }
+
+      // Fetch signed URL from API
+      const res = await fetch(`/api/verification-upload?path=${encodeURIComponent(path)}`, {
+        headers: { authorization: `Bearer ${token}` }
+      })
+      
+      if (!res.ok) {
+        const data = await res.json()
+        alert(data.error || 'Failed to load document')
+        return
+      }
+
+      const { url } = await res.json()
+      // Open in new tab
+      window.open(url, '_blank')
+    } catch (e) {
+      console.error('Error viewing document:', e)
+      alert('Failed to load document')
+    }
+  }
+
   useEffect(() => {
     const timer = setTimeout(() => loadData(), 300)
     return () => clearTimeout(timer)
@@ -1253,22 +1284,25 @@ export default function AdminCampaignHub() {
                             <span className="text-white/50 text-xs">Documents:</span>
                             <div className="flex gap-2 mt-1">
                               {campaign.verification_selfie && (
-                                <a href={campaign.verification_selfie} target="_blank" rel="noopener noreferrer"
-                                   className="px-2 py-1 bg-white/10 rounded text-xs text-white/70 hover:text-white">
+                                <button 
+                                  onClick={() => viewDocument(campaign.verification_selfie!)}
+                                  className="px-2 py-1 bg-white/10 rounded text-xs text-white/70 hover:text-white hover:bg-white/20 transition-colors">
                                   📸 Selfie
-                                </a>
+                                </button>
                               )}
                               {campaign.verification_id_front && (
-                                <a href={campaign.verification_id_front} target="_blank" rel="noopener noreferrer"
-                                   className="px-2 py-1 bg-white/10 rounded text-xs text-white/70 hover:text-white">
+                                <button 
+                                  onClick={() => viewDocument(campaign.verification_id_front!)}
+                                  className="px-2 py-1 bg-white/10 rounded text-xs text-white/70 hover:text-white hover:bg-white/20 transition-colors">
                                   🪪 ID Front
-                                </a>
+                                </button>
                               )}
                               {campaign.verification_id_back && (
-                                <a href={campaign.verification_id_back} target="_blank" rel="noopener noreferrer"
-                                   className="px-2 py-1 bg-white/10 rounded text-xs text-white/70 hover:text-white">
+                                <button 
+                                  onClick={() => viewDocument(campaign.verification_id_back!)}
+                                  className="px-2 py-1 bg-white/10 rounded text-xs text-white/70 hover:text-white hover:bg-white/20 transition-colors">
                                   🪪 ID Back
-                                </a>
+                                </button>
                               )}
                               {!campaign.verification_selfie && !campaign.verification_id_front && !campaign.verification_id_back && (
                                 <span className="text-white/40 text-xs">No documents uploaded</span>
@@ -1279,10 +1313,12 @@ export default function AdminCampaignHub() {
                                 <span className="text-white/50 text-xs">Supporting Docs:</span>
                                 <div className="flex flex-wrap gap-1 mt-1">
                                   {campaign.verification_documents.map((doc: any, i: number) => (
-                                    <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer"
-                                       className="px-2 py-1 bg-white/10 rounded text-xs text-white/70 hover:text-white">
+                                    <button 
+                                      key={i} 
+                                      onClick={() => viewDocument(doc.url)}
+                                      className="px-2 py-1 bg-white/10 rounded text-xs text-white/70 hover:text-white hover:bg-white/20 transition-colors">
                                       📄 {doc.name || doc.type || `Doc ${i + 1}`}
-                                    </a>
+                                    </button>
                                   ))}
                                 </div>
                               </div>

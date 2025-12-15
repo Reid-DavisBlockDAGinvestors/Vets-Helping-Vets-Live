@@ -139,6 +139,29 @@ export async function POST(req: NextRequest) {
 // GET endpoint to generate signed URLs for viewing documents (admin only)
 export async function GET(req: NextRequest) {
   try {
+    // Verify admin access
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+    }
+
+    const token = authHeader.slice(7)
+    const { data: { user } } = await supabaseAdmin.auth.getUser(token)
+    if (!user) {
+      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN - Admin access required' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(req.url)
     const path = searchParams.get('path')
     
@@ -146,8 +169,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Path required' }, { status: 400 })
     }
 
-    // TODO: Add admin authentication check here
-    // For now, generate a signed URL that expires in 1 hour
+    // Remove bucket prefix if present
     const bucketPath = path.replace('verification-docs/', '')
     
     const { data, error } = await supabaseAdmin.storage
@@ -155,12 +177,14 @@ export async function GET(req: NextRequest) {
       .createSignedUrl(bucketPath, 3600) // 1 hour expiry
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to generate URL' }, { status: 500 })
+      console.error('[verification-upload] Signed URL error:', error)
+      return NextResponse.json({ error: 'Failed to generate URL', details: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ url: data.signedUrl })
 
   } catch (error: any) {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    console.error('[verification-upload] GET error:', error)
+    return NextResponse.json({ error: 'Failed', details: error?.message }, { status: 500 })
   }
 }

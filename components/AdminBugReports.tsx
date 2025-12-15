@@ -64,6 +64,12 @@ export default function AdminBugReports() {
   
   // Stats
   const [stats, setStats] = useState({ total: 0, new: 0, inProgress: 0, resolved: 0 })
+  
+  // Actions
+  const [updating, setUpdating] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [resolutionNotes, setResolutionNotes] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const fetchReports = async () => {
     setLoading(true)
@@ -130,6 +136,71 @@ export default function AdminBugReports() {
   const getPriorityColor = (priority: string) => {
     const opt = PRIORITY_OPTIONS.find(o => o.value === priority)
     return opt?.color || 'text-gray-400'
+  }
+
+  const updateReport = async (id: string, updates: { status?: string; priority?: string; resolution_notes?: string }) => {
+    setUpdating(true)
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) return
+
+      const res = await fetch('/api/bug-reports', {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id, ...updates })
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        // Update local state
+        setReports(prev => prev.map(r => r.id === id ? { ...r, ...data.report } : r))
+        if (selectedReport?.id === id) {
+          setSelectedReport({ ...selectedReport, ...data.report })
+        }
+        // Refresh stats
+        fetchReports()
+      }
+    } catch (e) {
+      console.error('Update error:', e)
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const deleteReport = async (id: string) => {
+    setDeleting(true)
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) return
+
+      const res = await fetch(`/api/bug-reports?id=${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (res.ok) {
+        setReports(prev => prev.filter(r => r.id !== id))
+        setSelectedReport(null)
+        setShowDeleteConfirm(false)
+        fetchReports()
+      }
+    } catch (e) {
+      console.error('Delete error:', e)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // When selecting a report, load its resolution notes
+  const handleSelectReport = (report: BugReport) => {
+    setSelectedReport(report)
+    setResolutionNotes(report.resolution_notes || '')
+    setShowDeleteConfirm(false)
   }
 
   if (loading) {
@@ -214,7 +285,7 @@ export default function AdminBugReports() {
             <div
               key={report.id}
               className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-colors cursor-pointer"
-              onClick={() => setSelectedReport(report)}
+              onClick={() => handleSelectReport(report)}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -261,13 +332,35 @@ export default function AdminBugReports() {
             </div>
             
             <div className="p-6 space-y-6">
-              <div className="flex items-center gap-2">
-                <span className={`text-sm px-3 py-1 rounded-full ${getStatusBadge(selectedReport.status).color}`}>
-                  {getStatusBadge(selectedReport.status).label}
-                </span>
-                <span className={`text-sm ${getPriorityColor(selectedReport.priority)}`}>
-                  Priority: {selectedReport.priority.toUpperCase()}
-                </span>
+              {/* Status & Priority Controls */}
+              <div className="flex flex-wrap items-center gap-3">
+                <div>
+                  <label className="text-xs text-white/50 mb-1 block">Status</label>
+                  <select
+                    value={selectedReport.status}
+                    onChange={(e) => updateReport(selectedReport.id, { status: e.target.value })}
+                    disabled={updating}
+                    className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    {STATUS_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value} className="bg-gray-900">{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-white/50 mb-1 block">Priority</label>
+                  <select
+                    value={selectedReport.priority}
+                    onChange={(e) => updateReport(selectedReport.id, { priority: e.target.value })}
+                    disabled={updating}
+                    className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    {PRIORITY_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value} className="bg-gray-900">{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {updating && <span className="text-blue-400 text-sm animate-pulse">Saving...</span>}
               </div>
 
               <div>
@@ -347,6 +440,90 @@ export default function AdminBugReports() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Resolution Notes */}
+              <div className="border-t border-white/10 pt-4">
+                <h4 className="text-sm font-medium text-white/70 mb-2">Resolution Notes</h4>
+                <textarea
+                  value={resolutionNotes}
+                  onChange={(e) => setResolutionNotes(e.target.value)}
+                  placeholder="Add notes about how this was resolved, workarounds, or related issues..."
+                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500 min-h-[100px] text-sm"
+                />
+                <button
+                  onClick={() => updateReport(selectedReport.id, { resolution_notes: resolutionNotes })}
+                  disabled={updating || resolutionNotes === (selectedReport.resolution_notes || '')}
+                  className="mt-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+                >
+                  {updating ? 'Saving...' : 'Save Notes'}
+                </button>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="border-t border-white/10 pt-4">
+                <h4 className="text-sm font-medium text-white/70 mb-3">Quick Actions</h4>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => updateReport(selectedReport.id, { status: 'investigating' })}
+                    disabled={updating || selectedReport.status === 'investigating'}
+                    className="px-3 py-2 rounded-lg bg-yellow-600/20 hover:bg-yellow-600/40 border border-yellow-500/30 text-yellow-400 text-sm transition-colors disabled:opacity-50"
+                  >
+                    🔍 Mark Investigating
+                  </button>
+                  <button
+                    onClick={() => updateReport(selectedReport.id, { status: 'in_progress' })}
+                    disabled={updating || selectedReport.status === 'in_progress'}
+                    className="px-3 py-2 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 text-purple-400 text-sm transition-colors disabled:opacity-50"
+                  >
+                    🔧 Mark In Progress
+                  </button>
+                  <button
+                    onClick={() => updateReport(selectedReport.id, { status: 'resolved' })}
+                    disabled={updating || selectedReport.status === 'resolved'}
+                    className="px-3 py-2 rounded-lg bg-green-600/20 hover:bg-green-600/40 border border-green-500/30 text-green-400 text-sm transition-colors disabled:opacity-50"
+                  >
+                    ✅ Mark Resolved
+                  </button>
+                  <button
+                    onClick={() => updateReport(selectedReport.id, { status: 'wont_fix' })}
+                    disabled={updating || selectedReport.status === 'wont_fix'}
+                    className="px-3 py-2 rounded-lg bg-gray-600/20 hover:bg-gray-600/40 border border-gray-500/30 text-gray-400 text-sm transition-colors disabled:opacity-50"
+                  >
+                    ❌ Won't Fix
+                  </button>
+                </div>
+              </div>
+
+              {/* Delete Section */}
+              <div className="border-t border-red-500/20 pt-4">
+                {!showDeleteConfirm ? (
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="px-4 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-400 text-sm transition-colors"
+                  >
+                    🗑️ Delete Report
+                  </button>
+                ) : (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                    <p className="text-red-400 text-sm mb-3">Are you sure you want to delete this bug report? This action cannot be undone.</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => deleteReport(selectedReport.id)}
+                        disabled={deleting}
+                        className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-colors"
+                      >
+                        {deleting ? 'Deleting...' : 'Yes, Delete'}
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(false)}
+                        className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="text-xs text-white/30">
