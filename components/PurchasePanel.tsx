@@ -256,19 +256,56 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
         // Apply tip only on the last mint
         // Add explicit gas limit to avoid estimation failures on slow RPC
         const gasLimit = 300000n // Safe gas limit for minting
-        if (isLast && tipBdagWei > 0n) {
-          const valueWithTip = pricePerNftWei + tipBdagWei
-          console.log(`[PurchasePanel] Calling mintWithBDAGAndTip(${targetId}, ${tipBdagWei}) with value ${valueWithTip}`)
-          tx = await contract.mintWithBDAGAndTip(BigInt(targetId), tipBdagWei, {
-            value: valueWithTip,
-            gasLimit,
-          })
-        } else {
-          console.log(`[PurchasePanel] Calling mintWithBDAG(${targetId}) with value ${pricePerNftWei}`)
-          tx = await contract.mintWithBDAG(BigInt(targetId), {
-            value: pricePerNftWei,
-            gasLimit,
-          })
+        
+        try {
+          if (isLast && tipBdagWei > 0n) {
+            const valueWithTip = pricePerNftWei + tipBdagWei
+            console.log(`[PurchasePanel] Calling mintWithBDAGAndTip(${targetId}, ${tipBdagWei}) with value ${valueWithTip}`)
+            
+            // Try static call first to get revert reason if it would fail
+            try {
+              await contract.mintWithBDAGAndTip.staticCall(BigInt(targetId), tipBdagWei, { value: valueWithTip })
+            } catch (staticErr: any) {
+              console.error('[PurchasePanel] Static call failed:', staticErr)
+              const reason = staticErr?.reason || staticErr?.message || 'Unknown error'
+              throw new Error(`Contract would revert: ${reason}`)
+            }
+            
+            tx = await contract.mintWithBDAGAndTip(BigInt(targetId), tipBdagWei, {
+              value: valueWithTip,
+              gasLimit,
+            })
+          } else {
+            console.log(`[PurchasePanel] Calling mintWithBDAG(${targetId}) with value ${pricePerNftWei}`)
+            
+            // Try static call first to get revert reason if it would fail
+            try {
+              await contract.mintWithBDAG.staticCall(BigInt(targetId), { value: pricePerNftWei })
+            } catch (staticErr: any) {
+              console.error('[PurchasePanel] Static call failed:', staticErr)
+              const reason = staticErr?.reason || staticErr?.message || 'Unknown error'
+              throw new Error(`Contract would revert: ${reason}`)
+            }
+            
+            tx = await contract.mintWithBDAG(BigInt(targetId), {
+              value: pricePerNftWei,
+              gasLimit,
+            })
+          }
+        } catch (mintErr: any) {
+          console.error('[PurchasePanel] Mint call failed:', mintErr)
+          // Extract meaningful error message
+          let errorMsg = mintErr?.reason || mintErr?.message || 'Transaction failed'
+          if (errorMsg.includes('user rejected')) {
+            errorMsg = 'Transaction cancelled by user'
+          } else if (errorMsg.includes('insufficient funds')) {
+            errorMsg = 'Insufficient BDAG balance in wallet'
+          } else if (errorMsg.includes('Campaign not active')) {
+            errorMsg = 'Campaign is not active on-chain'
+          }
+          setCryptoMsg(`❌ ${errorMsg}`)
+          setLoading(false)
+          return
         }
         
         txHashes.push(tx.hash)
