@@ -157,14 +157,33 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       return
     }
 
+    // IMMEDIATE LOG - should appear as soon as button is clicked
+    console.log(`[PurchasePanel] ========== PURCHASE STARTED ==========`)
+    console.log(`[PurchasePanel] Campaign ID: ${targetId}, Price: ${pricePerNft}, Quantity: ${quantity}`)
+    console.log(`[PurchasePanel] CONTRACT_ADDRESS: ${CONTRACT_ADDRESS}`)
+
     try {
       setLoading(true)
       setCryptoMsg('Verifying campaign on blockchain...')
       setTxHash(null)
 
+      console.log(`[PurchasePanel] Getting ethereum provider...`)
       const ethereum = (window as any).ethereum
+      if (!ethereum) {
+        console.error('[PurchasePanel] No ethereum provider found!')
+        setCryptoMsg('No wallet detected. Please install MetaMask.')
+        setLoading(false)
+        return
+      }
+      
+      console.log(`[PurchasePanel] Creating BrowserProvider...`)
       const provider = new BrowserProvider(ethereum)
+      
+      console.log(`[PurchasePanel] Getting signer...`)
       const signer = await provider.getSigner()
+      console.log(`[PurchasePanel] Signer address: ${await signer.getAddress()}`)
+      
+      console.log(`[PurchasePanel] Creating contract instance...`)
       const contract = new Contract(CONTRACT_ADDRESS, MINT_EDITION_ABI, signer)
 
       // Pre-flight check: Verify campaign exists and is active on-chain
