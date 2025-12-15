@@ -58,7 +58,9 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
   const [editLoadError, setEditLoadError] = useState<string | null>(null)
   
   // Contact information
-  const [fullName, setFullName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [company, setCompany] = useState('')
   const [phone, setPhone] = useState('')
   const [streetAddress, setStreetAddress] = useState('')
   const [city, setCity] = useState('')
@@ -172,7 +174,13 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
         if (sub.category) setCategory(sub.category)
         if (sub.title) setTitle(sub.title)
         if (sub.goal) setGoal(sub.goal)
-        if (sub.creator_name) setFullName(sub.creator_name)
+        if (sub.creator_name) {
+          // Parse creator_name into first/last if possible
+          const nameParts = sub.creator_name.split(' ')
+          setFirstName(nameParts[0] || '')
+          setLastName(nameParts.slice(1).join(' ') || '')
+        }
+        if (sub.company) setCompany(sub.company)
         if (sub.creator_phone) setPhone(sub.creator_phone)
         if (sub.creator_wallet) setWallet(sub.creator_wallet)
         if (sub.creator_email) setEmail(sub.creator_email)
@@ -242,7 +250,9 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
       if (draft.need) setNeed(draft.need)
       if (draft.fundsUsage) setFundsUsage(draft.fundsUsage)
       if (draft.goal) setGoal(draft.goal)
-      if (draft.fullName) setFullName(draft.fullName)
+      if (draft.firstName) setFirstName(draft.firstName)
+      if (draft.lastName) setLastName(draft.lastName)
+      if (draft.company) setCompany(draft.company)
       if (draft.phone) setPhone(draft.phone)
       if (draft.streetAddress) setStreetAddress(draft.streetAddress)
       if (draft.city) setCity(draft.city)
@@ -268,14 +278,14 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
     
     const draft = {
       category, title, background, need, fundsUsage, goal,
-      fullName, phone, streetAddress, city, stateProvince, zipCode, country,
+      firstName, lastName, company, phone, streetAddress, city, stateProvince, zipCode, country,
       wallet, email, image, mediaMime,
       diditSessionId, diditStatus, verificationComplete
     }
     saveDraft(draft)
   }, [
     category, title, background, need, fundsUsage, goal,
-    fullName, phone, streetAddress, city, stateProvince, zipCode, country,
+    firstName, lastName, company, phone, streetAddress, city, stateProvince, zipCode, country,
     wallet, email, image, mediaMime,
     diditSessionId, diditStatus, verificationComplete,
     draftLoaded, isSubmitted
@@ -409,7 +419,7 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
       // Validation
       if (!title?.trim()) { showMsg('Please enter a title', 'error'); setIsSubmitting(false); return }
       if (!background?.trim() && !need?.trim()) { showMsg('Please describe your situation or need', 'error'); setIsSubmitting(false); return }
-      if (!fullName?.trim()) { showMsg('Full name is required', 'error'); setIsSubmitting(false); return }
+      if (!firstName?.trim() || !lastName?.trim()) { showMsg('First and last name are required', 'error'); setIsSubmitting(false); return }
       if (!phone?.trim()) { showMsg('Phone number is required', 'error'); setIsSubmitting(false); return }
       if (!email?.trim()) { showMsg('Email is required', 'error'); setIsSubmitting(false); return }
       // Wallet is optional - we can set it up later during the verification process
@@ -436,7 +446,10 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
         goal,
         creator_wallet: wallet,
         creator_email: email,
-        creator_name: fullName,
+        creator_name: `${firstName} ${lastName}`.trim(),
+        creator_first_name: firstName,
+        creator_last_name: lastName,
+        company: company || null,
         creator_phone: phone,
         creator_address: streetAddress ? {
           street: streetAddress,
@@ -880,12 +893,21 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-white/70 block mb-1">Full Name <span className="text-red-400">*</span></label>
+              <label className="text-sm text-white/70 block mb-1">First Name <span className="text-red-400">*</span></label>
               <input 
                 className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50" 
-                value={fullName} 
-                onChange={e=>setFullName(e.target.value)}
-                placeholder="John Doe"
+                value={firstName} 
+                onChange={e=>setFirstName(e.target.value)}
+                placeholder="John"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-white/70 block mb-1">Last Name <span className="text-red-400">*</span></label>
+              <input 
+                className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50" 
+                value={lastName} 
+                onChange={e=>setLastName(e.target.value)}
+                placeholder="Doe"
               />
             </div>
             <div>
@@ -898,6 +920,18 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
                 placeholder="(555) 123-4567"
               />
             </div>
+          </div>
+          
+          <div>
+            <label className="text-sm text-white/70 block mb-1">Company / Organization <span className="text-white/40">(optional)</span></label>
+            <input 
+              type="text"
+              className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50" 
+              value={company} 
+              onChange={e=>setCompany(e.target.value)}
+              placeholder="For corporate tax receipts"
+            />
+            <p className="text-xs text-white/40 mt-1">Include if you want the company name on tax receipts</p>
           </div>
           
           <div>
@@ -988,7 +1022,7 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
             <VerificationUploader
               walletAddress={wallet || undefined}
               email={email}
-              name={fullName}
+              name={`${firstName} ${lastName}`.trim()}
               phone={phone}
               submissionId={submittedId || undefined}
               onUploadsChange={(docs) => setVerificationDocs(docs as VerificationDocs)}

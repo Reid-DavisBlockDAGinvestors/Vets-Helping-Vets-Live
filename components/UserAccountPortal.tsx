@@ -36,7 +36,9 @@ export default function UserAccountPortal() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [company, setCompany] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [user, setUser] = useState<any>(null)
@@ -234,12 +236,23 @@ export default function UserAccountPortal() {
       const { error } = await supabase.auth.signUp({ 
         email, 
         password,
-        options: { data: { name } }
+        options: { 
+          data: { 
+            first_name: firstName,
+            last_name: lastName,
+            company: company || null,
+            full_name: `${firstName} ${lastName}`.trim()
+          } 
+        }
       })
       if (error) {
         setMessage(error.message)
       } else {
         setMessage('✅ Check your email to confirm your account!')
+        // Clear form
+        setFirstName('')
+        setLastName('')
+        setCompany('')
       }
     } catch (e: any) {
       setMessage(e?.message || 'Signup failed')
@@ -455,13 +468,31 @@ export default function UserAccountPortal() {
 
             <div className="space-y-4">
               {authMode === 'signup' && (
-                <input
-                  type="text"
-                  placeholder="Your Name"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
-                />
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      placeholder="First Name"
+                      value={firstName}
+                      onChange={e => setFirstName(e.target.value)}
+                      className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Last Name"
+                      value={lastName}
+                      onChange={e => setLastName(e.target.value)}
+                      className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Company / Organization (optional - for tax receipts)"
+                    value={company}
+                    onChange={e => setCompany(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
+                  />
+                </>
               )}
               <input
                 type="email"
@@ -481,7 +512,7 @@ export default function UserAccountPortal() {
 
               <button
                 onClick={authMode === 'login' ? handleLogin : handleSignup}
-                disabled={loading || !email || !password}
+                disabled={loading || !email || !password || (authMode === 'signup' && (!firstName || !lastName))}
                 className="w-full px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-medium transition-colors disabled:cursor-not-allowed"
               >
                 {loading ? 'Please wait...' : (authMode === 'login' ? 'Sign In' : 'Create Account')}
