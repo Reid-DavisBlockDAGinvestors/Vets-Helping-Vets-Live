@@ -2,6 +2,7 @@ import './globals.css'
 import { ReactNode } from 'react'
 import NavBar from '@/components/NavBar'
 import Footer from '@/components/Footer'
+import BugReportButton from '@/components/BugReportButton'
 
 export const metadata = {
   title: 'PatriotPledge NFTs',
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
         </main>
         <Footer />
+        <BugReportButton />
       </body>
     </html>
   )

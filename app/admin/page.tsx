@@ -5,9 +5,10 @@ import AdminCampaignHub from '@/components/AdminCampaignHub'
 import AdminGovernance from '@/components/AdminGovernance'
 import AdminUsers from '@/components/AdminUsers'
 import AdminSubmitters from '@/components/AdminSubmitters'
+import AdminBugReports from '@/components/AdminBugReports'
 import { supabase } from '@/lib/supabase'
 
-type AdminTab = 'campaigns' | 'users' | 'submitters' | 'governance' | 'settings'
+type AdminTab = 'campaigns' | 'users' | 'submitters' | 'governance' | 'bugs' | 'settings'
 
 export default function AdminPage() {
   const [email, setEmail] = useState('')
@@ -450,6 +451,16 @@ export default function AdminPage() {
               🗳️ <span className="hidden xs:inline">Governance</span><span className="xs:hidden">Gov</span>
             </button>
             <button
+              onClick={() => setActiveTab('bugs')}
+              className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap ${
+                activeTab === 'bugs' 
+                  ? 'bg-red-600 text-white' 
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              }`}
+            >
+              🐛 <span className="hidden xs:inline">Bug Reports</span><span className="xs:hidden">Bugs</span>
+            </button>
+            <button
               onClick={() => setActiveTab('settings')}
               className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap ${
                 activeTab === 'settings' 
@@ -467,6 +478,15 @@ export default function AdminPage() {
         {activeTab === 'users' && <AdminUsers />}
         {activeTab === 'submitters' && <AdminSubmitters />}
         {activeTab === 'governance' && <AdminGovernance />}
+        {activeTab === 'bugs' && (
+          <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-white">Bug Reports</h2>
+              <p className="text-sm text-white/50">Review user-submitted bug reports and feedback</p>
+            </div>
+            <AdminBugReports />
+          </div>
+        )}
         {activeTab === 'settings' && (
           <>
             {/* Admin Access Requests */}
