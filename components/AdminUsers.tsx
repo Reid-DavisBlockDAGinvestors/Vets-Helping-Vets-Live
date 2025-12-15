@@ -21,11 +21,25 @@ interface UserData {
 
 interface Purchase {
   id: string
+  campaign_id: number
   campaign_title: string
   amount_usd: number
   quantity: number
   created_at: string
   tx_hash: string | null
+}
+
+interface Campaign {
+  id: string
+  campaign_id: number
+  title: string
+  image_uri: string | null
+  status: string
+  goal: number | null
+  category: string
+  created_at?: string
+  purchase_count?: number
+  total_spent?: number
 }
 
 export default function AdminUsers() {
@@ -34,7 +48,10 @@ export default function AdminUsers() {
   const [error, setError] = useState('')
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null)
   const [userPurchases, setUserPurchases] = useState<Purchase[]>([])
+  const [createdCampaigns, setCreatedCampaigns] = useState<Campaign[]>([])
+  const [purchasedCampaigns, setPurchasedCampaigns] = useState<Campaign[]>([])
   const [loadingPurchases, setLoadingPurchases] = useState(false)
+  const [detailTab, setDetailTab] = useState<'purchased' | 'created' | 'history'>('purchased')
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'created_at' | 'purchases_count' | 'total_spent_usd'>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
@@ -77,6 +94,9 @@ export default function AdminUsers() {
 
   const loadUserPurchases = async (userId: string) => {
     setLoadingPurchases(true)
+    setUserPurchases([])
+    setCreatedCampaigns([])
+    setPurchasedCampaigns([])
     try {
       const { data: session } = await supabase.auth.getSession()
       const token = session?.session?.access_token
@@ -89,6 +109,8 @@ export default function AdminUsers() {
       
       if (res.ok) {
         setUserPurchases(data?.purchases || [])
+        setCreatedCampaigns(data?.createdCampaigns || [])
+        setPurchasedCampaigns(data?.purchasedCampaigns || [])
       }
     } catch (e) {
       console.error('Failed to load purchases:', e)
@@ -379,38 +401,174 @@ export default function AdminUsers() {
                 </div>
               </div>
 
-              {/* Purchase History */}
-              <h3 className="text-lg font-semibold text-white mb-4">Purchase History</h3>
+              {/* Tabs */}
+              <div className="flex gap-2 mb-4 border-b border-white/10 pb-3">
+                <button
+                  onClick={() => setDetailTab('purchased')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    detailTab === 'purchased' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-white/5 text-white/70 hover:bg-white/10'
+                  }`}
+                >
+                  🛒 Campaigns Purchased ({purchasedCampaigns.length})
+                </button>
+                <button
+                  onClick={() => setDetailTab('created')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    detailTab === 'created' 
+                      ? 'bg-orange-600 text-white' 
+                      : 'bg-white/5 text-white/70 hover:bg-white/10'
+                  }`}
+                >
+                  ✨ Campaigns Created ({createdCampaigns.length})
+                </button>
+                <button
+                  onClick={() => setDetailTab('history')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    detailTab === 'history' 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-white/5 text-white/70 hover:bg-white/10'
+                  }`}
+                >
+                  📜 Purchase History ({userPurchases.length})
+                </button>
+              </div>
+
               {loadingPurchases ? (
-                <div className="text-center py-8 text-white/40">Loading purchases...</div>
-              ) : userPurchases.length > 0 ? (
-                <div className="space-y-2">
-                  {userPurchases.map(p => (
-                    <div key={p.id} className="rounded-lg bg-white/5 border border-white/10 p-4 flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-white">{p.campaign_title}</div>
-                        <div className="text-sm text-white/50">
-                          {new Date(p.created_at).toLocaleDateString()} • {p.quantity} NFT{p.quantity > 1 ? 's' : ''}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-green-400 font-medium">${p.amount_usd?.toFixed(2) || '0.00'}</div>
-                        {p.tx_hash && (
-                          <a 
-                            href={`https://awakening.bdagscan.com/tx/${p.tx_hash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-400 hover:underline"
-                          >
-                            View TX →
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <div className="text-center py-8 text-white/40">Loading...</div>
               ) : (
-                <div className="text-center py-8 text-white/40">No purchases yet</div>
+                <>
+                  {/* Purchased Campaigns Tab */}
+                  {detailTab === 'purchased' && (
+                    <div>
+                      {purchasedCampaigns.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {purchasedCampaigns.map(c => (
+                            <div key={c.id} className="rounded-lg bg-white/5 border border-white/10 p-4 flex items-start gap-3">
+                              <div className="w-16 h-16 rounded-lg bg-white/10 overflow-hidden flex-shrink-0">
+                                {c.image_uri ? (
+                                  <img 
+                                    src={c.image_uri.startsWith('ipfs://') ? `https://ipfs.io/ipfs/${c.image_uri.slice(7)}` : c.image_uri} 
+                                    alt="" 
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-2xl">🎁</div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-white truncate">{c.title}</div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className={`text-xs px-2 py-0.5 rounded ${
+                                    c.status === 'minted' ? 'bg-green-500/20 text-green-400' :
+                                    c.status === 'approved' ? 'bg-blue-500/20 text-blue-400' :
+                                    'bg-gray-500/20 text-gray-400'
+                                  }`}>
+                                    {c.status}
+                                  </span>
+                                  <span className="text-xs text-white/40">{c.category}</span>
+                                </div>
+                                <div className="flex items-center gap-3 mt-2 text-sm">
+                                  <span className="text-blue-400">{c.purchase_count} purchase{c.purchase_count !== 1 ? 's' : ''}</span>
+                                  <span className="text-green-400">${(c.total_spent || 0).toFixed(2)} spent</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-white/40">No campaigns purchased yet</div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Created Campaigns Tab */}
+                  {detailTab === 'created' && (
+                    <div>
+                      {createdCampaigns.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {createdCampaigns.map(c => (
+                            <div key={c.id} className="rounded-lg bg-white/5 border border-white/10 p-4 flex items-start gap-3">
+                              <div className="w-16 h-16 rounded-lg bg-white/10 overflow-hidden flex-shrink-0">
+                                {c.image_uri ? (
+                                  <img 
+                                    src={c.image_uri.startsWith('ipfs://') ? `https://ipfs.io/ipfs/${c.image_uri.slice(7)}` : c.image_uri} 
+                                    alt="" 
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-2xl">📝</div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-white truncate">{c.title}</div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className={`text-xs px-2 py-0.5 rounded ${
+                                    c.status === 'minted' ? 'bg-green-500/20 text-green-400' :
+                                    c.status === 'approved' ? 'bg-blue-500/20 text-blue-400' :
+                                    c.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                    'bg-gray-500/20 text-gray-400'
+                                  }`}>
+                                    {c.status}
+                                  </span>
+                                  <span className="text-xs text-white/40">{c.category}</span>
+                                </div>
+                                {c.goal && (
+                                  <div className="mt-2 text-sm text-white/60">
+                                    Goal: ${c.goal.toLocaleString()}
+                                  </div>
+                                )}
+                                {c.created_at && (
+                                  <div className="mt-1 text-xs text-white/40">
+                                    Created {new Date(c.created_at).toLocaleDateString()}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-white/40">No campaigns created yet</div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Purchase History Tab */}
+                  {detailTab === 'history' && (
+                    <div>
+                      {userPurchases.length > 0 ? (
+                        <div className="space-y-2">
+                          {userPurchases.map(p => (
+                            <div key={p.id} className="rounded-lg bg-white/5 border border-white/10 p-4 flex items-center justify-between">
+                              <div>
+                                <div className="font-medium text-white">{p.campaign_title}</div>
+                                <div className="text-sm text-white/50">
+                                  {new Date(p.created_at).toLocaleDateString()} • {p.quantity} NFT{p.quantity > 1 ? 's' : ''}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-green-400 font-medium">${p.amount_usd?.toFixed(2) || '0.00'}</div>
+                                {p.tx_hash && (
+                                  <a 
+                                    href={`https://awakening.bdagscan.com/tx/${p.tx_hash}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-400 hover:underline"
+                                  >
+                                    View TX →
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-white/40">No purchase history</div>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

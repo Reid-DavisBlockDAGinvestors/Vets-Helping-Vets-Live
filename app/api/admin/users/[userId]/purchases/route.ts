@@ -63,6 +63,7 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
 
     const formattedPurchases = (purchases || []).map(p => ({
       id: p.id,
+      campaign_id: p.campaign_id,
       campaign_title: p.submissions?.title || `Campaign #${p.campaign_id || p.submission_id}`,
       amount_usd: p.amount_usd || 0,
       quantity: p.quantity || 1,
@@ -70,7 +71,67 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
       tx_hash: p.tx_hash
     }))
 
-    return NextResponse.json({ purchases: formattedPurchases })
+    // Get campaigns created by this user
+    const { data: targetProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle()
+
+    // Get user email from auth if not in profile
+    let userEmail = targetProfile?.email
+    if (!userEmail) {
+      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId)
+      userEmail = authUser?.user?.email
+    }
+
+    let createdCampaigns: any[] = []
+    if (userEmail) {
+      const { data: campaigns } = await supabaseAdmin
+        .from('submissions')
+        .select('id, campaign_id, title, image_uri, status, goal, category, created_at')
+        .ilike('creator_email', userEmail)
+        .order('created_at', { ascending: false })
+      
+      createdCampaigns = (campaigns || []).map(c => ({
+        id: c.id,
+        campaign_id: c.campaign_id,
+        title: c.title,
+        image_uri: c.image_uri,
+        status: c.status,
+        goal: c.goal,
+        category: c.category,
+        created_at: c.created_at
+      }))
+    }
+
+    // Get unique campaigns from purchases for "interacted with" section
+    const purchasedCampaignIds = [...new Set(formattedPurchases.map(p => p.campaign_id).filter(Boolean))]
+    let purchasedCampaigns: any[] = []
+    if (purchasedCampaignIds.length > 0) {
+      const { data: campaigns } = await supabaseAdmin
+        .from('submissions')
+        .select('id, campaign_id, title, image_uri, status, goal, category')
+        .in('campaign_id', purchasedCampaignIds)
+      
+      purchasedCampaigns = (campaigns || []).map(c => ({
+        id: c.id,
+        campaign_id: c.campaign_id,
+        title: c.title,
+        image_uri: c.image_uri,
+        status: c.status,
+        goal: c.goal,
+        category: c.category,
+        purchase_count: formattedPurchases.filter(p => p.campaign_id === c.campaign_id).length,
+        total_spent: formattedPurchases.filter(p => p.campaign_id === c.campaign_id).reduce((sum, p) => sum + (p.amount_usd || 0), 0)
+      }))
+    }
+
+    return NextResponse.json({ 
+      purchases: formattedPurchases,
+      createdCampaigns,
+      purchasedCampaigns
+    })
   } catch (e: any) {
     console.error('[admin/users/purchases] Error:', e)
     return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
