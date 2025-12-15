@@ -254,14 +254,20 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
         
         let tx
         // Apply tip only on the last mint
+        // Add explicit gas limit to avoid estimation failures on slow RPC
+        const gasLimit = 300000n // Safe gas limit for minting
         if (isLast && tipBdagWei > 0n) {
           const valueWithTip = pricePerNftWei + tipBdagWei
+          console.log(`[PurchasePanel] Calling mintWithBDAGAndTip(${targetId}, ${tipBdagWei}) with value ${valueWithTip}`)
           tx = await contract.mintWithBDAGAndTip(BigInt(targetId), tipBdagWei, {
             value: valueWithTip,
+            gasLimit,
           })
         } else {
+          console.log(`[PurchasePanel] Calling mintWithBDAG(${targetId}) with value ${pricePerNftWei}`)
           tx = await contract.mintWithBDAG(BigInt(targetId), {
             value: pricePerNftWei,
+            gasLimit,
           })
         }
         
