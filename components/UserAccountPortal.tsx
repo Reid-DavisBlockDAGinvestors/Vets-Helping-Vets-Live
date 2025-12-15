@@ -33,7 +33,7 @@ export default function UserAccountPortal() {
   const [isOpen, setIsOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [firstName, setFirstName] = useState('')
@@ -261,6 +261,29 @@ export default function UserAccountPortal() {
     }
   }
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setMessage('Please enter your email address')
+      return
+    }
+    setLoading(true)
+    setMessage('')
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      })
+      if (error) {
+        setMessage(error.message)
+      } else {
+        setMessage('✅ Check your email for a password reset link!')
+      }
+    } catch (e: any) {
+      setMessage(e?.message || 'Failed to send reset email')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setUser(null)
@@ -455,14 +478,16 @@ export default function UserAccountPortal() {
             </button>
 
             <div className="text-center mb-6">
-              <div className="text-4xl mb-3">{authMode === 'login' ? '👋' : '🎉'}</div>
+              <div className="text-4xl mb-3">{authMode === 'login' ? '👋' : authMode === 'signup' ? '🎉' : '🔐'}</div>
               <h2 className="text-xl font-bold text-white">
-                {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
+                {authMode === 'login' ? 'Welcome Back' : authMode === 'signup' ? 'Create Account' : 'Reset Password'}
               </h2>
               <p className="text-white/60 text-sm mt-1">
                 {authMode === 'login' 
                   ? 'Sign in to your PatriotPledge account' 
-                  : 'Join the PatriotPledge community'}
+                  : authMode === 'signup'
+                    ? 'Join the PatriotPledge community'
+                    : 'Enter your email to receive a reset link'}
               </p>
             </div>
 
@@ -501,21 +526,35 @@ export default function UserAccountPortal() {
                 onChange={e => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
               />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && (authMode === 'login' ? handleLogin() : handleSignup())}
-                className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
-              />
+              {authMode !== 'forgot' && (
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && (authMode === 'login' ? handleLogin() : handleSignup())}
+                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
+                />
+              )}
+
+              {authMode === 'login' && (
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode('forgot'); setMessage(''); }}
+                    className="text-sm text-blue-400 hover:text-blue-300"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
 
               <button
-                onClick={authMode === 'login' ? handleLogin : handleSignup}
-                disabled={loading || !email || !password || (authMode === 'signup' && (!firstName || !lastName))}
+                onClick={authMode === 'login' ? handleLogin : authMode === 'signup' ? handleSignup : handleForgotPassword}
+                disabled={loading || !email || (authMode !== 'forgot' && !password) || (authMode === 'signup' && (!firstName || !lastName))}
                 className="w-full px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-medium transition-colors disabled:cursor-not-allowed"
               >
-                {loading ? 'Please wait...' : (authMode === 'login' ? 'Sign In' : 'Create Account')}
+                {loading ? 'Please wait...' : (authMode === 'login' ? 'Sign In' : authMode === 'signup' ? 'Create Account' : 'Send Reset Link')}
               </button>
 
               {message && (
@@ -528,18 +567,27 @@ export default function UserAccountPortal() {
                 </div>
               )}
 
-              <div className="text-center">
-                <button
-                  onClick={() => {
-                    setAuthMode(authMode === 'login' ? 'signup' : 'login')
-                    setMessage('')
-                  }}
-                  className="text-sm text-white/60 hover:text-white"
-                >
-                  {authMode === 'login' 
-                    ? "Don't have an account? Sign up" 
-                    : 'Already have an account? Sign in'}
-                </button>
+              <div className="text-center space-y-2">
+                {authMode === 'forgot' ? (
+                  <button
+                    onClick={() => { setAuthMode('login'); setMessage(''); }}
+                    className="text-sm text-white/60 hover:text-white"
+                  >
+                    ← Back to sign in
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setAuthMode(authMode === 'login' ? 'signup' : 'login')
+                      setMessage('')
+                    }}
+                    className="text-sm text-white/60 hover:text-white"
+                  >
+                    {authMode === 'login' 
+                      ? "Don't have an account? Sign up" 
+                      : 'Already have an account? Sign in'}
+                  </button>
+                )}
               </div>
             </div>
             </div>
