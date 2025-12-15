@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const { data: userData } = token ? await supabaseAdmin.auth.getUser(token) : { data: null as any }
     const uid = userData?.user?.id
     const { data: profile } = uid ? await supabaseAdmin.from('profiles').select('role').eq('id', uid).single() : { data: null as any }
-    if ((profile?.role || '') !== 'admin') {
+    if (!['admin', 'super_admin'].includes(profile?.role || '')) {
       return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
     }
 

@@ -1,0 +1,99 @@
+{
+  "timestamp": "2025-12-15T07:17:44.667Z",
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "passed": 13
+  },
+  "sections": [
+    {
+      "name": "Secrets",
+      "findings": [
+        {
+          "severity": "PASS",
+          "title": "No hardcoded production secrets found"
+        },
+        {
+          "severity": "PASS",
+          "title": "Server-only vars not in client components"
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "findings": [
+        {
+          "severity": "PASS",
+          "title": "All admin routes have authentication"
+        },
+        {
+          "severity": "PASS",
+          "title": "All debug routes have authentication"
+        }
+      ]
+    },
+    {
+      "name": "XSS",
+      "findings": [
+        {
+          "severity": "PASS",
+          "title": "No unsanitized HTML injection found"
+        }
+      ]
+    },
+    {
+      "name": "Environment",
+      "findings": [
+        {
+          "severity": "PASS",
+          "title": ".env.local is in .gitignore"
+        }
+      ]
+    },
+    {
+      "name": "Headers",
+      "findings": [
+        {
+          "severity": "PASS",
+          "title": "HSTS (Strict-Transport-Security)"
+        },
+        {
+          "severity": "PASS",
+          "title": "MIME sniffing protection (X-Content-Type-Options)"
+        },
+        {
+          "severity": "PASS",
+          "title": "Clickjacking protection (X-Frame-Options)"
+        },
+        {
+          "severity": "PASS",
+          "title": "XSS filter (X-XSS-Protection)"
+        }
+      ]
+    },
+    {
+      "name": "Database",
+      "findings": [
+        {
+          "severity": "PASS",
+          "title": "Row Level Security enabled"
+        },
+        {
+          "severity": "PASS",
+          "title": "RLS policies defined"
+        }
+      ]
+    },
+    {
+      "name": "Third-Party",
+      "findings": [
+        {
+          "severity": "PASS",
+          "title": "Stripe webhook signature verification"
+        }
+      ]
+    }
+  ]
+}

@@ -12,7 +12,7 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
     const uid = userData?.user?.id
     if (!uid) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
     const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', uid).single()
-    if ((profile?.role || '') !== 'admin') return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+    if (!['admin', 'super_admin'].includes(profile?.role || '')) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
 
     const tokenIdRaw = context.params.id
     const tokenId = BigInt(tokenIdRaw)

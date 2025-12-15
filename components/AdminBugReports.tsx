@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import ErrorWithBugReport from './ErrorWithBugReport'
 
 interface BugReport {
   id: string
@@ -141,9 +142,11 @@ export default function AdminBugReports() {
 
   if (error) {
     return (
-      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-400">
-        {error}
-      </div>
+      <ErrorWithBugReport 
+        error={error} 
+        onRetry={fetchReports}
+        context={{ page: 'Admin Bug Reports', category: 'auth' }}
+      />
     )
   }
 

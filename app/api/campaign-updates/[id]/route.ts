@@ -59,7 +59,7 @@ export async function PATCH(req: NextRequest, context: { params: { id: string } 
         adminUid = userData?.user?.id || null
         if (adminUid) {
           const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', adminUid).single()
-          if (profile?.role !== 'admin') {
+          if (!['admin', 'super_admin'].includes(profile?.role || '')) {
             return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
           }
         } else {
@@ -286,7 +286,7 @@ export async function DELETE(req: NextRequest, context: { params: { id: string }
         const adminUid = userData?.user?.id || null
         if (adminUid) {
           const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', adminUid).single()
-          if (profile?.role !== 'admin') {
+          if (!['admin', 'super_admin'].includes(profile?.role || '')) {
             return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
           }
         } else {

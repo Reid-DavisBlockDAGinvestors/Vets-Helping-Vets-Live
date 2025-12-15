@@ -11,7 +11,7 @@ async function requireAdmin(req: NextRequest) {
   const uid = userData?.user?.id
   if (!uid) return { ok: false as const, error: 'UNAUTHORIZED' as const }
   const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', uid).single()
-  if ((profile?.role || '') !== 'admin') return { ok: false as const, error: 'UNAUTHORIZED' as const }
+  if (!['admin', 'super_admin'].includes(profile?.role || '')) return { ok: false as const, error: 'UNAUTHORIZED' as const }
 
   return { ok: true as const }
 }

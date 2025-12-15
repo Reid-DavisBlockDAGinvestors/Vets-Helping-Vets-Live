@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const uid = userData?.user?.id
     if (!uid) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
     const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', uid).single()
-    if ((profile?.role || '') !== 'admin') return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+    if (!['admin', 'super_admin'].includes(profile?.role || '')) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
 
     const body = await req.json().catch(()=>null)
     if (!body?.id) return NextResponse.json({ error: 'MISSING_ID' }, { status: 400 })

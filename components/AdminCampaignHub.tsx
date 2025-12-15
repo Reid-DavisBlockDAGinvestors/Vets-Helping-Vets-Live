@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { ipfsToHttp } from '@/lib/ipfs'
 import { supabase } from '@/lib/supabase'
+import ErrorWithBugReport from './ErrorWithBugReport'
 
 type CampaignUpdate = {
   id: string
@@ -807,10 +808,11 @@ export default function AdminCampaignHub() {
 
   if (error) {
     return (
-      <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-4 text-red-400">
-        {error}
-        <button onClick={loadData} className="ml-4 underline hover:no-underline">Retry</button>
-      </div>
+      <ErrorWithBugReport 
+        error={error} 
+        onRetry={loadData}
+        context={{ page: 'Admin Campaigns', category: 'auth' }}
+      />
     )
   }
 

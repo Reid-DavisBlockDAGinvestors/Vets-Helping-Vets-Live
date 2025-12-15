@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
           const uid = userData?.user?.id
           if (uid) {
             const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', uid).single()
-            if (profile?.role !== 'admin') {
+            if (!['admin', 'super_admin'].includes(profile?.role || '')) {
               return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
             }
           } else {
