@@ -111,6 +111,7 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
     }
 
     console.log('[admin/users/purchases] Found purchases:', purchases?.length || 0)
+    console.log('[admin/users/purchases] Campaign IDs:', [...new Set(purchases.map(p => p.campaign_id).filter(Boolean))])
 
     if (purchasesErr) {
       console.error('[admin/users/purchases] error:', purchasesErr)
@@ -182,6 +183,13 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
         total_spent: formattedPurchases.filter(p => p.campaign_id === c.campaign_id).reduce((sum, p) => sum + (p.amount_usd || 0), 0)
       }))
     }
+
+    console.log('[admin/users/purchases] Final response:', {
+      purchases: formattedPurchases.length,
+      purchasedCampaigns: purchasedCampaigns.length,
+      createdCampaigns: createdCampaigns.length,
+      purchasedCampaignIds
+    })
 
     return NextResponse.json({ 
       purchases: formattedPurchases,
