@@ -129,38 +129,49 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
 
   // Purchase with connected wallet (direct on-chain)
   const purchaseWithWallet = async () => {
+    // IMMEDIATE LOG - at the very start before any checks
+    console.log(`[PurchasePanel] ========== BUTTON CLICKED ==========`)
+    console.log(`[PurchasePanel] isLoggedIn: ${isLoggedIn}, userEmail: ${userEmail}`)
+    console.log(`[PurchasePanel] wallet.isConnected: ${wallet.isConnected}, wallet.address: ${wallet.address}`)
+    console.log(`[PurchasePanel] wallet.isOnBlockDAG: ${wallet.isOnBlockDAG}`)
+    console.log(`[PurchasePanel] CONTRACT_ADDRESS: ${CONTRACT_ADDRESS}`)
+    console.log(`[PurchasePanel] isPendingOnchain: ${isPendingOnchain}`)
+    console.log(`[PurchasePanel] Campaign ID: ${targetId}, Price: ${pricePerNft}, Quantity: ${quantity}`)
+    
     // Require login for NFT purchases to ensure we have email for receipt
     if (!isLoggedIn || !userEmail) {
+      console.log(`[PurchasePanel] BLOCKED: Not logged in`)
       setCryptoMsg('Please log in to purchase NFTs. Your email is required for the purchase receipt.')
       return
     }
     
     if (!wallet.isConnected || !wallet.address) {
+      console.log(`[PurchasePanel] BLOCKED: Wallet not connected`)
       setCryptoMsg('Please connect your wallet first')
       return
     }
     
     if (!wallet.isOnBlockDAG) {
+      console.log(`[PurchasePanel] BLOCKED: Not on BlockDAG network`)
       setCryptoMsg('Please switch to BlockDAG network')
       await wallet.switchToBlockDAG()
       return
     }
 
     if (!CONTRACT_ADDRESS) {
+      console.log(`[PurchasePanel] BLOCKED: No contract address`)
       setCryptoMsg('Contract not configured')
       return
     }
 
     // Block purchases for pending campaigns
     if (isPendingOnchain) {
+      console.log(`[PurchasePanel] BLOCKED: Campaign pending on-chain`)
       setCryptoMsg('⏳ Campaign is awaiting blockchain confirmation. Please wait for admin to verify the transaction.')
       return
     }
 
-    // IMMEDIATE LOG - should appear as soon as button is clicked
-    console.log(`[PurchasePanel] ========== PURCHASE STARTED ==========`)
-    console.log(`[PurchasePanel] Campaign ID: ${targetId}, Price: ${pricePerNft}, Quantity: ${quantity}`)
-    console.log(`[PurchasePanel] CONTRACT_ADDRESS: ${CONTRACT_ADDRESS}`)
+    console.log(`[PurchasePanel] All checks passed, proceeding with purchase...`)
 
     try {
       setLoading(true)
