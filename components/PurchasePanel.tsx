@@ -311,13 +311,26 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
             const callData = iface.encodeFunctionData('mintWithBDAG', [BigInt(targetId)])
             console.log(`[PurchasePanel] Encoded call data: ${callData}`)
             
-            // Use contract method directly - this ensures data is properly included
-            // The previous signer.sendTransaction approach was stripping the data field
-            tx = await contract.mintWithBDAG(BigInt(targetId), {
+            // Build the transaction explicitly to ensure data is included
+            const populatedTx = await contract.mintWithBDAG.populateTransaction(BigInt(targetId), {
               value: pricePerNftWei,
               gasLimit,
             })
-            console.log(`[PurchasePanel] Transaction sent via contract method`)
+            console.log(`[PurchasePanel] Populated transaction:`, JSON.stringify({
+              to: populatedTx.to,
+              data: populatedTx.data,
+              value: populatedTx.value?.toString(),
+              gasLimit: populatedTx.gasLimit?.toString(),
+            }))
+            
+            // Verify data is present before sending
+            if (!populatedTx.data || populatedTx.data === '0x') {
+              throw new Error('Transaction data is empty - contract call not encoded properly')
+            }
+            
+            // Send the populated transaction
+            tx = await signer.sendTransaction(populatedTx)
+            console.log(`[PurchasePanel] Transaction sent, hash: ${tx.hash}`)
           }
         } catch (mintErr: any) {
           console.error('[PurchasePanel] Mint call failed:', mintErr)
