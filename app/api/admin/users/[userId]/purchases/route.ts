@@ -128,19 +128,26 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
       tx_hash: p.tx_hash
     }))
 
-    // Get campaigns created by this user
-    const { data: targetProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
+    // Get campaigns created by this user (only for profile users, not wallet-only users)
+    let userEmail: string | null = null
+    
+    if (!isWalletId) {
+      // Only look up profile/auth for UUID users, not wallet addresses
+      const { data: targetProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
 
-    // Get user email from auth if not in profile
-    let userEmail = targetProfile?.email
-    if (!userEmail) {
-      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId)
-      userEmail = authUser?.user?.email
+      userEmail = targetProfile?.email
+      
+      // Get user email from auth if not in profile
+      if (!userEmail) {
+        const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId)
+        userEmail = authUser?.user?.email || null
+      }
     }
+    // Wallet-only users don't have profiles or auth records, so skip created campaigns lookup
 
     let createdCampaigns: any[] = []
     if (userEmail) {
