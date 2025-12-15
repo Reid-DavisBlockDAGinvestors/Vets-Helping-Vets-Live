@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     if (userEmail) {
       const { data: byEmail, error: byEmailErr } = await supabaseAdmin
         .from('submissions')
-        .select('id, title, image_uri, slug, short_code, campaign_id, category, status')
+        .select('id, title, image_uri, campaign_id, category, status')
         .ilike('creator_email', userEmail)
         .in('status', ['minted', 'approved', 'pending'])
         .order('created_at', { ascending: false })
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
     if (purchasedCampaignIds.length > 0) {
       const { data } = await supabaseAdmin
         .from('submissions')
-        .select('id, title, image_uri, slug, short_code, campaign_id, category, status')
+        .select('id, title, image_uri, campaign_id, category, status')
         .in('campaign_id', purchasedCampaignIds)
         .eq('status', 'minted')
       purchasedCampaigns = data || []
@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
       // Try to find by UUID first
       const { data } = await supabaseAdmin
         .from('submissions')
-        .select('id, title, image_uri, slug, short_code, campaign_id, category, status')
+        .select('id, title, image_uri, campaign_id, category, status')
         .in('id', Array.from(mentionedCampaignIds))
         .eq('status', 'minted')
       commentedCampaigns = data || []
@@ -136,7 +136,7 @@ export async function GET(req: NextRequest) {
       if (numericIds.length > 0) {
         const { data: byNumeric } = await supabaseAdmin
           .from('submissions')
-          .select('id, title, image_uri, slug, short_code, campaign_id, category, status')
+          .select('id, title, image_uri, campaign_id, category, status')
           .in('campaign_id', numericIds)
           .eq('status', 'minted')
         commentedCampaigns = [...commentedCampaigns, ...(byNumeric || [])]
