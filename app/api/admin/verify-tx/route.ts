@@ -155,12 +155,13 @@ export async function POST(req: NextRequest) {
     const active = campaign.active ?? campaign[8]
     const closed = campaign.closed ?? campaign[9]
 
-    // Update Supabase with confirmed data
+    // Update Supabase with confirmed data including contract_address
     const { error: updateErr } = await supabaseAdmin
       .from('submissions')
       .update({ 
         status: 'minted',
-        campaign_id: confirmedCampaignId
+        campaign_id: confirmedCampaignId,
+        contract_address: contractAddress
       })
       .eq('id', submissionId)
 

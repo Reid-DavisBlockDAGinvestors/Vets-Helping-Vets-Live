@@ -116,12 +116,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (foundCampaignId !== null) {
-      // Update Supabase with correct ID
+      // Update Supabase with correct ID and contract_address
       const { error: updateErr } = await supabaseAdmin
         .from('submissions')
         .update({ 
           campaign_id: foundCampaignId,
-          status: 'minted'
+          status: 'minted',
+          contract_address: contractAddress
         })
         .eq('id', submissionId)
 
