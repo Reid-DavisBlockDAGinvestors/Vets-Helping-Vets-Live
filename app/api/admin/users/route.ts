@@ -159,42 +159,71 @@ export async function GET(req: NextRequest) {
 
     console.log('[admin/users] Blockchain queried:', blockchainQueried, 'Wallet owners:', Object.keys(userPurchaseStats).length, 'Error:', blockchainError)
 
-    // 2. Also check database tables for additional data
-    const { data: contributions } = await supabaseAdmin
-      .from('contributions')
-      .select('buyer_wallet, amount_gross, amount_net, token_id, created_at')
+    // 2. Query purchases table for spending data (primary source for USD amounts)
+    const { data: purchases } = await supabaseAdmin
+      .from('purchases')
+      .select('wallet_address, amount_usd, tip_usd, email, user_id, created_at')
       .order('created_at', { ascending: false })
 
-    const { data: purchaseEvents } = await supabaseAdmin
-      .from('events')
-      .select('wallet_address, amount_usd, created_at')
-      .eq('event_type', 'purchase')
+    console.log('[admin/users] DB: purchases:', purchases?.length)
 
-    console.log('[admin/users] DB: contributions:', contributions?.length, 'events:', purchaseEvents?.length)
+    // Build spending stats from purchases table
+    const walletSpending: Record<string, { total: number, count: number, first_purchase: string | null }> = {}
+    const emailSpending: Record<string, { total: number, count: number }> = {}
+    const userIdSpending: Record<string, { total: number, count: number }> = {}
 
-    // Add contribution amounts to wallet stats
-    for (const c of (contributions || [])) {
-      const key = c.buyer_wallet?.toLowerCase()
-      if (!key) continue
-      if (!userPurchaseStats[key]) {
-        userPurchaseStats[key] = { 
-          count: 0, total: 0, nfts: 0, 
-          wallet_address: c.buyer_wallet,
-          first_purchase: c.created_at
+    for (const p of (purchases || [])) {
+      const spent = (p.amount_usd || 0) + (p.tip_usd || 0)
+      
+      // Track by wallet
+      if (p.wallet_address) {
+        const key = p.wallet_address.toLowerCase()
+        if (!walletSpending[key]) {
+          walletSpending[key] = { total: 0, count: 0, first_purchase: null }
+        }
+        walletSpending[key].total += spent
+        walletSpending[key].count += 1
+        if (!walletSpending[key].first_purchase) {
+          walletSpending[key].first_purchase = p.created_at
         }
       }
-      userPurchaseStats[key].total += parseFloat(c.amount_gross) || parseFloat(c.amount_net) || 0
-      if (!userPurchaseStats[key].first_purchase) {
-        userPurchaseStats[key].first_purchase = c.created_at
+      
+      // Track by email for profile matching
+      if (p.email) {
+        const key = p.email.toLowerCase()
+        if (!emailSpending[key]) {
+          emailSpending[key] = { total: 0, count: 0 }
+        }
+        emailSpending[key].total += spent
+        emailSpending[key].count += 1
+      }
+      
+      // Track by user_id for direct profile matching
+      if (p.user_id) {
+        if (!userIdSpending[p.user_id]) {
+          userIdSpending[p.user_id] = { total: 0, count: 0 }
+        }
+        userIdSpending[p.user_id].total += spent
+        userIdSpending[p.user_id].count += 1
       }
     }
 
-    // Add event amounts
-    for (const e of (purchaseEvents || [])) {
-      const key = e.wallet_address?.toLowerCase()
-      if (!key) continue
-      if (userPurchaseStats[key]) {
-        userPurchaseStats[key].total += parseFloat(e.amount_usd) || 0
+    // Merge wallet spending into userPurchaseStats
+    for (const [wallet, stats] of Object.entries(walletSpending)) {
+      if (!userPurchaseStats[wallet]) {
+        userPurchaseStats[wallet] = {
+          count: stats.count,
+          total: stats.total,
+          nfts: stats.count,
+          wallet_address: wallet,
+          first_purchase: stats.first_purchase
+        }
+      } else {
+        userPurchaseStats[wallet].total = stats.total // Use purchases table as source of truth
+        userPurchaseStats[wallet].count = Math.max(userPurchaseStats[wallet].count, stats.count)
+        if (!userPurchaseStats[wallet].first_purchase) {
+          userPurchaseStats[wallet].first_purchase = stats.first_purchase
+        }
       }
     }
 
@@ -226,6 +255,12 @@ export async function GET(req: NextRequest) {
     
     for (const p of (profiles || [])) {
       const emailKey = p.email?.toLowerCase()
+      
+      // Get spending data from user_id first, then email
+      const userIdStats = userIdSpending[p.id]
+      const emailStats = emailKey ? emailSpending[emailKey] : null
+      const spending = userIdStats || emailStats || { total: 0, count: 0 }
+      
       users.push({
         id: p.id,
         email: p.email,
@@ -234,13 +269,18 @@ export async function GET(req: NextRequest) {
         role: p.role || 'user',
         created_at: p.created_at,
         last_sign_in_at: p.last_sign_in_at,
-        wallet_address: null,
-        purchases_count: 0,
-        nfts_owned: 0,
-        total_spent_usd: 0,
+        wallet_address: p.wallet_address || null,
+        purchases_count: spending.count,
+        nfts_owned: spending.count,
+        total_spent_usd: spending.total,
         campaigns_created: campaignsCreated[emailKey] || 0,
         source: 'profile'
       })
+      
+      // Track wallet if profile has one to avoid duplicates
+      if (p.wallet_address) {
+        addedWallets.add(p.wallet_address.toLowerCase())
+      }
     }
 
     // Add ALL wallet-based purchasers (these are separate from profile users)
