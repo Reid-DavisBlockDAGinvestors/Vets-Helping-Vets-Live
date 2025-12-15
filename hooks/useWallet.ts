@@ -28,6 +28,7 @@ const BLOCKDAG_CHAIN_CONFIG = {
 }
 
 const WALLETCONNECT_PROJECT_ID = 'a86a6a0afc0849fdb0832b5ec288b5a2'
+const DISCONNECTED_KEY = 'wallet_user_disconnected'
 
 export function useWallet() {
   const [state, setState] = useState<WalletState>({
@@ -72,6 +73,11 @@ export function useWallet() {
     if (!ethereum) {
       setState(prev => ({ ...prev, error: 'No wallet found. Please install MetaMask.' }))
       return
+    }
+
+    // Clear disconnected flag when user explicitly connects
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(DISCONNECTED_KEY)
     }
 
     setState(prev => ({ ...prev, isConnecting: true, error: null }))
@@ -132,6 +138,11 @@ export function useWallet() {
 
   // Connect via WalletConnect (for mobile browsers without injected wallet)
   const connectWalletConnect = useCallback(async () => {
+    // Clear disconnected flag when user explicitly connects
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(DISCONNECTED_KEY)
+    }
+
     setState(prev => ({ ...prev, isConnecting: true, error: null }))
 
     try {
@@ -204,6 +215,11 @@ export function useWallet() {
   }, [])
 
   const disconnect = useCallback(async () => {
+    // Set flag to prevent auto-reconnect
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(DISCONNECTED_KEY, 'true')
+    }
+
     // Disconnect WalletConnect if active
     if (wcProviderRef.current) {
       try {
@@ -212,6 +228,20 @@ export function useWallet() {
         console.error('WC disconnect error:', e)
       }
       wcProviderRef.current = null
+    }
+
+    // Try to revoke permissions for injected wallets (MetaMask 10.25+)
+    const ethereum = (window as any).ethereum
+    if (ethereum && ethereum.request) {
+      try {
+        await ethereum.request({
+          method: 'wallet_revokePermissions',
+          params: [{ eth_accounts: {} }]
+        })
+      } catch (e) {
+        // wallet_revokePermissions not supported by this wallet, that's ok
+        console.log('wallet_revokePermissions not supported, clearing local state only')
+      }
     }
     
     setState({
@@ -278,6 +308,11 @@ export function useWallet() {
   // Check if already connected on mount
   useEffect(() => {
     const checkConnection = async () => {
+      // Don't auto-reconnect if user explicitly disconnected
+      if (typeof window !== 'undefined' && localStorage.getItem(DISCONNECTED_KEY)) {
+        return
+      }
+
       const ethereum = (window as any).ethereum
       if (!ethereum) return
 
