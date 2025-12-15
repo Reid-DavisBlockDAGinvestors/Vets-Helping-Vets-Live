@@ -396,25 +396,38 @@ export default function AdminUsers() {
             </div>
             
             <div className="p-6 overflow-y-auto max-h-[60vh]">
-              {/* Stats */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
-                <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
-                  <div className="text-2xl font-bold text-blue-400">{selectedUser.purchases_count || 0}</div>
-                  <div className="text-sm text-white/50">Purchases</div>
-                </div>
-                <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
-                  <div className="text-2xl font-bold text-purple-400">{selectedUser.nfts_owned || 0}</div>
-                  <div className="text-sm text-white/50">NFTs Owned</div>
-                </div>
-                <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
-                  <div className="text-2xl font-bold text-green-400">${(selectedUser.total_spent_usd || 0).toFixed(2)}</div>
-                  <div className="text-sm text-white/50">Total Spent</div>
-                </div>
-                <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
-                  <div className="text-2xl font-bold text-orange-400">{selectedUser.campaigns_created || 0}</div>
-                  <div className="text-sm text-white/50">Campaigns Created</div>
-                </div>
-              </div>
+              {/* Stats - Use data from purchases API for consistency */}
+              {(() => {
+                // Calculate totals from the actual purchase data for consistency
+                const totalSpentFromPurchases = userPurchases.reduce((sum, p) => sum + (p.amount_usd || 0), 0)
+                const purchaseCount = userPurchases.length
+                // Use blockchain NFT count if higher (some purchases may not be recorded)
+                const nftsOwned = Math.max(selectedUser.nfts_owned || 0, purchaseCount)
+                
+                return (
+                  <div className="grid grid-cols-4 gap-4 mb-6">
+                    <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
+                      <div className="text-2xl font-bold text-blue-400">{purchaseCount}</div>
+                      <div className="text-sm text-white/50">Purchases</div>
+                      {selectedUser.nfts_owned > purchaseCount && (
+                        <div className="text-xs text-white/30 mt-1">({selectedUser.nfts_owned} on-chain)</div>
+                      )}
+                    </div>
+                    <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
+                      <div className="text-2xl font-bold text-purple-400">{nftsOwned}</div>
+                      <div className="text-sm text-white/50">NFTs Owned</div>
+                    </div>
+                    <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
+                      <div className="text-2xl font-bold text-green-400">${totalSpentFromPurchases.toFixed(2)}</div>
+                      <div className="text-sm text-white/50">Total Spent</div>
+                    </div>
+                    <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
+                      <div className="text-2xl font-bold text-orange-400">{createdCampaigns.length}</div>
+                      <div className="text-sm text-white/50">Campaigns Created</div>
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Tabs */}
               <div className="flex gap-2 mb-4 border-b border-white/10 pb-3">
