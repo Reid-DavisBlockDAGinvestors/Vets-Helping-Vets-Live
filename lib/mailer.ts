@@ -466,6 +466,83 @@ export async function sendAdminNewSubmission(data: AdminNewSubmissionData) {
   return { sent: adminEmails.length, results }
 }
 
+// Notify campaign creator when someone purchases their NFT
+export type CreatorPurchaseNotificationData = {
+  creatorEmail: string
+  creatorName?: string
+  campaignTitle: string
+  campaignId: number
+  donorWallet: string
+  amountBDAG: number
+  amountUSD?: number
+  tokenId?: number
+  editionNumber?: number
+  totalRaised?: number
+  goalAmount?: number
+  txHash: string
+}
+
+export async function sendCreatorPurchaseNotification(data: CreatorPurchaseNotificationData) {
+  const storyUrl = `${SITE_URL}/story/${data.campaignId}`
+  const explorerTxUrl = `${EXPLORER_URL}/tx/${data.txHash}`
+  const progressPercent = data.goalAmount && data.totalRaised 
+    ? Math.min(100, Math.round((data.totalRaised / data.goalAmount) * 100))
+    : null
+  
+  const content = `
+    <h1 style="color: #fff; font-size: 24px; margin: 0 0 20px 0;">🎉 You Just Received a Donation!</h1>
+    
+    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6;">
+      ${data.creatorName ? `Great news ${data.creatorName}!` : 'Great news!'} Someone just purchased an NFT from your campaign!
+    </p>
+    
+    <div style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0;">
+      <h2 style="color: #22c55e; font-size: 28px; margin: 0 0 10px 0; text-align: center;">
+        +${data.amountBDAG.toFixed(2)} BDAG
+      </h2>
+      ${data.amountUSD ? `<p style="color: #94a3b8; font-size: 16px; margin: 0; text-align: center;">≈ $${data.amountUSD.toFixed(2)} USD</p>` : ''}
+    </div>
+    
+    <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #fff; font-size: 18px; margin: 0 0 15px 0;">${data.campaignTitle}</h3>
+      <table width="100%" style="color: #94a3b8; font-size: 14px;">
+        <tr><td style="padding: 8px 0;">Campaign ID:</td><td style="text-align: right; color: #fff;">#${data.campaignId}</td></tr>
+        ${data.tokenId ? `<tr><td style="padding: 8px 0;">Token ID:</td><td style="text-align: right; color: #fff;">#${data.tokenId}</td></tr>` : ''}
+        ${data.editionNumber ? `<tr><td style="padding: 8px 0;">Edition Sold:</td><td style="text-align: right; color: #fff;">#${data.editionNumber}</td></tr>` : ''}
+        <tr><td style="padding: 8px 0;">Donor Wallet:</td><td style="text-align: right; color: #3b82f6; font-size: 12px;">${data.donorWallet.slice(0, 6)}...${data.donorWallet.slice(-4)}</td></tr>
+      </table>
+    </div>
+    
+    ${progressPercent !== null ? `
+    <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #fff; font-size: 16px; margin: 0 0 15px 0;">📊 Campaign Progress</h3>
+      <div style="background: rgba(255,255,255,0.1); border-radius: 8px; height: 20px; overflow: hidden;">
+        <div style="background: linear-gradient(90deg, #22c55e, #10b981); height: 100%; width: ${progressPercent}%; transition: width 0.3s;"></div>
+      </div>
+      <p style="color: #94a3b8; font-size: 14px; margin: 10px 0 0 0; text-align: center;">
+        <strong style="color: #22c55e;">${progressPercent}%</strong> of $${data.goalAmount?.toLocaleString()} goal reached
+        ${data.totalRaised ? ` · $${data.totalRaised.toLocaleString()} raised` : ''}
+      </p>
+    </div>
+    ` : ''}
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${storyUrl}" style="display: inline-block; background: #3b82f6; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 5px;">View Campaign</a>
+      <a href="${explorerTxUrl}" style="display: inline-block; background: rgba(255,255,255,0.1); color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 5px;">View Transaction</a>
+    </div>
+    
+    <p style="color: #64748b; font-size: 12px; text-align: center;">
+      Share your campaign to reach more supporters! Every share helps.
+    </p>
+  `
+  
+  return sendEmail({
+    to: data.creatorEmail,
+    subject: `🎉 New Donation! +${data.amountBDAG.toFixed(2)} BDAG for ${data.campaignTitle}`,
+    html: wrapEmail(content)
+  })
+}
+
 export async function sendProposalSubmitted(data: ProposalSubmittedData) {
   const content = `
     <h1 style="color: #fff; font-size: 24px; margin: 0 0 20px 0;">📋 Proposal Submitted</h1>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { sendPurchaseReceipt } from '@/lib/mailer'
+import { sendPurchaseReceipt, sendCreatorPurchaseNotification } from '@/lib/mailer'
 
 export const runtime = 'nodejs'
 
@@ -107,15 +107,16 @@ export async function POST(req: NextRequest) {
     // Update the submission's sold_count (default 1 for edition mint)
     const qty = quantity ?? 1
     // Try campaign_id first (V5), fallback to token_id
+    // Include creator_email and creator_name for notification
     const { data: subByCampaign } = await supabaseAdmin
       .from('submissions')
-      .select('id, sold_count, title, image_uri, campaign_id')
+      .select('id, sold_count, title, image_uri, campaign_id, creator_email, creator_name, goal')
       .eq('campaign_id', effectiveId)
       .maybeSingle()
     
     const sub = subByCampaign || (await supabaseAdmin
       .from('submissions')
-      .select('id, sold_count, title, image_uri, campaign_id')
+      .select('id, sold_count, title, image_uri, campaign_id, creator_email, creator_name, goal')
       .eq('token_id', effectiveId)
       .maybeSingle()).data
 
@@ -127,19 +128,19 @@ export async function POST(req: NextRequest) {
       console.log(`[purchase/record] Updated sold_count for submission ${sub.id}`)
     }
 
+    // Determine the token ID to include in emails
+    // Priority: explicit tokenId > editionMinted (if it's a number) > first from mintedTokenIds array
+    let emailTokenId: number | undefined = undefined
+    if (typeof tokenId === 'number' && tokenId > 0) {
+      emailTokenId = tokenId
+    } else if (typeof editionMinted === 'number' && editionMinted > 0) {
+      emailTokenId = editionMinted
+    } else if (Array.isArray(mintedTokenIds) && mintedTokenIds.length > 0) {
+      emailTokenId = mintedTokenIds[mintedTokenIds.length - 1] // Use last minted token
+    }
+
     // Send purchase receipt email if buyer provided email
     if (buyerEmail && sub) {
-      // Determine the token ID to include in the email
-      // Priority: explicit tokenId > editionMinted (if it's a number) > first from mintedTokenIds array
-      let emailTokenId: number | undefined = undefined
-      if (typeof tokenId === 'number' && tokenId > 0) {
-        emailTokenId = tokenId
-      } else if (typeof editionMinted === 'number' && editionMinted > 0) {
-        emailTokenId = editionMinted
-      } else if (Array.isArray(mintedTokenIds) && mintedTokenIds.length > 0) {
-        emailTokenId = mintedTokenIds[mintedTokenIds.length - 1] // Use last minted token
-      }
-      
       try {
         await sendPurchaseReceipt({
           email: buyerEmail,
@@ -156,6 +157,34 @@ export async function POST(req: NextRequest) {
         console.log(`[purchase/record] Sent receipt email to ${buyerEmail} with tokenId=${emailTokenId}`)
       } catch (emailErr) {
         console.error('[purchase/record] Failed to send receipt email:', emailErr)
+      }
+    }
+
+    // Send notification to campaign CREATOR that they received a donation
+    if (sub?.creator_email) {
+      // Calculate total raised (current sold_count * price per NFT)
+      const newSoldCount = (sub.sold_count || 0) + qty
+      const pricePerNFT = sub.goal && newSoldCount > 0 ? sub.goal / 100 : amountUSD || 0 // Estimate
+      const totalRaised = newSoldCount * pricePerNFT
+      
+      try {
+        await sendCreatorPurchaseNotification({
+          creatorEmail: sub.creator_email,
+          creatorName: sub.creator_name || undefined,
+          campaignTitle: sub.title || 'Your Campaign',
+          campaignId: sub.campaign_id || effectiveId,
+          donorWallet: walletAddress || 'Anonymous',
+          amountBDAG: amountBDAG || 0,
+          amountUSD: amountUSD,
+          tokenId: emailTokenId,
+          editionNumber: typeof editionMinted === 'number' ? editionMinted : newSoldCount,
+          totalRaised: totalRaised,
+          goalAmount: sub.goal || undefined,
+          txHash
+        })
+        console.log(`[purchase/record] Sent creator notification to ${sub.creator_email}`)
+      } catch (creatorEmailErr) {
+        console.error('[purchase/record] Failed to send creator notification:', creatorEmailErr)
       }
     }
 
