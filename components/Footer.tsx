@@ -6,15 +6,12 @@ export default function Footer() {
           <p>© {new Date().getFullYear()} PatriotPledge NFTs · vetshelpingvets.life</p>
           <p>1% nonprofit fee for operations · Transparent and auditable</p>
         </div>
-        <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap gap-3">
+        <div className="mt-3 flex flex-wrap gap-3">
             <a className="underline" href="https://awakening.bdagscan.com" target="_blank" rel="noreferrer">BlockDAG Explorer</a>
             <a className="underline" href="https://awakening.bdagscan.com/faucet" target="_blank" rel="noreferrer">Faucet</a>
             <a className="underline" href="https://rpc.awakening.bdagscan.com" target="_blank" rel="noreferrer">RPC</a>
             <a className="underline" href="https://nownodes.io/nodes/bdag-blockdag" target="_blank" rel="noreferrer">Alt RPC</a>
           </div>
-          <a className="underline" href="https://t.me/+bXthKkX7onU5ZmI1" target="_blank" rel="noreferrer">Join BlockDAG Buildathon Telegram</a>
-        </div>
       </div>
     </footer>
   )
