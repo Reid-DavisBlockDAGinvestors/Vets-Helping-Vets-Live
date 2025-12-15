@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { ipfsToHttp } from '@/lib/ipfs'
 import { supabase } from '@/lib/supabase'
 import ErrorWithBugReport from './ErrorWithBugReport'
+import { openBugReport } from './BugReportButton'
 
 type CampaignUpdate = {
   id: string
@@ -1100,6 +1101,24 @@ export default function AdminCampaignHub() {
                           📋 Campaign Details
                         </h4>
                         <div className="space-y-2 text-sm">
+                          {/* On-Chain Status - Clear indicator */}
+                          <div className={`rounded-lg p-2 mb-2 ${
+                            campaign.campaign_id != null 
+                              ? 'bg-green-500/20 border border-green-500/30' 
+                              : 'bg-orange-500/20 border border-orange-500/30'
+                          }`}>
+                            {campaign.campaign_id != null ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-400">✅ ON-CHAIN</span>
+                                <span className="text-green-300 font-mono">Campaign #{campaign.campaign_id}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-orange-400">⚠️ NOT ON-CHAIN</span>
+                                <span className="text-orange-300 text-xs">Campaign needs to be created on blockchain</span>
+                              </div>
+                            )}
+                          </div>
                           <div>
                             <span className="text-white/50">ID:</span>
                             <span className="text-white ml-2 font-mono text-xs">{campaign.id.slice(0, 8)}...</span>
@@ -1440,6 +1459,21 @@ export default function AdminCampaignHub() {
                           className="px-4 py-2 rounded-lg bg-red-600/20 hover:bg-red-600 border border-red-500/30 text-red-400 hover:text-white text-sm font-medium transition-colors"
                         >
                           🗑️ Delete
+                        </button>
+                        
+                        {/* Report Bug Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openBugReport({
+                              title: `Admin Issue: ${campaign.title}`,
+                              description: `Issue with campaign in admin portal.\n\nCampaign: ${campaign.title}\nID: ${campaign.id}\nStatus: ${campaign.status}\nOn-Chain ID: ${campaign.campaign_id || 'NOT CREATED'}\nTx Hash: ${campaign.tx_hash || 'NONE'}`,
+                              category: 'submission'
+                            });
+                          }}
+                          className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-colors flex items-center gap-1"
+                        >
+                          🐛 Report Issue
                         </button>
                         
                         {/* Current Status Display */}
