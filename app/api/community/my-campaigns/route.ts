@@ -53,18 +53,7 @@ export async function GET(req: NextRequest) {
     // Query by email and wallet_address (purchases table stores wallet_address, not user_id)
     let purchases: any[] = []
     
-    // Query by email first
-    if (userEmail) {
-      const { data: purchasesByEmail, error: purchasesErr } = await supabaseAdmin
-        .from('purchases')
-        .select('campaign_id, submission_id')
-        .ilike('email', userEmail)
-      
-      if (purchasesErr) console.error('[my-campaigns] purchases by email error:', purchasesErr)
-      purchases = purchasesByEmail || []
-    }
-    
-    // Also get user's linked wallet addresses from profiles
+    // Get user's linked wallet address from profiles
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('wallet_address')
@@ -72,31 +61,29 @@ export async function GET(req: NextRequest) {
       .single()
     
     const walletAddress = profile?.wallet_address
+    
+    // Query purchases by wallet_address (purchases table uses wallet_address, not email or user_id)
     if (walletAddress) {
       const { data: purchasesByWallet, error: walletErr } = await supabaseAdmin
         .from('purchases')
-        .select('campaign_id, submission_id')
+        .select('campaign_id')
         .ilike('wallet_address', walletAddress)
       
       if (walletErr) console.error('[my-campaigns] purchases by wallet error:', walletErr)
-      // Merge unique
-      for (const p of (purchasesByWallet || [])) {
-        if (!purchases.find(ex => ex.submission_id === p.submission_id)) {
-          purchases.push(p)
-        }
-      }
+      purchases = purchasesByWallet || []
     }
     
     console.log('[my-campaigns] purchases:', purchases?.length, 'wallet:', walletAddress)
 
-    const purchasedSubmissionIds = [...new Set(purchases?.map(p => p.submission_id).filter(Boolean) || [])]
+    // Get unique campaign IDs from purchases
+    const purchasedCampaignIds = [...new Set(purchases?.map(p => p.campaign_id).filter(Boolean) || [])]
     
     let purchasedCampaigns: any[] = []
-    if (purchasedSubmissionIds.length > 0) {
+    if (purchasedCampaignIds.length > 0) {
       const { data } = await supabaseAdmin
         .from('submissions')
         .select('id, title, image_uri, slug, short_code, campaign_id, category, status')
-        .in('id', purchasedSubmissionIds)
+        .in('campaign_id', purchasedCampaignIds)
         .eq('status', 'minted')
       purchasedCampaigns = data || []
     }
