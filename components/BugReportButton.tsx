@@ -76,9 +76,19 @@ export default function BugReportButton() {
     
     // Subscribe to bug report events from other components
     const unsubscribe = bugReportEmitter.subscribe((context) => {
+      console.log('[BugReportButton] Received event, opening modal with context:', context)
+      
+      // Reset form first to clear any stale state
+      setSubmitted(false)
+      setMessage('')
+      setIsSubmitting(false)
+      
       // Pre-fill form with context
       if (context.title) setTitle(context.title)
+      else setTitle('')
+      
       if (context.category) setCategory(context.category)
+      else setCategory('general')
       
       // Build description from context
       let desc = ''
@@ -86,10 +96,18 @@ export default function BugReportButton() {
       if (context.errorMessage) {
         desc += (desc ? '\n\n' : '') + `Error Message:\n${context.errorMessage}`
       }
-      if (desc) setDescription(desc)
+      setDescription(desc)
       
-      // Open the modal
-      setIsOpen(true)
+      // Clear other fields
+      setStepsToReproduce('')
+      setExpectedBehavior('')
+      setScreenshots([])
+      
+      // Open the modal with a small delay to ensure state is set
+      setTimeout(() => {
+        console.log('[BugReportButton] Setting isOpen to true')
+        setIsOpen(true)
+      }, 10)
     })
     
     return () => unsubscribe()

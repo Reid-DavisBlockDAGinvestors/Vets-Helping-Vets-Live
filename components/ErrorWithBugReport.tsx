@@ -23,7 +23,10 @@ export default function ErrorWithBugReport({
   onRetry,
   context 
 }: ErrorWithBugReportProps) {
-  const handleReportBug = () => {
+  const handleReportBug = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    console.log('[ErrorWithBugReport] Opening bug report modal')
     openBugReport({
       title: `Error: ${error}`,
       description: details 
@@ -74,7 +77,9 @@ export function InlineErrorWithBugReport({
   onRetry,
   context 
 }: Omit<ErrorWithBugReportProps, 'details'>) {
-  const handleReportBug = () => {
+  const handleReportBug = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     openBugReport({
       title: `Error: ${error}`,
       description: `Error encountered: ${error}`,
