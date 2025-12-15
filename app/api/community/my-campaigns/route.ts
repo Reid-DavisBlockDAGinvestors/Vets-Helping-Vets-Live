@@ -62,7 +62,18 @@ export async function GET(req: NextRequest) {
     
     const walletAddress = profile?.wallet_address
     
-    // Query purchases by wallet_address (purchases table uses wallet_address, not email or user_id)
+    // Query purchases by email first (most reliable identifier)
+    if (userEmail) {
+      const { data: purchasesByEmail, error: emailErr } = await supabaseAdmin
+        .from('purchases')
+        .select('campaign_id')
+        .ilike('email', userEmail)
+      
+      if (emailErr) console.error('[my-campaigns] purchases by email error:', emailErr)
+      purchases = purchasesByEmail || []
+    }
+    
+    // Also query by wallet_address and merge results
     if (walletAddress) {
       const { data: purchasesByWallet, error: walletErr } = await supabaseAdmin
         .from('purchases')
@@ -70,10 +81,15 @@ export async function GET(req: NextRequest) {
         .ilike('wallet_address', walletAddress)
       
       if (walletErr) console.error('[my-campaigns] purchases by wallet error:', walletErr)
-      purchases = purchasesByWallet || []
+      // Merge unique campaign_ids
+      for (const p of (purchasesByWallet || [])) {
+        if (!purchases.find(ex => ex.campaign_id === p.campaign_id)) {
+          purchases.push(p)
+        }
+      }
     }
     
-    console.log('[my-campaigns] purchases:', purchases?.length, 'wallet:', walletAddress)
+    console.log('[my-campaigns] purchases:', purchases?.length, 'email:', userEmail, 'wallet:', walletAddress)
 
     // Get unique campaign IDs from purchases
     const purchasedCampaignIds = [...new Set(purchases?.map(p => p.campaign_id).filter(Boolean) || [])]

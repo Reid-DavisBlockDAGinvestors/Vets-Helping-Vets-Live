@@ -78,7 +78,8 @@ export async function POST(req: NextRequest) {
           token_id: editionMinted || (mintedTokenIds?.[0]) || null,
           tx_hash: txHash,
           amount_bdag: amountBDAG || null,
-          amount_usd: amountUSD || null
+          amount_usd: amountUSD || null,
+          email: buyerEmail || null
         })
       
       if (purchaseError) {

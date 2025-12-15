@@ -101,7 +101,7 @@ async function main() {
       tokenId = null
     }
 
-    // Insert purchase record (only columns that exist in table)
+    // Insert purchase record (includes email after column is added)
     const { error: insertErr } = await supabaseAdmin
       .from('purchases')
       .insert({
@@ -110,7 +110,8 @@ async function main() {
         token_id: tokenId,
         tx_hash: txHash,
         amount_bdag: event.amount_bdag || null,
-        amount_usd: event.amount_usd || null
+        amount_usd: event.amount_usd || null,
+        email: metadata.buyerEmail || null
       })
 
     if (insertErr) {
