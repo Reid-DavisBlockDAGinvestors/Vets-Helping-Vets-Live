@@ -50,9 +50,10 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
   // Wallet connection
   const wallet = useWallet()
   
-  // Auth - get logged-in user's email
+  // Auth - get logged-in user's email and verification status
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
+  const [isEmailVerified, setIsEmailVerified] = useState<boolean>(false)
   
   useEffect(() => {
     const checkAuth = async () => {
@@ -60,6 +61,8 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       if (session?.user) {
         setIsLoggedIn(true)
         setUserEmail(session.user.email || null)
+        // Check if email is verified (email_confirmed_at is set)
+        setIsEmailVerified(!!session.user.email_confirmed_at)
         // Pre-fill email field with user's email
         if (session.user.email && !email) {
           setEmail(session.user.email)
@@ -67,6 +70,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       } else {
         setIsLoggedIn(false)
         setUserEmail(null)
+        setIsEmailVerified(false)
       }
     }
     checkAuth()
@@ -76,12 +80,14 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       if (session?.user) {
         setIsLoggedIn(true)
         setUserEmail(session.user.email || null)
+        setIsEmailVerified(!!session.user.email_confirmed_at)
         if (session.user.email && !email) {
           setEmail(session.user.email)
         }
       } else {
         setIsLoggedIn(false)
         setUserEmail(null)
+        setIsEmailVerified(false)
       }
     })
     
@@ -142,6 +148,13 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
     if (!isLoggedIn || !userEmail) {
       console.log(`[PurchasePanel] BLOCKED: Not logged in`)
       setCryptoMsg('Please log in to purchase NFTs. Your email is required for the purchase receipt.')
+      return
+    }
+    
+    // Require verified email for purchases
+    if (!isEmailVerified) {
+      console.log(`[PurchasePanel] BLOCKED: Email not verified`)
+      setCryptoMsg('Please verify your email address before making a purchase. Check your inbox for the verification link.')
       return
     }
     

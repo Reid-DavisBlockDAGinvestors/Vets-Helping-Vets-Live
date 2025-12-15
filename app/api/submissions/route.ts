@@ -7,6 +7,41 @@ import { sendSubmissionConfirmation, sendAdminNewSubmission } from '@/lib/mailer
 export async function POST(req: NextRequest) {
   console.log('[submissions] POST request received')
   try {
+    // Require authentication
+    const authHeader = req.headers.get('authorization') || ''
+    const token = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7) : ''
+    
+    let userId: string | null = null
+    let authEmail: string | null = null
+    let isEmailVerified = false
+    
+    if (token) {
+      const { data: userData, error: authErr } = await supabaseAdmin.auth.getUser(token)
+      if (!authErr && userData?.user) {
+        userId = userData.user.id
+        authEmail = userData.user.email || null
+        isEmailVerified = !!userData.user.email_confirmed_at
+      }
+    }
+    
+    // Require authenticated user
+    if (!userId || !authEmail) {
+      console.log('[submissions] BLOCKED: No authenticated user')
+      return NextResponse.json({ 
+        error: 'AUTHENTICATION_REQUIRED', 
+        message: 'Please log in to submit a campaign. Create an account if you don\'t have one.' 
+      }, { status: 401 })
+    }
+    
+    // Require verified email
+    if (!isEmailVerified) {
+      console.log('[submissions] BLOCKED: Email not verified for user:', authEmail)
+      return NextResponse.json({ 
+        error: 'EMAIL_NOT_VERIFIED', 
+        message: 'Please verify your email address before submitting a campaign. Check your inbox for the verification link.' 
+      }, { status: 403 })
+    }
+    
     const body = await req.json().catch(()=>null)
     console.log('[submissions] Body parsed:', body ? 'success' : 'failed')
     if (!body) return NextResponse.json({ error: 'INVALID_JSON' }, { status: 400 })
@@ -18,8 +53,10 @@ export async function POST(req: NextRequest) {
       // Didit KYC verification
       didit_session_id, didit_status
     } = body
-    // Wallet is optional - email is required
-    if (!creator_email) return NextResponse.json({ error: 'MISSING_EMAIL' }, { status: 400 })
+    
+    // Use authenticated email, not the one from the body (security)
+    const verifiedEmail = authEmail
+    
     if (!metadata_uri) return NextResponse.json({ error: 'MISSING_METADATA_URI' }, { status: 400 })
 
     const payload: Record<string, any> = {
@@ -28,7 +65,8 @@ export async function POST(req: NextRequest) {
       category: category || 'general',
       goal: typeof goal === 'number' ? goal : null,
       creator_wallet: creator_wallet || null,  // Optional - can be added later
-      creator_email,
+      creator_email: verifiedEmail,  // Use authenticated email for security
+      user_id: userId,  // Link to authenticated user
       creator_name: creator_name || null,
       creator_phone: creator_phone || null,
       creator_address: creator_address || null,
@@ -55,19 +93,19 @@ export async function POST(req: NextRequest) {
     // Best-effort: ensure a profiles row exists for this email (for wallet-only users)
     try {
       // Try update-by-email if such row exists
-      const { data: prof } = await supabaseAdmin.from('profiles').select('email').eq('email', creator_email).maybeSingle()
+      const { data: prof } = await supabaseAdmin.from('profiles').select('email').eq('email', verifiedEmail).maybeSingle()
       if (prof) {
-        await supabaseAdmin.from('profiles').update({ email: creator_email }).eq('email', creator_email)
+        await supabaseAdmin.from('profiles').update({ email: verifiedEmail }).eq('email', verifiedEmail)
       } else {
         // Attempt insert; schema may require id — ignore errors
-        await supabaseAdmin.from('profiles').insert({ email: creator_email })
+        await supabaseAdmin.from('profiles').insert({ email: verifiedEmail, id: userId })
       }
     } catch {}
     // Send receipt email to creator (best-effort)
     try {
-      console.log('[submissions] Sending confirmation email to:', creator_email)
+      console.log('[submissions] Sending confirmation email to:', verifiedEmail)
       const emailResult = await sendSubmissionConfirmation({
-        email: creator_email,
+        email: verifiedEmail,
         submissionId: data.id,
         title: title || 'Your Campaign',
         creatorName: creator_name

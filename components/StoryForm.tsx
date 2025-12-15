@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ipfsToHttp } from '@/lib/ipfs'
 import VerificationUploader from './VerificationUploader'
+import { supabase } from '@/lib/supabase'
 
 const SUPPORTED_FORMATS = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
 const HEIC_FORMATS = ['image/heic', 'image/heif']
@@ -93,6 +94,44 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
   const [submittedId, setSubmittedId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [draftLoaded, setDraftLoaded] = useState(false)
+  
+  // Auth state
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [isEmailVerified, setIsEmailVerified] = useState(false)
+  const [authEmail, setAuthEmail] = useState<string | null>(null)
+  const [authChecked, setAuthChecked] = useState(false)
+  
+  // Check auth on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setIsLoggedIn(true)
+        setAuthEmail(session.user.email || null)
+        setIsEmailVerified(!!session.user.email_confirmed_at)
+        // Pre-fill email if not already set
+        if (session.user.email && !email) {
+          setEmail(session.user.email)
+        }
+      }
+      setAuthChecked(true)
+    }
+    checkAuth()
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setIsLoggedIn(true)
+        setAuthEmail(session.user.email || null)
+        setIsEmailVerified(!!session.user.email_confirmed_at)
+      } else {
+        setIsLoggedIn(false)
+        setAuthEmail(null)
+        setIsEmailVerified(false)
+      }
+    })
+    
+    return () => subscription.unsubscribe()
+  }, [])
 
   // Load submission for editing if editSubmissionId is provided
   useEffect(() => {
@@ -422,14 +461,29 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
         didit_status: diditStatus === 'completed' ? 'Approved' : 'Not Started'
       }
       
+      // Get auth token for authenticated submission
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      
+      if (!token) {
+        showMsg('Please log in to submit your campaign. Create an account if you don\'t have one.', 'error')
+        setIsSubmitting(false)
+        return
+      }
+      
       const res = await fetch('/api/submissions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
       })
       const data = await res.json().catch(()=>({}))
       if (!res.ok) { 
-        showMsg(data?.error || 'Submit failed', 'error')
+        // Show user-friendly error messages
+        const errorMsg = data?.message || data?.error || 'Submit failed'
+        showMsg(errorMsg, 'error')
         setIsSubmitting(false)
         return 
       }
