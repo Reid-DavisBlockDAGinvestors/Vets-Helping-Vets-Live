@@ -97,23 +97,38 @@ export default function AdminUsers() {
     setUserPurchases([])
     setCreatedCampaigns([])
     setPurchasedCampaigns([])
+    console.log('[AdminUsers] Loading purchases for userId:', userId)
     try {
       const { data: session } = await supabase.auth.getSession()
       const token = session?.session?.access_token
-      if (!token) return
+      if (!token) {
+        console.log('[AdminUsers] No auth token!')
+        return
+      }
 
       const res = await fetch(`/api/admin/users/${userId}/purchases`, {
         headers: { authorization: `Bearer ${token}` }
       })
       const data = await res.json()
       
+      console.log('[AdminUsers] API response:', {
+        ok: res.ok,
+        status: res.status,
+        purchases: data?.purchases?.length,
+        purchasedCampaigns: data?.purchasedCampaigns?.length,
+        createdCampaigns: data?.createdCampaigns?.length,
+        error: data?.error
+      })
+      
       if (res.ok) {
         setUserPurchases(data?.purchases || [])
         setCreatedCampaigns(data?.createdCampaigns || [])
         setPurchasedCampaigns(data?.purchasedCampaigns || [])
+      } else {
+        console.error('[AdminUsers] API error:', data?.error)
       }
     } catch (e) {
-      console.error('Failed to load purchases:', e)
+      console.error('[AdminUsers] Failed to load purchases:', e)
     } finally {
       setLoadingPurchases(false)
     }
