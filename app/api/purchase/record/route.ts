@@ -32,8 +32,15 @@ export async function POST(req: NextRequest) {
       quantity,
       editionMinted, // Token ID of the minted edition (or true for legacy)
       mintedTokenIds, // Array of all token IDs if multiple minted
-      buyerEmail // Email for receipt
+      buyerEmail, // Email for receipt
+      userId, // Logged-in user ID if available
+      paymentMethod, // crypto_bdag, stripe, etc.
+      referrer // How user found the campaign
     } = body
+
+    // Get request metadata for fraud prevention
+    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || null
+    const userAgent = req.headers.get('user-agent') || null
 
     // V5: Accept either tokenId or campaignId
     const effectiveId = campaignId ?? tokenId
@@ -75,14 +82,19 @@ export async function POST(req: NextRequest) {
         .insert({
           wallet_address: walletAddress.toLowerCase(),
           campaign_id: effectiveId,
-          token_id: editionMinted || (mintedTokenIds?.[0]) || null,
+          token_id: typeof editionMinted === 'number' ? editionMinted : (mintedTokenIds?.[0]) || null,
           tx_hash: txHash,
           amount_bdag: amountBDAG || null,
           amount_usd: amountUSD || null,
           tip_bdag: tipBDAG || 0,
           tip_usd: tipUSD || 0,
           quantity: quantity || 1,
-          email: buyerEmail || null
+          email: buyerEmail || null,
+          user_id: userId || null,
+          payment_method: paymentMethod || 'crypto_bdag',
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          referrer: referrer || null
         })
       
       if (purchaseError) {

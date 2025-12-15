@@ -51,8 +51,9 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
   // Wallet connection
   const wallet = useWallet()
   
-  // Auth - get logged-in user's email and verification status
+  // Auth - get logged-in user's email, ID, and verification status
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
   const [isEmailVerified, setIsEmailVerified] = useState<boolean>(false)
   
@@ -62,6 +63,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       if (session?.user) {
         setIsLoggedIn(true)
         setUserEmail(session.user.email || null)
+        setUserId(session.user.id || null)
         // Check if email is verified (email_confirmed_at is set)
         setIsEmailVerified(!!session.user.email_confirmed_at)
         // Pre-fill email field with user's email
@@ -71,6 +73,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       } else {
         setIsLoggedIn(false)
         setUserEmail(null)
+        setUserId(null)
         setIsEmailVerified(false)
       }
     }
@@ -81,6 +84,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       if (session?.user) {
         setIsLoggedIn(true)
         setUserEmail(session.user.email || null)
+        setUserId(session.user.id || null)
         setIsEmailVerified(!!session.user.email_confirmed_at)
         if (session.user.email && !email) {
           setEmail(session.user.email)
@@ -88,6 +92,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       } else {
         setIsLoggedIn(false)
         setUserEmail(null)
+        setUserId(null)
         setIsEmailVerified(false)
       }
     })
@@ -414,6 +419,9 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
             mintedTokenIds, // All token IDs if multiple minted
             quantity, // Track how many were minted
             buyerEmail: userEmail || email, // Use logged-in user's email, fallback to manual entry
+            userId: userId, // Link to auth.users for logged-in purchases
+            paymentMethod: 'crypto_bdag', // Track payment method
+            referrer: typeof window !== 'undefined' ? document.referrer : null, // Marketing attribution
           })
         })
         console.log(`[PurchasePanel] Purchase recorded for campaign ${targetId}, tokenId=${lastTokenId}`)
