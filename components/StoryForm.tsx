@@ -1182,12 +1182,18 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
             {mintMsg}
             {msgType === 'error' && (
               <button
-                onClick={() => openBugReport({
-                  title: 'Campaign Submission Error',
-                  description: `I encountered an error while trying to submit my campaign.\n\nCampaign Title: ${title || 'Not set'}`,
-                  errorMessage: mintMsg,
-                  category: 'submission'
-                })}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  console.log('[StoryForm] Opening bug report for error:', mintMsg)
+                  openBugReport({
+                    title: 'Campaign Submission Error',
+                    description: `I encountered an error while trying to submit my campaign.\n\nCampaign Title: ${title || 'Not set'}\nCategory: ${category}`,
+                    errorMessage: mintMsg,
+                    category: 'submission'
+                  })
+                }}
                 className="mt-2 block text-xs text-red-300 hover:text-red-200 underline"
               >
                 🐛 Report this issue
