@@ -42,19 +42,75 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
       return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
     }
 
-    // Get the target user's email
-    const { data: targetUser } = await supabaseAdmin
-      .from('profiles')
-      .select('email')
-      .eq('id', userId)
-      .maybeSingle()
+    // Check if userId is a wallet address (starts with 0x) or a UUID
+    const isWalletId = userId.startsWith('0x')
+    console.log('[admin/users/purchases] userId:', userId, 'isWalletId:', isWalletId)
 
-    // Get purchases by user_id or email
-    const { data: purchases, error: purchasesErr } = await supabaseAdmin
-      .from('purchases')
-      .select('*, submissions(title)')
-      .or(`user_id.eq.${userId}${targetUser?.email ? `,email.ilike.${targetUser.email}` : ''}`)
-      .order('created_at', { ascending: false })
+    let purchases: any[] = []
+    let purchasesErr: any = null
+    let targetWallet: string | null = null
+    let targetEmail: string | null = null
+
+    if (isWalletId) {
+      // For wallet-only users, query directly by wallet_address
+      targetWallet = userId
+      console.log('[admin/users/purchases] Querying by wallet_address:', targetWallet)
+      
+      const result = await supabaseAdmin
+        .from('purchases')
+        .select('*')
+        .ilike('wallet_address', targetWallet)
+        .order('created_at', { ascending: false })
+      
+      purchases = result.data || []
+      purchasesErr = result.error
+    } else {
+      // For profile users, get their profile and query by user_id, email, or wallet_address
+      const { data: targetUser } = await supabaseAdmin
+        .from('profiles')
+        .select('email, wallet_address')
+        .eq('id', userId)
+        .maybeSingle()
+
+      targetEmail = targetUser?.email || null
+      targetWallet = targetUser?.wallet_address || null
+
+      // Build query conditions
+      const queryConditions: string[] = [`user_id.eq.${userId}`]
+      if (targetEmail) {
+        queryConditions.push(`email.ilike.${targetEmail}`)
+      }
+      if (targetWallet) {
+        queryConditions.push(`wallet_address.ilike.${targetWallet}`)
+      }
+
+      console.log('[admin/users/purchases] Query conditions:', queryConditions)
+
+      const result = await supabaseAdmin
+        .from('purchases')
+        .select('*')
+        .or(queryConditions.join(','))
+        .order('created_at', { ascending: false })
+      
+      purchases = result.data || []
+      purchasesErr = result.error
+    }
+
+    // Get campaign titles for the purchases (separate query since no FK)
+    const campaignIds = [...new Set(purchases.map(p => p.campaign_id).filter(Boolean))]
+    let campaignTitles: Record<number, string> = {}
+    if (campaignIds.length > 0) {
+      const { data: campaigns } = await supabaseAdmin
+        .from('submissions')
+        .select('campaign_id, title')
+        .in('campaign_id', campaignIds)
+      
+      for (const c of (campaigns || [])) {
+        campaignTitles[c.campaign_id] = c.title
+      }
+    }
+
+    console.log('[admin/users/purchases] Found purchases:', purchases?.length || 0)
 
     if (purchasesErr) {
       console.error('[admin/users/purchases] error:', purchasesErr)
@@ -64,7 +120,7 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
     const formattedPurchases = (purchases || []).map(p => ({
       id: p.id,
       campaign_id: p.campaign_id,
-      campaign_title: p.submissions?.title || `Campaign #${p.campaign_id || p.submission_id}`,
+      campaign_title: campaignTitles[p.campaign_id] || `Campaign #${p.campaign_id || p.submission_id}`,
       amount_usd: p.amount_usd || 0,
       quantity: p.quantity || 1,
       created_at: p.created_at,
