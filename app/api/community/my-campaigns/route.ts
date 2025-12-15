@@ -50,30 +50,44 @@ export async function GET(req: NextRequest) {
     console.log('[my-campaigns] createdCampaigns:', createdCampaigns?.length, 'for user:', userId, userEmail)
 
     // 2. Campaigns user purchased NFTs for (from purchases table)
-    // Try by user_id first, then by email
+    // Query by email and wallet_address (purchases table stores wallet_address, not user_id)
     let purchases: any[] = []
-    const { data: purchasesByUserId, error: purchasesErr1 } = await supabaseAdmin
-      .from('purchases')
-      .select('campaign_id, submission_id')
-      .eq('user_id', userId)
     
-    if (purchasesErr1) console.error('[my-campaigns] purchases by user_id error:', purchasesErr1)
-    purchases = purchasesByUserId || []
-    
+    // Query by email first
     if (userEmail) {
-      const { data: purchasesByEmail, error: purchasesErr2 } = await supabaseAdmin
+      const { data: purchasesByEmail, error: purchasesErr } = await supabaseAdmin
         .from('purchases')
         .select('campaign_id, submission_id')
         .ilike('email', userEmail)
       
-      if (purchasesErr2) console.error('[my-campaigns] purchases by email error:', purchasesErr2)
-      // Merge
-      for (const p of (purchasesByEmail || [])) {
-        purchases.push(p)
+      if (purchasesErr) console.error('[my-campaigns] purchases by email error:', purchasesErr)
+      purchases = purchasesByEmail || []
+    }
+    
+    // Also get user's linked wallet addresses from profiles
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('wallet_address')
+      .eq('id', userId)
+      .single()
+    
+    const walletAddress = profile?.wallet_address
+    if (walletAddress) {
+      const { data: purchasesByWallet, error: walletErr } = await supabaseAdmin
+        .from('purchases')
+        .select('campaign_id, submission_id')
+        .ilike('wallet_address', walletAddress)
+      
+      if (walletErr) console.error('[my-campaigns] purchases by wallet error:', walletErr)
+      // Merge unique
+      for (const p of (purchasesByWallet || [])) {
+        if (!purchases.find(ex => ex.submission_id === p.submission_id)) {
+          purchases.push(p)
+        }
       }
     }
     
-    console.log('[my-campaigns] purchases:', purchases?.length)
+    console.log('[my-campaigns] purchases:', purchases?.length, 'wallet:', walletAddress)
 
     const purchasedSubmissionIds = [...new Set(purchases?.map(p => p.submission_id).filter(Boolean) || [])]
     

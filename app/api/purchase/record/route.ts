@@ -68,6 +68,35 @@ export async function POST(req: NextRequest) {
       console.error('Failed to record purchase event:', eventError)
     }
 
+    // Also record to purchases table for my-campaigns tracking
+    // Get the submission first to get submission_id
+    const { data: subForPurchase } = await supabaseAdmin
+      .from('submissions')
+      .select('id')
+      .eq('campaign_id', effectiveId)
+      .maybeSingle()
+
+    if (subForPurchase && walletAddress) {
+      const { error: purchaseError } = await supabaseAdmin
+        .from('purchases')
+        .insert({
+          wallet_address: walletAddress.toLowerCase(),
+          campaign_id: effectiveId,
+          submission_id: subForPurchase.id,
+          token_id: editionMinted || (mintedTokenIds?.[0]) || null,
+          tx_hash: txHash,
+          amount_bdag: amountBDAG || null,
+          amount_usd: amountUSD || null,
+          email: buyerEmail || null
+        })
+      
+      if (purchaseError) {
+        console.error('[purchase/record] Failed to record to purchases table:', purchaseError)
+      } else {
+        console.log(`[purchase/record] Recorded purchase for wallet ${walletAddress}, submission ${subForPurchase.id}`)
+      }
+    }
+
     // Update the submission's sold_count (default 1 for edition mint)
     const qty = quantity ?? 1
     // Try campaign_id first (V5), fallback to token_id
