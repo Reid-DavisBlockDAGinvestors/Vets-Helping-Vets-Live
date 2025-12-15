@@ -292,51 +292,32 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
             const valueWithTip = pricePerNftWei + tipBdagWei
             console.log(`[PurchasePanel] Calling mintWithBDAGAndTip(${targetId}, ${tipBdagWei}) with value ${valueWithTip}`)
             
-            // Manually encode the function call to ensure data is included
+            // Log the encoded call data for debugging
             const iface = new Interface(MINT_EDITION_ABI)
             const callData = iface.encodeFunctionData('mintWithBDAGAndTip', [BigInt(targetId), tipBdagWei])
             console.log(`[PurchasePanel] Encoded call data: ${callData}`)
             
-            // Try static call first to get revert reason if it would fail
-            try {
-              await contract.mintWithBDAGAndTip.staticCall(BigInt(targetId), tipBdagWei, { value: valueWithTip })
-            } catch (staticErr: any) {
-              console.error('[PurchasePanel] Static call failed:', staticErr)
-              const reason = staticErr?.reason || staticErr?.message || 'Unknown error'
-              throw new Error(`Contract would revert: ${reason}`)
-            }
-            
-            // Send transaction with explicit data field
-            tx = await signer.sendTransaction({
-              to: CONTRACT_ADDRESS,
+            // Use contract method directly - this ensures data is properly included
+            tx = await contract.mintWithBDAGAndTip(BigInt(targetId), tipBdagWei, {
               value: valueWithTip,
-              data: callData,
               gasLimit,
             })
+            console.log(`[PurchasePanel] Transaction sent via contract method`)
           } else {
             console.log(`[PurchasePanel] Calling mintWithBDAG(${targetId}) with value ${pricePerNftWei}`)
             
-            // Manually encode the function call to ensure data is included
+            // Log the encoded call data for debugging
             const iface = new Interface(MINT_EDITION_ABI)
             const callData = iface.encodeFunctionData('mintWithBDAG', [BigInt(targetId)])
             console.log(`[PurchasePanel] Encoded call data: ${callData}`)
             
-            // Try static call first to get revert reason if it would fail
-            try {
-              await contract.mintWithBDAG.staticCall(BigInt(targetId), { value: pricePerNftWei })
-            } catch (staticErr: any) {
-              console.error('[PurchasePanel] Static call failed:', staticErr)
-              const reason = staticErr?.reason || staticErr?.message || 'Unknown error'
-              throw new Error(`Contract would revert: ${reason}`)
-            }
-            
-            // Send transaction with explicit data field
-            tx = await signer.sendTransaction({
-              to: CONTRACT_ADDRESS,
+            // Use contract method directly - this ensures data is properly included
+            // The previous signer.sendTransaction approach was stripping the data field
+            tx = await contract.mintWithBDAG(BigInt(targetId), {
               value: pricePerNftWei,
-              data: callData,
               gasLimit,
             })
+            console.log(`[PurchasePanel] Transaction sent via contract method`)
           }
         } catch (mintErr: any) {
           console.error('[PurchasePanel] Mint call failed:', mintErr)
