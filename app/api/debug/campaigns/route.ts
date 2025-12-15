@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
+import { verifyAdminAuth } from '@/lib/adminAuth'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,9 @@ const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || '0.05')
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await verifyAdminAuth(req)
+    if (!auth.authorized) return auth.response
+
     const supabase = getSupabaseAdmin()
     const contractAddress = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
     

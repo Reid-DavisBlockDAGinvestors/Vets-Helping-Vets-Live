@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
+import { verifyAdminAuth } from '@/lib/adminAuth'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,8 +13,11 @@ export const dynamic = 'force-dynamic'
  * - totalCampaigns: number of campaigns on-chain
  * - campaigns: array of campaign data for each ID
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const auth = await verifyAdminAuth(req)
+    if (!auth.authorized) return auth.response
+
     const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
     if (!contractAddress) {
       return NextResponse.json({ error: 'NO_CONTRACT_CONFIGURED' }, { status: 500 })

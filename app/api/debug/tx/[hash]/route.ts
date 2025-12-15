@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
+import { verifyAdminAuth } from '@/lib/adminAuth'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,8 +11,11 @@ export const dynamic = 'force-dynamic'
  * 
  * Returns transaction details and parsed events
  */
-export async function GET(_req: NextRequest, context: { params: { hash: string } }) {
+export async function GET(req: NextRequest, context: { params: { hash: string } }) {
   try {
+    const auth = await verifyAdminAuth(req)
+    if (!auth.authorized) return auth.response
+
     const txHash = context.params.hash
     if (!txHash || txHash.length < 10) {
       return NextResponse.json({ error: 'Invalid transaction hash' }, { status: 400 })

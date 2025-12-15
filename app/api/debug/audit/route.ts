@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { verifyAdminAuth } from '@/lib/adminAuth'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
+  // Admin auth required for debug endpoints
+  const auth = await verifyAdminAuth(req)
+  if (!auth.authorized) return auth.response
+
   const results: any = {
     timestamp: new Date().toISOString(),
     supabase: {},

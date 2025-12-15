@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { verifyAdminAuth } from '@/lib/adminAuth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await verifyAdminAuth(req)
+    if (!auth.authorized) return auth.response
+
     const query = req.nextUrl.searchParams.get('q')
     if (!query) {
       return NextResponse.json({ error: 'q (search query) required' }, { status: 400 })

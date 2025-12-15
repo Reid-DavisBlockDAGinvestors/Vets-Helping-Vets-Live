@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
 import { ipfsToHttp } from '@/lib/ipfs'
+import { verifyAdminAuth } from '@/lib/adminAuth'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,8 +10,11 @@ export const dynamic = 'force-dynamic'
  * Debug endpoint to check NFT token data on-chain
  * GET /api/debug/nft/[tokenId]
  */
-export async function GET(_req: NextRequest, context: { params: { tokenId: string } }) {
+export async function GET(req: NextRequest, context: { params: { tokenId: string } }) {
   try {
+    const auth = await verifyAdminAuth(req)
+    if (!auth.authorized) return auth.response
+
     const tokenId = Number(context.params.tokenId)
     if (!Number.isFinite(tokenId) || tokenId < 0) {
       return NextResponse.json({ error: 'INVALID_TOKEN_ID' }, { status: 400 })
