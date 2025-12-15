@@ -52,6 +52,12 @@ export default function AdminUsers() {
   const [purchasedCampaigns, setPurchasedCampaigns] = useState<Campaign[]>([])
   const [loadingPurchases, setLoadingPurchases] = useState(false)
   const [detailTab, setDetailTab] = useState<'purchased' | 'created' | 'history'>('purchased')
+  const [purchaseStats, setPurchaseStats] = useState<{
+    totalSpent: number
+    totalNftSpent: number
+    totalTips: number
+    purchaseCount: number
+  } | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'created_at' | 'purchases_count' | 'total_spent_usd'>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
@@ -97,6 +103,7 @@ export default function AdminUsers() {
     setUserPurchases([])
     setCreatedCampaigns([])
     setPurchasedCampaigns([])
+    setPurchaseStats(null)
     console.log('[AdminUsers] Loading purchases for userId:', userId)
     try {
       const { data: session } = await supabase.auth.getSession()
@@ -117,6 +124,7 @@ export default function AdminUsers() {
         purchases: data?.purchases?.length,
         purchasedCampaigns: data?.purchasedCampaigns?.length,
         createdCampaigns: data?.createdCampaigns?.length,
+        stats: data?.stats,
         error: data?.error
       })
       
@@ -124,6 +132,7 @@ export default function AdminUsers() {
         setUserPurchases(data?.purchases || [])
         setCreatedCampaigns(data?.createdCampaigns || [])
         setPurchasedCampaigns(data?.purchasedCampaigns || [])
+        setPurchaseStats(data?.stats || null)
       } else {
         console.error('[AdminUsers] API error:', data?.error)
       }
@@ -398,33 +407,53 @@ export default function AdminUsers() {
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               {/* Stats - Use data from purchases API for consistency */}
               {(() => {
-                // Calculate totals from the actual purchase data for consistency
-                const totalSpentFromPurchases = userPurchases.reduce((sum, p) => sum + (p.amount_usd || 0), 0)
-                const purchaseCount = userPurchases.length
+                // Use stats from API if available, otherwise calculate from purchases
+                const totalNft = purchaseStats?.totalNftSpent ?? userPurchases.reduce((sum, p) => sum + (p.amount_usd || 0), 0)
+                const totalTips = purchaseStats?.totalTips ?? 0
+                const totalSpent = purchaseStats?.totalSpent ?? totalNft
+                const purchaseCount = purchaseStats?.purchaseCount ?? userPurchases.length
                 // Use blockchain NFT count if higher (some purchases may not be recorded)
                 const nftsOwned = Math.max(selectedUser.nfts_owned || 0, purchaseCount)
                 
                 return (
-                  <div className="grid grid-cols-4 gap-4 mb-6">
-                    <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
-                      <div className="text-2xl font-bold text-blue-400">{purchaseCount}</div>
-                      <div className="text-sm text-white/50">Purchases</div>
-                      {selectedUser.nfts_owned > purchaseCount && (
-                        <div className="text-xs text-white/30 mt-1">({selectedUser.nfts_owned} on-chain)</div>
-                      )}
+                  <div className="space-y-4 mb-6">
+                    {/* Main stats row */}
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
+                        <div className="text-2xl font-bold text-blue-400">{purchaseCount}</div>
+                        <div className="text-sm text-white/50">Purchases</div>
+                        {selectedUser.nfts_owned > purchaseCount && (
+                          <div className="text-xs text-white/30 mt-1">({selectedUser.nfts_owned} on-chain)</div>
+                        )}
+                      </div>
+                      <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
+                        <div className="text-2xl font-bold text-purple-400">{nftsOwned}</div>
+                        <div className="text-sm text-white/50">NFTs Owned</div>
+                      </div>
+                      <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
+                        <div className="text-2xl font-bold text-green-400">${totalSpent.toFixed(2)}</div>
+                        <div className="text-sm text-white/50">Total Spent</div>
+                      </div>
+                      <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
+                        <div className="text-2xl font-bold text-orange-400">{createdCampaigns.length}</div>
+                        <div className="text-sm text-white/50">Campaigns Created</div>
+                      </div>
                     </div>
-                    <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
-                      <div className="text-2xl font-bold text-purple-400">{nftsOwned}</div>
-                      <div className="text-sm text-white/50">NFTs Owned</div>
-                    </div>
-                    <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
-                      <div className="text-2xl font-bold text-green-400">${totalSpentFromPurchases.toFixed(2)}</div>
-                      <div className="text-sm text-white/50">Total Spent</div>
-                    </div>
-                    <div className="rounded-lg bg-white/5 border border-white/10 p-4 text-center">
-                      <div className="text-2xl font-bold text-orange-400">{createdCampaigns.length}</div>
-                      <div className="text-sm text-white/50">Campaigns Created</div>
-                    </div>
+                    
+                    {/* Spending breakdown */}
+                    {totalSpent > 0 && (
+                      <div className="rounded-lg bg-white/5 border border-white/10 p-3 flex items-center justify-center gap-6 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white/50">NFT Purchases:</span>
+                          <span className="text-green-400 font-medium">${totalNft.toFixed(2)}</span>
+                        </div>
+                        <div className="w-px h-4 bg-white/20"></div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white/50">Tips:</span>
+                          <span className="text-yellow-400 font-medium">${totalTips.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })()}

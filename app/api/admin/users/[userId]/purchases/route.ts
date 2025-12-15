@@ -123,10 +123,16 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
       campaign_id: p.campaign_id,
       campaign_title: campaignTitles[p.campaign_id] || `Campaign #${p.campaign_id || p.submission_id}`,
       amount_usd: p.amount_usd || 0,
+      tip_usd: p.tip_usd || 0,
       quantity: p.quantity || 1,
       created_at: p.created_at,
       tx_hash: p.tx_hash
     }))
+
+    // Calculate totals for stats
+    const totalNftSpent = formattedPurchases.reduce((sum, p) => sum + (p.amount_usd || 0), 0)
+    const totalTips = formattedPurchases.reduce((sum, p) => sum + (p.tip_usd || 0), 0)
+    const totalSpent = totalNftSpent + totalTips
 
     // Get campaigns created by this user (only for profile users, not wallet-only users)
     let userEmail: string | null = null
@@ -195,13 +201,21 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
       purchases: formattedPurchases.length,
       purchasedCampaigns: purchasedCampaigns.length,
       createdCampaigns: createdCampaigns.length,
-      purchasedCampaignIds
+      totalSpent,
+      totalNftSpent,
+      totalTips
     })
 
     return NextResponse.json({ 
       purchases: formattedPurchases,
       createdCampaigns,
-      purchasedCampaigns
+      purchasedCampaigns,
+      stats: {
+        totalSpent,
+        totalNftSpent,
+        totalTips,
+        purchaseCount: formattedPurchases.length
+      }
     })
   } catch (e: any) {
     console.error('[admin/users/purchases] Error:', e)

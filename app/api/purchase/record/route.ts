@@ -79,6 +79,9 @@ export async function POST(req: NextRequest) {
           tx_hash: txHash,
           amount_bdag: amountBDAG || null,
           amount_usd: amountUSD || null,
+          tip_bdag: tipBDAG || 0,
+          tip_usd: tipUSD || 0,
+          quantity: quantity || 1,
           email: buyerEmail || null
         })
       
