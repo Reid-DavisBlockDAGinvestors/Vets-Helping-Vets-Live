@@ -9,6 +9,37 @@ interface Screenshot {
   filename: string
 }
 
+// Global event for triggering bug report from anywhere
+export interface BugReportContext {
+  title?: string
+  description?: string
+  category?: string
+  errorMessage?: string
+}
+
+// Create a global event emitter for bug reports
+class BugReportEmitter {
+  private listeners: ((context: BugReportContext) => void)[] = []
+  
+  subscribe(listener: (context: BugReportContext) => void) {
+    this.listeners.push(listener)
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener)
+    }
+  }
+  
+  emit(context: BugReportContext) {
+    this.listeners.forEach(l => l(context))
+  }
+}
+
+export const bugReportEmitter = new BugReportEmitter()
+
+// Helper function to open bug report from anywhere
+export function openBugReport(context: BugReportContext = {}) {
+  bugReportEmitter.emit(context)
+}
+
 const CATEGORIES = [
   { value: 'general', label: '🐛 General Bug' },
   { value: 'purchase', label: '💳 Purchase/Payment Issue' },
@@ -42,6 +73,26 @@ export default function BugReportButton() {
 
   useEffect(() => {
     setMounted(true)
+    
+    // Subscribe to bug report events from other components
+    const unsubscribe = bugReportEmitter.subscribe((context) => {
+      // Pre-fill form with context
+      if (context.title) setTitle(context.title)
+      if (context.category) setCategory(context.category)
+      
+      // Build description from context
+      let desc = ''
+      if (context.description) desc = context.description
+      if (context.errorMessage) {
+        desc += (desc ? '\n\n' : '') + `Error Message:\n${context.errorMessage}`
+      }
+      if (desc) setDescription(desc)
+      
+      // Open the modal
+      setIsOpen(true)
+    })
+    
+    return () => unsubscribe()
   }, [])
 
   const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

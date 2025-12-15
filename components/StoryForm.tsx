@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { ipfsToHttp } from '@/lib/ipfs'
 import VerificationUploader from './VerificationUploader'
 import { supabase } from '@/lib/supabase'
+import { openBugReport } from './BugReportButton'
 
 const SUPPORTED_FORMATS = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
 const HEIC_FORMATS = ['image/heic', 'image/heif']
@@ -1179,6 +1180,19 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
             'bg-blue-500/20 text-blue-300 border border-blue-500/30'
           }`}>
             {mintMsg}
+            {msgType === 'error' && (
+              <button
+                onClick={() => openBugReport({
+                  title: 'Campaign Submission Error',
+                  description: `I encountered an error while trying to submit my campaign.\n\nCampaign Title: ${title || 'Not set'}`,
+                  errorMessage: mintMsg,
+                  category: 'submission'
+                })}
+                className="mt-2 block text-xs text-red-300 hover:text-red-200 underline"
+              >
+                🐛 Report this issue
+              </button>
+            )}
           </div>
         )}
         </div>

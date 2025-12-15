@@ -6,6 +6,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import { useWallet } from '@/hooks/useWallet'
 import { BrowserProvider, Contract, parseEther, formatEther, Interface } from 'ethers'
 import { supabase } from '@/lib/supabase'
+import { openBugReport } from './BugReportButton'
 
 type PaymentTab = 'card' | 'crypto' | 'other'
 
@@ -543,7 +544,22 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
           </button>
           <span className="text-sm text-white/70">Make this a monthly donation</span>
         </div>
-        {cardError && <p className="text-red-400 text-sm">{cardError}</p>}
+        {cardError && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+            <p className="text-red-400 text-sm">{cardError}</p>
+            <button
+              onClick={() => openBugReport({
+                title: 'Card Payment Error',
+                description: 'I encountered an error while trying to make a card payment.',
+                errorMessage: cardError,
+                category: 'purchase'
+              })}
+              className="mt-1 text-xs text-red-300 hover:text-red-200 underline"
+            >
+              🐛 Report this issue
+            </button>
+          </div>
+        )}
         <button
           onClick={handlePayment}
           disabled={submitting || !stripe}
@@ -771,11 +787,42 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
                   <p className="text-xs text-white/40 mt-1">≈ ${totalAmount} USD</p>
                 </div>
 
-                {/* Pay Button */}
+                {/* Status/Error Messages */}
                 {cryptoMsg && (
-                  <p className={`text-sm ${cryptoMsg.includes('🎉') || cryptoMsg.includes('confirmed') ? 'text-green-400' : cryptoMsg.includes('cancelled') ? 'text-yellow-400' : 'text-white/70'}`}>
-                    {cryptoMsg}
-                  </p>
+                  <div className={`rounded-lg p-3 ${
+                    cryptoMsg.includes('🎉') || cryptoMsg.includes('confirmed') 
+                      ? 'bg-green-500/10 border border-green-500/30' 
+                      : cryptoMsg.includes('cancelled') 
+                        ? 'bg-yellow-500/10 border border-yellow-500/30'
+                        : cryptoMsg.includes('❌') || cryptoMsg.includes('error') || cryptoMsg.includes('failed') || cryptoMsg.includes('Failed')
+                          ? 'bg-red-500/10 border border-red-500/30'
+                          : 'bg-white/5 border border-white/10'
+                  }`}>
+                    <p className={`text-sm ${
+                      cryptoMsg.includes('🎉') || cryptoMsg.includes('confirmed') 
+                        ? 'text-green-400' 
+                        : cryptoMsg.includes('cancelled') 
+                          ? 'text-yellow-400' 
+                          : cryptoMsg.includes('❌') || cryptoMsg.includes('error') || cryptoMsg.includes('failed') || cryptoMsg.includes('Failed')
+                            ? 'text-red-400'
+                            : 'text-white/70'
+                    }`}>
+                      {cryptoMsg}
+                    </p>
+                    {(cryptoMsg.includes('❌') || cryptoMsg.includes('error') || cryptoMsg.includes('failed') || cryptoMsg.includes('Failed') || cryptoMsg.includes('Please')) && !cryptoMsg.includes('🎉') && (
+                      <button
+                        onClick={() => openBugReport({
+                          title: 'Crypto Purchase Error',
+                          description: `I encountered an error while trying to purchase with crypto.\n\nCampaign ID: ${campaignId}`,
+                          errorMessage: cryptoMsg,
+                          category: 'purchase'
+                        })}
+                        className="mt-2 text-xs text-red-300 hover:text-red-200 underline"
+                      >
+                        🐛 Report this issue
+                      </button>
+                    )}
+                  </div>
                 )}
                 <button
                   onClick={purchaseWithWallet}
