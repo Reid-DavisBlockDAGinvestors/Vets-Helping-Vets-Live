@@ -285,7 +285,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
         let tx
         // Apply tip only on the last mint
         // Add explicit gas limit to avoid estimation failures on slow RPC
-        const gasLimit = 300000n // Safe gas limit for minting
+        const gasLimit = 600000n // Gas limit for minting (contract needs ~420k with viaIR)
         
         try {
           if (isLast && tipBdagWei > 0n) {
