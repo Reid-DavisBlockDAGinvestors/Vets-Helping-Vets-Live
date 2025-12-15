@@ -126,7 +126,11 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
       tip_usd: p.tip_usd || 0,
       quantity: p.quantity || 1,
       created_at: p.created_at,
-      tx_hash: p.tx_hash
+      tx_hash: p.tx_hash,
+      email: p.email || null,
+      token_id: p.token_id || null,
+      wallet_address: p.wallet_address || null,
+      payment_method: p.payment_method || 'crypto_bdag'
     }))
 
     // Calculate totals for stats

@@ -24,9 +24,14 @@ interface Purchase {
   campaign_id: number
   campaign_title: string
   amount_usd: number
+  tip_usd: number
   quantity: number
   created_at: string
   tx_hash: string | null
+  email: string | null
+  token_id: number | null
+  wallet_address: string | null
+  payment_method: string
 }
 
 interface Campaign {
@@ -597,25 +602,33 @@ export default function AdminUsers() {
                       {userPurchases.length > 0 ? (
                         <div className="space-y-2">
                           {userPurchases.map(p => (
-                            <div key={p.id} className="rounded-lg bg-white/5 border border-white/10 p-4 flex items-center justify-between">
-                              <div>
-                                <div className="font-medium text-white">{p.campaign_title}</div>
-                                <div className="text-sm text-white/50">
-                                  {new Date(p.created_at).toLocaleDateString()} • {p.quantity} NFT{p.quantity > 1 ? 's' : ''}
+                            <div key={p.id} className="rounded-lg bg-white/5 border border-white/10 p-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-medium text-white">{p.campaign_title}</div>
+                                  <div className="text-sm text-white/50">
+                                    {new Date(p.created_at).toLocaleDateString()} • {p.quantity} NFT{p.quantity > 1 ? 's' : ''}
+                                  </div>
+                                  {p.email && (
+                                    <div className="text-xs text-blue-400 mt-1">📧 {p.email}</div>
+                                  )}
                                 </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-green-400 font-medium">${p.amount_usd?.toFixed(2) || '0.00'}</div>
-                                {p.tx_hash && (
-                                  <a 
-                                    href={`https://awakening.bdagscan.com/tx/${p.tx_hash}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-xs text-blue-400 hover:underline"
-                                  >
-                                    View TX →
-                                  </a>
-                                )}
+                                <div className="text-right">
+                                  <div className="text-green-400 font-medium">${p.amount_usd?.toFixed(2) || '0.00'}</div>
+                                  {p.tip_usd > 0 && (
+                                    <div className="text-yellow-400 text-sm">+${p.tip_usd.toFixed(2)} tip</div>
+                                  )}
+                                  {p.tx_hash && (
+                                    <a 
+                                      href={`https://awakening.bdagscan.com/tx/${p.tx_hash}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-blue-400 hover:underline"
+                                    >
+                                      View TX →
+                                    </a>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           ))}
