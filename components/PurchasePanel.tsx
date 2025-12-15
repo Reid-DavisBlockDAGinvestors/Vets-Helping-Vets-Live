@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
 import { useWallet } from '@/hooks/useWallet'
-import { BrowserProvider, Contract, parseEther, formatEther } from 'ethers'
+import { BrowserProvider, Contract, parseEther, formatEther, Interface } from 'ethers'
 import { supabase } from '@/lib/supabase'
 
 type PaymentTab = 'card' | 'crypto' | 'other'
@@ -262,6 +262,11 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
             const valueWithTip = pricePerNftWei + tipBdagWei
             console.log(`[PurchasePanel] Calling mintWithBDAGAndTip(${targetId}, ${tipBdagWei}) with value ${valueWithTip}`)
             
+            // Manually encode the function call to ensure data is included
+            const iface = new Interface(MINT_EDITION_ABI)
+            const callData = iface.encodeFunctionData('mintWithBDAGAndTip', [BigInt(targetId), tipBdagWei])
+            console.log(`[PurchasePanel] Encoded call data: ${callData}`)
+            
             // Try static call first to get revert reason if it would fail
             try {
               await contract.mintWithBDAGAndTip.staticCall(BigInt(targetId), tipBdagWei, { value: valueWithTip })
@@ -271,12 +276,20 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
               throw new Error(`Contract would revert: ${reason}`)
             }
             
-            tx = await contract.mintWithBDAGAndTip(BigInt(targetId), tipBdagWei, {
+            // Send transaction with explicit data field
+            tx = await signer.sendTransaction({
+              to: CONTRACT_ADDRESS,
               value: valueWithTip,
+              data: callData,
               gasLimit,
             })
           } else {
             console.log(`[PurchasePanel] Calling mintWithBDAG(${targetId}) with value ${pricePerNftWei}`)
+            
+            // Manually encode the function call to ensure data is included
+            const iface = new Interface(MINT_EDITION_ABI)
+            const callData = iface.encodeFunctionData('mintWithBDAG', [BigInt(targetId)])
+            console.log(`[PurchasePanel] Encoded call data: ${callData}`)
             
             // Try static call first to get revert reason if it would fail
             try {
@@ -287,8 +300,11 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
               throw new Error(`Contract would revert: ${reason}`)
             }
             
-            tx = await contract.mintWithBDAG(BigInt(targetId), {
+            // Send transaction with explicit data field
+            tx = await signer.sendTransaction({
+              to: CONTRACT_ADDRESS,
               value: pricePerNftWei,
+              data: callData,
               gasLimit,
             })
           }
