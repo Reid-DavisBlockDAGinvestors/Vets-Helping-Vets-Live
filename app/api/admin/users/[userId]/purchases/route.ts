@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { ethers } from 'ethers'
+import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 
 // GET - Get purchases for a specific user
 export async function GET(req: NextRequest, { params }: { params: { userId: string } }) {
@@ -180,7 +182,43 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
     }
 
     // Get unique campaigns from purchases for "interacted with" section
-    const purchasedCampaignIds = [...new Set(formattedPurchases.map(p => p.campaign_id).filter(Boolean))]
+    let purchasedCampaignIds = [...new Set(formattedPurchases.map(p => p.campaign_id).filter(Boolean))]
+    
+    // For wallet users with no purchase records, query blockchain for owned NFTs
+    let onchainNfts: { tokenId: number, campaignId: number }[] = []
+    if (isWalletId && formattedPurchases.length === 0) {
+      try {
+        console.log('[admin/users/purchases] No DB purchases, querying blockchain for wallet:', targetWallet)
+        const contractAddr = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS
+        if (contractAddr && targetWallet) {
+          const provider = getProvider()
+          const contract = new ethers.Contract(contractAddr, PatriotPledgeV5ABI, provider)
+          
+          // Get balance and enumerate owned tokens
+          const balance = await contract.balanceOf(targetWallet)
+          const balanceNum = Number(balance)
+          console.log('[admin/users/purchases] Wallet owns', balanceNum, 'NFTs on-chain')
+          
+          for (let i = 0; i < balanceNum; i++) {
+            try {
+              const tokenId = await contract.tokenOfOwnerByIndex(targetWallet, i)
+              const campaignId = await contract.tokenToCampaign(tokenId)
+              onchainNfts.push({ tokenId: Number(tokenId), campaignId: Number(campaignId) })
+            } catch (e) {
+              console.error('[admin/users/purchases] Error fetching token', i, e)
+            }
+          }
+          
+          // Add on-chain campaign IDs to the list
+          const onchainCampaignIds = [...new Set(onchainNfts.map(n => n.campaignId).filter(Boolean))]
+          purchasedCampaignIds = [...new Set([...purchasedCampaignIds, ...onchainCampaignIds])]
+          console.log('[admin/users/purchases] Found on-chain campaign IDs:', onchainCampaignIds)
+        }
+      } catch (e: any) {
+        console.error('[admin/users/purchases] Blockchain query error:', e?.message)
+      }
+    }
+    
     let purchasedCampaigns: any[] = []
     if (purchasedCampaignIds.length > 0) {
       const { data: campaigns } = await supabaseAdmin
@@ -188,17 +226,26 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
         .select('id, campaign_id, title, image_uri, status, goal, category')
         .in('campaign_id', purchasedCampaignIds)
       
-      purchasedCampaigns = (campaigns || []).map(c => ({
-        id: c.id,
-        campaign_id: c.campaign_id,
-        title: c.title,
-        image_uri: c.image_uri,
-        status: c.status,
-        goal: c.goal,
-        category: c.category,
-        purchase_count: formattedPurchases.filter(p => p.campaign_id === c.campaign_id).length,
-        total_spent: formattedPurchases.filter(p => p.campaign_id === c.campaign_id).reduce((sum, p) => sum + (p.amount_usd || 0), 0)
-      }))
+      purchasedCampaigns = (campaigns || []).map(c => {
+        // Count from DB purchases first, then fall back to on-chain count
+        const dbPurchaseCount = formattedPurchases.filter(p => p.campaign_id === c.campaign_id).length
+        const onchainCount = onchainNfts.filter(n => n.campaignId === c.campaign_id).length
+        const purchaseCount = dbPurchaseCount || onchainCount
+        const totalSpent = formattedPurchases.filter(p => p.campaign_id === c.campaign_id).reduce((sum, p) => sum + (p.amount_usd || 0), 0)
+        
+        return {
+          id: c.id,
+          campaign_id: c.campaign_id,
+          title: c.title,
+          image_uri: c.image_uri,
+          status: c.status,
+          goal: c.goal,
+          category: c.category,
+          purchase_count: purchaseCount,
+          total_spent: totalSpent,
+          source: dbPurchaseCount > 0 ? 'database' : 'blockchain'
+        }
+      })
     }
 
     console.log('[admin/users/purchases] Final response:', {
