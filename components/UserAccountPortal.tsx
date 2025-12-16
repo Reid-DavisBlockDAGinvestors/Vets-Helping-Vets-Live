@@ -360,9 +360,9 @@ export default function UserAccountPortal() {
           </button>
         )}
 
-        {/* Dropdown Menu */}
+        {/* Dropdown Menu - responsive positioning for mobile */}
         {isOpen && user && (
-          <div className="absolute right-0 mt-2 w-80 bg-gray-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+          <div className="fixed sm:absolute inset-x-4 sm:inset-x-auto sm:right-0 top-16 sm:top-auto sm:mt-2 w-auto sm:w-80 bg-gray-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
             {/* User Info */}
             <div className="p-4 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
               <div className="flex items-center gap-3">
