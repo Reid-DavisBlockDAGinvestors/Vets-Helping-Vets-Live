@@ -144,6 +144,8 @@ export function useWallet() {
   }, [updateBalance])
 
   // Connect via WalletConnect (for mobile browsers without injected wallet)
+  // Uses Ethereum mainnet for initial pairing (MetaMask recognizes it), 
+  // then we'll prompt user to add/switch to BlockDAG after connection
   const connectWalletConnect = useCallback(async () => {
     // Clear disconnected flag when user explicitly connects
     if (typeof window !== 'undefined') {
@@ -154,18 +156,21 @@ export function useWallet() {
 
     try {
       // Create WalletConnect provider
+      // IMPORTANT: Use Ethereum mainnet (1) as required chain since MetaMask
+      // doesn't recognize BlockDAG (1043) in WalletConnect pairing
       const provider = await EthereumProvider.init({
         projectId: WALLETCONNECT_PROJECT_ID,
-        chains: [BLOCKDAG_CHAIN_ID],
-        optionalChains: [1, 137], // Ethereum mainnet and Polygon as fallbacks
+        chains: [1], // Ethereum mainnet for initial pairing (MetaMask recognizes this)
+        optionalChains: [BLOCKDAG_CHAIN_ID, 137], // BlockDAG and Polygon as optional
         showQrModal: true,
         metadata: {
           name: 'PatriotPledge NFTs',
           description: 'Support veterans through blockchain-powered fundraising',
-          url: typeof window !== 'undefined' ? window.location.origin : 'https://patriotpledgenfts.com',
+          url: typeof window !== 'undefined' ? window.location.origin : 'https://patriotpledgenfts.netlify.app',
           icons: ['https://patriotpledgenfts.netlify.app/favicon.ico'],
         },
         rpcMap: {
+          1: 'https://eth.llamarpc.com', // Free Ethereum RPC for pairing
           [BLOCKDAG_CHAIN_ID]: 'https://rpc.awakening.bdagscan.com',
         },
       })
@@ -354,8 +359,8 @@ export function useWallet() {
   const hasInjectedWallet = typeof window !== 'undefined' && !!(window as any).ethereum
 
   // Smart connect - automatically chooses the best method
-  // For mobile: Opens MetaMask app directly via deep link (most reliable)
-  // For desktop with wallet: Uses injected provider
+  // For desktop/mobile with wallet: Uses injected provider
+  // For mobile without wallet: Uses WalletConnect (stays in browser)
   // For desktop without wallet: Shows error with instructions
   const connectAuto = useCallback(async () => {
     // If we have an injected wallet (MetaMask extension or in-app browser), use it
@@ -363,20 +368,9 @@ export function useWallet() {
       return connect()
     }
     
-    // On mobile without injected wallet, open MetaMask app directly
-    // This is more reliable than WalletConnect's deep linking
+    // On mobile without injected wallet, use WalletConnect to stay in browser
     if (isMobile) {
-      // Set a brief connecting state to give feedback
-      setState(prev => ({ ...prev, isConnecting: true, error: null }))
-      
-      // Open MetaMask's in-app browser with our dApp
-      openInMetaMaskBrowser()
-      
-      // Reset connecting state after a short delay (user will be redirected)
-      setTimeout(() => {
-        setState(prev => ({ ...prev, isConnecting: false }))
-      }, 2000)
-      return
+      return connectWalletConnect()
     }
     
     // On desktop without wallet, show error suggesting MetaMask installation
@@ -384,7 +378,7 @@ export function useWallet() {
       ...prev, 
       error: 'No wallet detected. Please install MetaMask or use WalletConnect.' 
     }))
-  }, [hasInjectedWallet, isMobile, connect])
+  }, [hasInjectedWallet, isMobile, connect, connectWalletConnect])
 
   return {
     ...state,
