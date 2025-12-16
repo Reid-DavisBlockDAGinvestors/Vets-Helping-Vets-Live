@@ -360,7 +360,7 @@ export function useWallet() {
 
   // Smart connect - automatically chooses the best method
   // For desktop/mobile with wallet: Uses injected provider
-  // For mobile without wallet: Uses WalletConnect (stays in browser)
+  // For mobile without wallet: Opens MetaMask app directly
   // For desktop without wallet: Shows error with instructions
   const connectAuto = useCallback(async () => {
     // If we have an injected wallet (MetaMask extension or in-app browser), use it
@@ -368,17 +368,18 @@ export function useWallet() {
       return connect()
     }
     
-    // On mobile without injected wallet, use WalletConnect to stay in browser
+    // On mobile without injected wallet, open in MetaMask's browser
     if (isMobile) {
-      return connectWalletConnect()
+      openInMetaMaskBrowser()
+      return
     }
     
     // On desktop without wallet, show error suggesting MetaMask installation
     setState(prev => ({ 
       ...prev, 
-      error: 'No wallet detected. Please install MetaMask or use WalletConnect.' 
+      error: 'No wallet detected. Please install MetaMask.' 
     }))
-  }, [hasInjectedWallet, isMobile, connect, connectWalletConnect])
+  }, [hasInjectedWallet, isMobile, connect])
 
   return {
     ...state,
