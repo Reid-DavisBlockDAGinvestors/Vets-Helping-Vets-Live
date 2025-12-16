@@ -31,10 +31,14 @@ const WALLETCONNECT_PROJECT_ID = 'a86a6a0afc0849fdb0832b5ec288b5a2'
 const DISCONNECTED_KEY = 'wallet_user_disconnected'
 
 // MetaMask deep link helper - opens the current page in MetaMask's browser
+// Uses native URL scheme which is more reliable than universal links
 const openInMetaMaskBrowser = () => {
   if (typeof window === 'undefined') return
   const dappUrl = window.location.href.replace(/^https?:\/\//, '')
-  window.location.href = `https://metamask.app.link/dapp/${dappUrl}`
+  
+  // Try native URL scheme first (more reliable when MetaMask is installed)
+  // Format: metamask://dapp/domain.com/path
+  window.location.href = `metamask://dapp/${dappUrl}`
 }
 
 export function useWallet() {
