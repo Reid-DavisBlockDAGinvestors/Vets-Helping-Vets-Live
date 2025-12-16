@@ -335,7 +335,7 @@ export default function UserAccountPortal() {
             </div>
             <div className="hidden sm:block text-left">
               <div className="text-sm font-medium text-white truncate max-w-[120px]">
-                {profile?.email?.split('@')[0] || 'Account'}
+                {communityProfile?.display_name || user?.email?.split('@')[0] || 'Account'}
               </div>
               {profile?.role && profile.role !== 'user' && (
                 <div className={`text-xs ${getRoleBadge(profile.role).text}`}>
