@@ -384,14 +384,8 @@ export default function GovernancePage() {
                             <div>
                               {!isConnected ? (
                                 <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-center">
-                                  <p className="text-sm text-amber-300 mb-2">Connect your wallet to vote</p>
-                                  <button 
-                                    onClick={connect}
-                                    disabled={isConnecting}
-                                    className="px-4 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 text-sm font-medium hover:bg-amber-500/30"
-                                  >
-                                    {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-                                  </button>
+                                  <p className="text-sm text-amber-300">🔐 Connect your wallet to vote</p>
+                                  <p className="text-xs text-white/50 mt-1">Use the Connect Wallet button in the header</p>
                                 </div>
                               ) : (
                                 <div className="flex gap-2">
