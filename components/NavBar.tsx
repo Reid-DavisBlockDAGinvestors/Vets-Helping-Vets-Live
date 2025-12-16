@@ -36,9 +36,11 @@ export default function NavBar() {
     connect,
     connectAuto,
     connectWalletConnect,
+    openInMetaMaskBrowser,
     disconnect, 
     switchToBlockDAG,
-    hasInjectedWallet
+    hasInjectedWallet,
+    isMobile
   } = useWallet()
 
   // Track client-side mounting for portal
@@ -90,12 +92,7 @@ export default function NavBar() {
     await connectAuto()
   }
 
-  const openInMetaMaskBrowser = () => {
-    const dappUrl = window.location.href
-    const metamaskDeepLink = `https://metamask.app.link/dapp/${dappUrl.replace(/^https?:\/\//, '')}`
-    window.location.href = metamaskDeepLink
-  }
-
+  
   const formatBalance = (bal: string | null) => {
     if (!bal) return '0.00'
     const num = parseFloat(bal)

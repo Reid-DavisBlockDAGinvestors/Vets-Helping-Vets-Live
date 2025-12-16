@@ -30,6 +30,13 @@ const BLOCKDAG_CHAIN_CONFIG = {
 const WALLETCONNECT_PROJECT_ID = 'a86a6a0afc0849fdb0832b5ec288b5a2'
 const DISCONNECTED_KEY = 'wallet_user_disconnected'
 
+// MetaMask deep link helper - opens the current page in MetaMask's browser
+const openInMetaMaskBrowser = () => {
+  if (typeof window === 'undefined') return
+  const dappUrl = window.location.href.replace(/^https?:\/\//, '')
+  window.location.href = `https://metamask.app.link/dapp/${dappUrl}`
+}
+
 export function useWallet() {
   const [state, setState] = useState<WalletState>({
     address: null,
@@ -347,15 +354,29 @@ export function useWallet() {
   const hasInjectedWallet = typeof window !== 'undefined' && !!(window as any).ethereum
 
   // Smart connect - automatically chooses the best method
+  // For mobile: Opens MetaMask app directly via deep link (most reliable)
+  // For desktop with wallet: Uses injected provider
+  // For desktop without wallet: Shows error with instructions
   const connectAuto = useCallback(async () => {
     // If we have an injected wallet (MetaMask extension or in-app browser), use it
     if (hasInjectedWallet) {
       return connect()
     }
     
-    // On mobile without injected wallet, use WalletConnect
+    // On mobile without injected wallet, open MetaMask app directly
+    // This is more reliable than WalletConnect's deep linking
     if (isMobile) {
-      return connectWalletConnect()
+      // Set a brief connecting state to give feedback
+      setState(prev => ({ ...prev, isConnecting: true, error: null }))
+      
+      // Open MetaMask's in-app browser with our dApp
+      openInMetaMaskBrowser()
+      
+      // Reset connecting state after a short delay (user will be redirected)
+      setTimeout(() => {
+        setState(prev => ({ ...prev, isConnecting: false }))
+      }, 2000)
+      return
     }
     
     // On desktop without wallet, show error suggesting MetaMask installation
@@ -363,7 +384,7 @@ export function useWallet() {
       ...prev, 
       error: 'No wallet detected. Please install MetaMask or use WalletConnect.' 
     }))
-  }, [hasInjectedWallet, isMobile, connect, connectWalletConnect])
+  }, [hasInjectedWallet, isMobile, connect])
 
   return {
     ...state,
@@ -373,6 +394,7 @@ export function useWallet() {
     connect,
     connectAuto, // Smart connect that handles mobile automatically
     connectWalletConnect,
+    openInMetaMaskBrowser, // Direct deep link to MetaMask app
     disconnect,
     switchToBlockDAG,
     updateBalance: () => state.address && updateBalance(state.address),
