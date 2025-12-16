@@ -28,6 +28,8 @@ export async function GET(req: NextRequest) {
         profile: {
           user_id: userData.user.id,
           display_name: userData.user.email?.split('@')[0] || 'User',
+          first_name: null,
+          last_name: null,
           bio: null,
           avatar_url: null,
           cover_url: null,
@@ -62,7 +64,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { display_name, bio, avatar_url, cover_url, website_url, twitter_handle } = body
+    const { display_name, first_name, last_name, bio, avatar_url, cover_url, website_url, twitter_handle } = body
 
     // Upsert profile
     const { data: profile, error: upsertErr } = await supabaseAdmin
@@ -70,6 +72,8 @@ export async function POST(req: NextRequest) {
       .upsert({
         user_id: userData.user.id,
         display_name: display_name || userData.user.email?.split('@')[0] || 'User',
+        first_name: first_name || null,
+        last_name: last_name || null,
         bio: bio || null,
         avatar_url: avatar_url || null,
         cover_url: cover_url || null,

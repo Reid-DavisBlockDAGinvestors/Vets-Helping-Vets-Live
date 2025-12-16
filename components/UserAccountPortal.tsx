@@ -19,6 +19,8 @@ interface UserProfile {
 
 interface CommunityProfile {
   display_name: string
+  first_name: string | null
+  last_name: string | null
   bio: string | null
   avatar_url: string | null
   cover_url: string | null
@@ -45,6 +47,8 @@ export default function UserAccountPortal() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [communityProfile, setCommunityProfile] = useState<CommunityProfile | null>(null)
   const [editDisplayName, setEditDisplayName] = useState('')
+  const [editFirstName, setEditFirstName] = useState('')
+  const [editLastName, setEditLastName] = useState('')
   const [editBio, setEditBio] = useState('')
   const [editTwitter, setEditTwitter] = useState('')
   const [editWebsite, setEditWebsite] = useState('')
@@ -166,6 +170,8 @@ export default function UserAccountPortal() {
         },
         body: JSON.stringify({
           display_name: editDisplayName,
+          first_name: editFirstName,
+          last_name: editLastName,
           bio: editBio,
           twitter_handle: editTwitter,
           website_url: editWebsite,
@@ -191,6 +197,8 @@ export default function UserAccountPortal() {
 
   const openProfileEditor = () => {
     setEditDisplayName(communityProfile?.display_name || user?.email?.split('@')[0] || '')
+    setEditFirstName(communityProfile?.first_name || '')
+    setEditLastName(communityProfile?.last_name || '')
     setEditBio(communityProfile?.bio || '')
     setEditTwitter(communityProfile?.twitter_handle || '')
     setEditWebsite(communityProfile?.website_url || '')
@@ -641,6 +649,30 @@ export default function UserAccountPortal() {
             </div>
 
             <div className="space-y-4">
+              {/* First and Last Name */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-white/70 mb-1">First Name</label>
+                  <input
+                    type="text"
+                    value={editFirstName}
+                    onChange={e => setEditFirstName(e.target.value)}
+                    placeholder="First name"
+                    className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/70 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    value={editLastName}
+                    onChange={e => setEditLastName(e.target.value)}
+                    placeholder="Last name"
+                    className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm text-white/70 mb-1">Display Name</label>
                 <input
@@ -650,6 +682,7 @@ export default function UserAccountPortal() {
                   placeholder="Your display name"
                   className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
                 />
+                <p className="text-xs text-white/40 mt-1">This is shown publicly in comments and community</p>
               </div>
 
               <div>
@@ -697,6 +730,32 @@ export default function UserAccountPortal() {
                   {profileMessage}
                 </div>
               )}
+
+              {/* Reset Password */}
+              <div className="pt-2 border-t border-white/10">
+                <button
+                  onClick={async () => {
+                    if (!user?.email) return
+                    setLoading(true)
+                    setProfileMessage('')
+                    try {
+                      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+                        redirectTo: `${window.location.origin}/reset-password`
+                      })
+                      if (error) throw error
+                      setProfileMessage('✅ Password reset link sent to your email!')
+                    } catch (e: any) {
+                      setProfileMessage(`❌ ${e?.message || 'Failed to send reset link'}`)
+                    } finally {
+                      setLoading(false)
+                    }
+                  }}
+                  disabled={loading}
+                  className="w-full px-4 py-2 text-amber-400 hover:text-amber-300 text-sm font-medium transition-colors text-left flex items-center gap-2"
+                >
+                  🔑 Reset Password
+                </button>
+              </div>
 
               <div className="flex gap-3 pt-2">
                 <button
