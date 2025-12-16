@@ -16,6 +16,10 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false)
   const [summary, setSummary] = useState<any>(null)
   const [showMilestoneModal, setShowMilestoneModal] = useState(false)
+  const [showPurchasesModal, setShowPurchasesModal] = useState(false)
+  const [purchases, setPurchases] = useState<any[]>([])
+  const [purchasesLoading, setPurchasesLoading] = useState(false)
+  const [purchasesSummary, setPurchasesSummary] = useState<any>(null)
   const [authMsg, setAuthMsg] = useState('')
   const [mktContracts, setMktContracts] = useState<any[]>([])
   const [mktMsg, setMktMsg] = useState('')
@@ -101,6 +105,35 @@ export default function AdminPage() {
     setAuthed(false)
     setEmail('')
     setPassword('')
+  }
+
+  // Load all purchases for modal
+  const loadPurchases = async () => {
+    setPurchasesLoading(true)
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) return
+
+      const res = await fetch('/api/admin/purchases?limit=500', {
+        headers: { authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setPurchases(data?.purchases || [])
+        setPurchasesSummary(data?.summary || null)
+      }
+    } catch (e) {
+      console.error('Failed to load purchases:', e)
+    } finally {
+      setPurchasesLoading(false)
+    }
+  }
+
+  // Open purchases modal
+  const openPurchasesModal = () => {
+    setShowPurchasesModal(true)
+    loadPurchases()
   }
 
   // Submit admin access request
@@ -378,12 +411,15 @@ export default function AdminPage() {
             </div>
             <div className="text-xs md:text-sm text-green-400/70 mt-1">Total Raised</div>
           </div>
-          <div className="rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/10 border border-blue-500/20 p-3 md:p-5">
+          <button
+            onClick={openPurchasesModal}
+            className="rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/10 border border-blue-500/20 p-3 md:p-5 text-left hover:border-blue-500/40 transition-colors cursor-pointer"
+          >
             <div className="text-xl md:text-3xl font-bold text-blue-400">
               {summary?.purchases?.toLocaleString?.() || 0}
             </div>
-            <div className="text-xs md:text-sm text-blue-400/70 mt-1">Purchases</div>
-          </div>
+            <div className="text-xs md:text-sm text-blue-400/70 mt-1">Purchases <span className="hidden sm:inline text-blue-400/50">→ Click</span></div>
+          </button>
           <div className="rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/20 p-3 md:p-5">
             <div className="text-xl md:text-3xl font-bold text-purple-400">
               {summary?.mints?.toLocaleString?.() || 0}
@@ -771,6 +807,138 @@ export default function AdminPage() {
             <div className="p-4 border-t border-white/10 bg-white/5">
               <button
                 onClick={() => setShowMilestoneModal(false)}
+                className="w-full py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Purchases Modal */}
+      {showPurchasesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white">💳 All Purchases</h2>
+                <p className="text-white/50 text-sm mt-1">
+                  {purchases.length} purchases · ${purchasesSummary?.totalAmountUSD?.toLocaleString() || 0} total
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPurchasesModal(false)}
+                className="text-white/50 hover:text-white p-2 rounded-lg hover:bg-white/10"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Summary Stats */}
+            {purchasesSummary && (
+              <div className="px-6 py-4 border-b border-white/10 bg-white/5">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                  <div>
+                    <div className="text-lg font-bold text-green-400">${purchasesSummary.totalAmountUSD?.toLocaleString() || 0}</div>
+                    <div className="text-xs text-white/50">Total Revenue</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-blue-400">${purchasesSummary.totalTipsUSD?.toLocaleString() || 0}</div>
+                    <div className="text-xs text-white/50">Total Tips</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-purple-400">{purchasesSummary.totalBDAG?.toLocaleString() || 0}</div>
+                    <div className="text-xs text-white/50">BDAG Collected</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-orange-400">${purchasesSummary.averageUSD?.toLocaleString() || 0}</div>
+                    <div className="text-xs text-white/50">Avg Purchase</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="p-6 overflow-y-auto max-h-[55vh]">
+              {purchasesLoading ? (
+                <div className="text-center text-white/50 py-8">
+                  <div className="animate-spin inline-block w-6 h-6 border-2 border-white/20 border-t-blue-400 rounded-full mb-2"></div>
+                  <div>Loading purchases...</div>
+                </div>
+              ) : purchases.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10 text-white/50">
+                        <th className="text-left p-3">Date</th>
+                        <th className="text-left p-3">Campaign</th>
+                        <th className="text-left p-3">Buyer</th>
+                        <th className="text-right p-3">Amount</th>
+                        <th className="text-right p-3">Tip</th>
+                        <th className="text-center p-3">Qty</th>
+                        <th className="text-left p-3">Tx</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {purchases.map((p: any, i: number) => (
+                        <tr key={p.id || i} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="p-3 text-white/70">
+                            {new Date(p.created_at).toLocaleDateString()}
+                            <div className="text-xs text-white/40">
+                              {new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="text-white font-medium truncate max-w-[180px]" title={p.campaign_title}>
+                              {p.campaign_title || `#${p.campaign_id}`}
+                            </div>
+                            <div className="text-xs text-white/40">ID: {p.campaign_id}</div>
+                          </td>
+                          <td className="p-3">
+                            <div className="text-white/70 truncate max-w-[150px]" title={p.email || p.wallet_address}>
+                              {p.email || (p.wallet_address ? `${p.wallet_address.slice(0,6)}...${p.wallet_address.slice(-4)}` : 'Unknown')}
+                            </div>
+                          </td>
+                          <td className="p-3 text-right">
+                            <div className="text-green-400 font-medium">${(p.amount_usd || 0).toFixed(2)}</div>
+                            <div className="text-xs text-white/40">{(p.amount_bdag || 0).toFixed(2)} BDAG</div>
+                          </td>
+                          <td className="p-3 text-right">
+                            {p.tip_usd > 0 ? (
+                              <div className="text-blue-400">${(p.tip_usd || 0).toFixed(2)}</div>
+                            ) : (
+                              <span className="text-white/30">-</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-center text-white/70">{p.quantity || 1}</td>
+                          <td className="p-3">
+                            {p.tx_hash ? (
+                              <a
+                                href={`https://awakening.bdagscan.com/tx/${p.tx_hash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-400 hover:text-blue-300 text-xs"
+                              >
+                                {p.tx_hash.slice(0,8)}...
+                              </a>
+                            ) : (
+                              <span className="text-white/30">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center text-white/50 py-8">
+                  No purchases recorded yet
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-white/10 bg-white/5">
+              <button
+                onClick={() => setShowPurchasesModal(false)}
                 className="w-full py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium"
               >
                 Close
