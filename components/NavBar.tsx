@@ -83,12 +83,19 @@ export default function NavBar() {
   }, [mobileMenuOpen])
 
   const handleConnect = async () => {
+    // On mobile without injected wallet, directly open MetaMask app
+    if (isMobile && !hasInjectedWallet) {
+      openInMetaMaskBrowser()
+      return
+    }
+    
+    // On desktop without wallet, show options modal
     if (!hasInjectedWallet) {
-      // No wallet found - show options modal with WalletConnect option
       setWalletModalOpen(true)
       return
     }
     
+    // Has injected wallet, connect normally
     await connectAuto()
   }
 
