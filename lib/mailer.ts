@@ -575,3 +575,47 @@ export async function sendProposalSubmitted(data: ProposalSubmittedData) {
     html: wrapEmail(content)
   })
 }
+
+// Password reset email
+export type PasswordResetData = {
+  email: string
+  resetLink: string
+  displayName?: string
+}
+
+export async function sendPasswordResetEmail(data: PasswordResetData) {
+  const content = `
+    <h1 style="color: #fff; font-size: 24px; margin: 0 0 20px 0;">🔑 Password Reset Request</h1>
+    
+    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6;">
+      ${data.displayName ? `Hi ${data.displayName},` : 'Hello,'}
+    </p>
+    
+    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6;">
+      We received a request to reset your password for your PatriotPledge NFTs account.
+    </p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${data.resetLink}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: #fff; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 16px;">
+        Click Here to Reset Your Password
+      </a>
+    </div>
+    
+    <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0;">
+      <p style="color: #fbbf24; font-size: 14px; margin: 0;">
+        ⚠️ This link will expire in 1 hour. If you didn't request this reset, you can safely ignore this email.
+      </p>
+    </div>
+    
+    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">
+      If the button above doesn't work, copy and paste this link into your browser:
+    </p>
+    <code style="display: block; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; color: #3b82f6; font-size: 12px; word-break: break-all; margin-bottom: 20px;">${data.resetLink}</code>
+  `
+  
+  return sendEmail({
+    to: data.email,
+    subject: '🔑 Reset Your PatriotPledge Password',
+    html: wrapEmail(content)
+  })
+}

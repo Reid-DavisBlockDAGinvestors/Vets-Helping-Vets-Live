@@ -739,11 +739,20 @@ export default function UserAccountPortal() {
                     setLoading(true)
                     setProfileMessage('')
                     try {
-                      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-                        redirectTo: `${window.location.origin}/reset-password`
+                      const { data: { session } } = await supabase.auth.getSession()
+                      if (!session?.access_token) throw new Error('Not authenticated')
+                      
+                      const res = await fetch('/api/auth/reset-password', {
+                        method: 'POST',
+                        headers: { authorization: `Bearer ${session.access_token}` }
                       })
-                      if (error) throw error
-                      setProfileMessage('✅ Password reset link sent to your email!')
+                      
+                      if (!res.ok) {
+                        const err = await res.json()
+                        throw new Error(err?.message || 'Failed to send reset link')
+                      }
+                      
+                      setProfileMessage('✅ Password reset link sent to your email! Click the link to reset your password.')
                     } catch (e: any) {
                       setProfileMessage(`❌ ${e?.message || 'Failed to send reset link'}`)
                     } finally {
