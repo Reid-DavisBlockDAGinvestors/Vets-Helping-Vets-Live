@@ -792,8 +792,26 @@ export default function AdminPage() {
                           {new Date(m.created_at).toLocaleDateString()}
                         </div>
                       </div>
-                      <div className="text-sm text-orange-400 mt-1">
-                        Submission ID: {m.submission_id}
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="text-sm text-orange-400">
+                          Submission ID: {m.submission_id}
+                        </div>
+                        <button
+                          onClick={() => {
+                            setShowMilestoneModal(false)
+                            // Find and expand this campaign in the list
+                            const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement
+                            if (searchInput && m.submission_id) {
+                              searchInput.value = m.submission_id
+                              searchInput.dispatchEvent(new Event('input', { bubbles: true }))
+                            }
+                            // Scroll to top of campaign hub
+                            window.scrollTo({ top: 400, behavior: 'smooth' })
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors flex items-center gap-1"
+                        >
+                          📋 View Campaign
+                        </button>
                       </div>
                     </div>
                   ))}
