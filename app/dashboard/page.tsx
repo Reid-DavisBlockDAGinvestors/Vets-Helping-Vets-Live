@@ -46,7 +46,7 @@ type CreatedCampaign = {
 }
 
 export default function DashboardPage() {
-  const { address, isConnected, connect, balance, isOnBlockDAG } = useWallet()
+  const { address, isConnected, connectAuto, balance, isOnBlockDAG } = useWallet()
   const [summary, setSummary] = useState<any>(null)
   const [ownedNfts, setOwnedNfts] = useState<OwnedNFT[]>([])
   const [createdCampaigns, setCreatedCampaigns] = useState<CreatedCampaign[]>([])
@@ -140,7 +140,7 @@ export default function DashboardPage() {
         
         {!isConnected ? (
           <button
-            onClick={connect}
+            onClick={connectAuto}
             className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-500/20"
           >
             Connect Wallet

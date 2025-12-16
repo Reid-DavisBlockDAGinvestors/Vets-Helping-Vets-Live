@@ -33,10 +33,12 @@ export default function NavBar() {
     isOnBlockDAG, 
     balance,
     error,
-    connect, 
+    connect,
+    connectAuto,
     connectWalletConnect,
     disconnect, 
-    switchToBlockDAG 
+    switchToBlockDAG,
+    hasInjectedWallet
   } = useWallet()
 
   // Track client-side mounting for portal
@@ -79,15 +81,13 @@ export default function NavBar() {
   }, [mobileMenuOpen])
 
   const handleConnect = async () => {
-    const hasWallet = typeof window !== 'undefined' && (window as any).ethereum
-    
-    if (!hasWallet) {
-      // No wallet found - show options modal
+    if (!hasInjectedWallet) {
+      // No wallet found - show options modal with WalletConnect option
       setWalletModalOpen(true)
       return
     }
     
-    await connect()
+    await connectAuto()
   }
 
   const openInMetaMaskBrowser = () => {
@@ -328,7 +328,7 @@ export default function NavBar() {
         {!isConnected && (
           <div className="mx-4 mt-4 pb-4">
             <button
-              onClick={() => { handleConnect(); setMobileMenuOpen(false); }}
+              onClick={() => { connectAuto(); setMobileMenuOpen(false); }}
               disabled={isConnecting}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-patriotic-red hover:bg-red-600 text-white rounded-xl text-base font-medium transition-all"
             >

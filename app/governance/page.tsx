@@ -32,7 +32,7 @@ const CATEGORIES = [
 ]
 
 export default function GovernancePage() {
-  const { address, isConnected, connect, isConnecting } = useWallet()
+  const { address, isConnected, connectAuto, isConnecting } = useWallet()
   const [list, setList] = useState<Proposal[]>([])
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
@@ -194,7 +194,7 @@ export default function GovernancePage() {
                   <h3 className="font-semibold text-amber-300 mb-2">Connect Your Wallet</h3>
                   <p className="text-sm text-white/60 mb-4">You must connect your wallet to submit proposals or vote. This helps us verify your platform participation.</p>
                   <button 
-                    onClick={connect}
+                    onClick={connectAuto}
                     disabled={isConnecting}
                     className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium hover:from-amber-400 hover:to-orange-400 disabled:opacity-50"
                   >

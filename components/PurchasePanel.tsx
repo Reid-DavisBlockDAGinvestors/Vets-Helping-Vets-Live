@@ -735,7 +735,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
               <div className="space-y-3">
                 <p className="text-sm text-white/70">Connect your wallet to pay with BDAG directly on-chain</p>
                 <button
-                  onClick={wallet.connect}
+                  onClick={wallet.connectAuto}
                   disabled={wallet.isConnecting}
                   className="w-full rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 px-6 py-4 font-semibold text-white shadow-lg shadow-orange-900/30 transition-all disabled:opacity-50"
                 >
@@ -745,7 +745,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
                       Connecting...
                     </span>
                   ) : (
-                    '🦊 Connect Wallet'
+                    '🔗 Connect Wallet'
                   )}
                 </button>
                 {wallet.error && (

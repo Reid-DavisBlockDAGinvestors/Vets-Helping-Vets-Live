@@ -340,10 +340,38 @@ export function useWallet() {
 
   const isOnBlockDAG = state.chainId === BLOCKDAG_CHAIN_ID
 
+  // Detect if we're on mobile
+  const isMobile = typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  
+  // Check if injected wallet is available
+  const hasInjectedWallet = typeof window !== 'undefined' && !!(window as any).ethereum
+
+  // Smart connect - automatically chooses the best method
+  const connectAuto = useCallback(async () => {
+    // If we have an injected wallet (MetaMask extension or in-app browser), use it
+    if (hasInjectedWallet) {
+      return connect()
+    }
+    
+    // On mobile without injected wallet, use WalletConnect
+    if (isMobile) {
+      return connectWalletConnect()
+    }
+    
+    // On desktop without wallet, show error suggesting MetaMask installation
+    setState(prev => ({ 
+      ...prev, 
+      error: 'No wallet detected. Please install MetaMask or use WalletConnect.' 
+    }))
+  }, [hasInjectedWallet, isMobile, connect, connectWalletConnect])
+
   return {
     ...state,
     isOnBlockDAG,
+    isMobile,
+    hasInjectedWallet,
     connect,
+    connectAuto, // Smart connect that handles mobile automatically
     connectWalletConnect,
     disconnect,
     switchToBlockDAG,
