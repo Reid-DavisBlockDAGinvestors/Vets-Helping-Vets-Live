@@ -326,7 +326,7 @@ export default async function HomePage() {
                     </div>
                     <div className="flex justify-between items-center py-1 border-b border-white/10">
                       <span className="text-white/50">RPC URL:</span>
-                      <span className="text-green-400 text-xs">https://rpc.primordial.bdagscan.com</span>
+                      <span className="text-green-400 text-xs">https://rpc.awakening.bdagscan.com</span>
                     </div>
                     <div className="flex justify-between items-center py-1 border-b border-white/10">
                       <span className="text-white/50">Chain ID:</span>

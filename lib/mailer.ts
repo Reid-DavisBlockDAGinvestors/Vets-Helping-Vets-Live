@@ -167,7 +167,7 @@ export async function sendPurchaseReceipt(data: PurchaseReceiptData) {
           <ul style="margin: 5px 0 10px 0; padding-left: 15px;">
             <li>Open MetaMask → Click network dropdown → "Add Network"</li>
             <li>Network Name: <code style="color: #a855f7;">BlockDAG</code></li>
-            <li>RPC URL: <code style="color: #a855f7;">https://rpc.primordial.bdagscan.com</code></li>
+            <li>RPC URL: <code style="color: #a855f7;">https://rpc.awakening.bdagscan.com</code></li>
             <li>Chain ID: <code style="color: #a855f7;">1043</code></li>
             <li>Symbol: <code style="color: #a855f7;">BDAG</code></li>
             <li>Explorer: <code style="color: #a855f7;">https://awakening.bdagscan.com</code></li>
