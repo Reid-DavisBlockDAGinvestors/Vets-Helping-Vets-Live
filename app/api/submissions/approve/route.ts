@@ -209,17 +209,57 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await createCampaignFast()
-    campaignId = result.campaignId // This is just a prediction, will be verified later
+    campaignId = result.campaignId // This is just a prediction, will be verified
     txHash = result.hash
 
-    // Update submission with PENDING status - campaign ID will be confirmed by background verification
-    // We store the predicted ID but mark status as pending_onchain until verified
+    // Try to verify the campaign was created correctly (quick check)
+    // This helps avoid the "Fix Campaign" step in most cases
+    let verifiedCampaignId = campaignId
+    let finalStatus = 'pending_onchain'
+    
+    try {
+      // Wait a moment for the tx to propagate
+      await new Promise(r => setTimeout(r, 2000))
+      
+      // Check if the predicted campaign ID has our metadata URI
+      const verifyContract = getContract(signer)
+      const camp = await verifyContract.getCampaign(BigInt(campaignId))
+      const onChainUri = camp.baseURI ?? camp[1]
+      
+      if (onChainUri === uri) {
+        // Predicted ID is correct!
+        console.log(`[approve] Verified campaign ${campaignId} matches metadata URI`)
+        finalStatus = 'minted'
+        verifiedCampaignId = campaignId
+      } else {
+        // Predicted ID doesn't match - search for correct one
+        console.log(`[approve] Predicted ID ${campaignId} has different URI, searching...`)
+        const total = Number(await verifyContract.totalCampaigns())
+        
+        for (let i = Math.max(0, campaignId - 5); i < total; i++) {
+          try {
+            const c = await verifyContract.getCampaign(BigInt(i))
+            if ((c.baseURI ?? c[1]) === uri) {
+              verifiedCampaignId = i
+              finalStatus = 'minted'
+              console.log(`[approve] Found correct campaign ID: ${i}`)
+              break
+            }
+          } catch { continue }
+        }
+      }
+    } catch (verifyErr: any) {
+      console.log(`[approve] Quick verification failed (tx may still be pending): ${verifyErr?.message}`)
+      // Keep pending_onchain status - user can verify later
+    }
+
+    // Update submission with verified or pending status
     const contractAddress = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || null
     const { error: updateError } = await supabaseAdmin
       .from('submissions')
       .update({ 
-        status: 'pending_onchain', // NEW: Pending until tx is verified on-chain
-        campaign_id: campaignId,   // Predicted ID - will be verified/corrected
+        status: finalStatus,
+        campaign_id: verifiedCampaignId,
         tx_hash: txHash, 
         contract_address: contractAddress, 
         visible_on_marketplace: true,
@@ -232,15 +272,15 @@ export async function POST(req: NextRequest) {
     if (updateError) {
       console.error('[approve] Failed to update submission:', updateError)
     } else {
-      console.log(`[approve] Submission ${id} updated: campaign_id=${campaignId} (predicted), status=pending_onchain, tx=${txHash}`)
+      console.log(`[approve] Submission ${id} updated: campaign_id=${verifiedCampaignId}, status=${finalStatus}, tx=${txHash}`)
     }
     
-    // Send campaign approved email - note that campaign is pending verification
+    // Send campaign approved email
     try {
       await sendCampaignApproved({
         email: sub.creator_email,
         title: sub.title || 'Your Campaign',
-        campaignId: campaignId,
+        campaignId: verifiedCampaignId,
         creatorName: sub.creator_name,
         imageUrl: toHttpUrl(sub.image_uri) || undefined,
         txHash: txHash || undefined
@@ -250,12 +290,16 @@ export async function POST(req: NextRequest) {
       console.error('[approve] Failed to send campaign approved email:', emailErr)
     }
 
+    const message = finalStatus === 'minted'
+      ? `Campaign created and verified! Campaign ID: ${verifiedCampaignId}. Now live on marketplace.`
+      : 'Campaign transaction submitted. Awaiting blockchain confirmation. Use "Verify" button to check status.'
+
     return NextResponse.json({
       ok: true,
       txHash,
-      campaignId: campaignId != null ? campaignId : undefined,
-      status: 'pending_onchain',
-      message: 'Campaign transaction submitted. Awaiting blockchain confirmation. Use "Verify" button to check status.'
+      campaignId: verifiedCampaignId,
+      status: finalStatus,
+      message
     })
   } catch (e:any) {
     console.error('[approve] Error:', e?.message || String(e))

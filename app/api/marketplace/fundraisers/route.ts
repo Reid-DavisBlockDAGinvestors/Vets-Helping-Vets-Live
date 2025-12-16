@@ -81,8 +81,11 @@ export async function GET(req: NextRequest) {
       }
     }
     
-    // Filter by status='minted' in code
-    const mintedSubs = (allSubs || []).filter((s: any) => s.status === 'minted')
+    // Filter by status='minted' or 'pending_onchain' in code
+    // pending_onchain = tx submitted but not yet confirmed (still valid for marketplace)
+    const mintedSubs = (allSubs || []).filter((s: any) => 
+      s.status === 'minted' || s.status === 'pending_onchain'
+    )
     
     console.log(`[fundraisers] Total submissions: ${allSubs?.length || 0}, minted: ${mintedSubs.length}`)
     console.log('[fundraisers] Minted subs:', JSON.stringify(mintedSubs.map((s: any) => ({
