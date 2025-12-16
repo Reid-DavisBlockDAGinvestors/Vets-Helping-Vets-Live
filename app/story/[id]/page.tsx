@@ -119,8 +119,9 @@ export default async function StoryViewer({ params }: { params: { id: string } }
   const benchmarks: string[] = Array.isArray(submission?.benchmarks) ? submission.benchmarks : []
   
   // Check if campaign is pending blockchain confirmation
-  // Either status is 'pending_onchain' (new flow) or 'approved' without on-chain data (legacy)
-  const isPendingOnchain = submission?.status === 'pending_onchain' || (submission?.status === 'approved' && !onchain)
+  // Only block purchases if we can't load on-chain data
+  // If on-chain data loads successfully, campaign is ready regardless of Supabase status
+  const isPendingOnchain = !onchain && (submission?.status === 'pending_onchain' || submission?.status === 'approved')
   
   // V5 Edition NFT pricing info
   // Price per NFT = Goal ÷ Number of NFTs in the series
