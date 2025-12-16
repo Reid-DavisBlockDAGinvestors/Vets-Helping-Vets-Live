@@ -381,11 +381,17 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
       })
       const data = await res.json().catch(()=>({}))
       if (!res.ok || !data?.uri) {
-        return { uri: null, imageUri: null, backend: null, error: data?.error || 'Preview upload failed' }
+        // Use friendly message from API if available
+        const errorMsg = data?.message || data?.error || 'Preview upload failed'
+        return { uri: null, imageUri: null, backend: null, error: errorMsg }
       }
       return { uri: data.uri, imageUri: data?.imageUri || null, backend: data?.backend || null }
     } catch (e:any) {
-      return { uri: null, imageUri: null, backend: null, error: e?.message || 'Preview upload failed' }
+      // Network error - likely mobile connection issue
+      const errorMsg = e?.message?.includes('fetch') 
+        ? 'Network error. Please check your connection and try again.' 
+        : (e?.message || 'Preview upload failed')
+      return { uri: null, imageUri: null, backend: null, error: errorMsg }
     }
   }
 
@@ -480,7 +486,7 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
       const token = session?.access_token
       
       if (!token) {
-        showMsg('Please log in to submit your campaign. Create an account if you don\'t have one.', 'error')
+        showMsg('⚠️ Account required: Please click the profile icon in the top right to log in or create an account before submitting.', 'error')
         setIsSubmitting(false)
         return
       }

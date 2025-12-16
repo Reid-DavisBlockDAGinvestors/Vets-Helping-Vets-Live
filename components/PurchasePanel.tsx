@@ -153,7 +153,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
     // Require login for NFT purchases to ensure we have email for receipt
     if (!isLoggedIn || !userEmail) {
       console.log(`[PurchasePanel] BLOCKED: Not logged in`)
-      setCryptoMsg('Please log in to purchase NFTs. Your email is required for the purchase receipt.')
+      setCryptoMsg('⚠️ Account required: Please click the profile icon in the top right to log in or create an account. Your email is needed for the purchase receipt.')
       return
     }
     
