@@ -3,6 +3,8 @@
 import { useState, useRef } from 'react'
 import DiditVerification from './DiditVerification'
 
+const HEIC_FORMATS = ['image/heic', 'image/heif']
+
 interface UploadedDoc {
   path: string
   category: string
@@ -133,13 +135,33 @@ export default function VerificationUploader({
     }
   }
 
-  const handleFileSelect = (
+  const handleFileSelect = async (
     e: React.ChangeEvent<HTMLInputElement>,
     docName?: string
   ) => {
     const file = e.target.files?.[0]
-    if (file) {
-      uploadFile(file, 'supporting', docName)
+    if (!file) return
+    
+    const fileType = (file.type || '').toLowerCase()
+    const fileName = (file.name || '').toLowerCase()
+    const isHeic = HEIC_FORMATS.includes(fileType) || fileName.endsWith('.heic') || fileName.endsWith('.heif')
+    
+    if (isHeic) {
+      setUploading('supporting')
+      setError(null)
+      try {
+        // Convert HEIC to JPEG
+        const heic2any = (await import('heic2any')).default
+        const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 }) as Blob
+        // Create a new File from the converted blob
+        const convertedFile = new File([blob], file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'), { type: 'image/jpeg' })
+        await uploadFile(convertedFile, 'supporting', docName)
+      } catch (err: any) {
+        setError('Failed to convert iPhone photo. Please use a JPEG or PNG image.')
+        setUploading(null)
+      }
+    } else {
+      await uploadFile(file, 'supporting', docName)
     }
     e.target.value = '' // Reset input
   }
