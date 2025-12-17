@@ -229,18 +229,23 @@ export default function DashboardPage() {
                       href={`/story/${nft.campaignId}`}
                       className="group block rounded-2xl bg-white/5 border border-white/10 overflow-hidden hover:border-white/20 hover:bg-white/10 transition-all"
                     >
-                      <div className="relative h-48 overflow-hidden">
+                      <div className="relative h-48 overflow-hidden bg-gradient-to-br from-blue-900/50 to-purple-900/50">
                         {nft.image ? (
                           <img
                             src={ipfsToHttp(nft.image)}
                             alt={nft.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                            onError={(e) => {
+                              // Hide broken image and show placeholder
+                              (e.target as HTMLImageElement).style.display = 'none'
+                            }}
                           />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-blue-900/50 to-purple-900/50 flex items-center justify-center">
-                            <span className="text-4xl opacity-30">🎖️</span>
-                          </div>
-                        )}
+                        ) : null}
+                        {/* Placeholder shown behind image or when image fails */}
+                        <div className="absolute inset-0 flex items-center justify-center -z-10">
+                          <span className="text-4xl opacity-30">🎖️</span>
+                        </div>
                         <div className="absolute top-3 right-3 px-2 py-1 rounded-full bg-black/50 backdrop-blur text-xs text-white">
                           Edition {nft.editionNumber}/{nft.totalEditions || '∞'}
                         </div>
@@ -331,18 +336,22 @@ export default function DashboardPage() {
                     >
                       <div className="flex flex-col md:flex-row">
                         {/* Image */}
-                        <div className="md:w-48 h-32 md:h-auto flex-shrink-0">
+                        <div className="md:w-48 h-32 md:h-auto flex-shrink-0 relative bg-gradient-to-br from-blue-900/50 to-purple-900/50">
                           {campaign.imageUri ? (
                             <img
                               src={ipfsToHttp(campaign.imageUri)}
                               alt={campaign.title}
                               className="w-full h-full object-cover"
+                              loading="lazy"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none'
+                              }}
                             />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-blue-900/50 to-purple-900/50 flex items-center justify-center">
-                              <span className="text-3xl opacity-30">🎖️</span>
-                            </div>
-                          )}
+                          ) : null}
+                          {/* Placeholder shown behind image or when image fails */}
+                          <div className="absolute inset-0 flex items-center justify-center -z-10">
+                            <span className="text-3xl opacity-30">🎖️</span>
+                          </div>
                         </div>
 
                         {/* Content */}
