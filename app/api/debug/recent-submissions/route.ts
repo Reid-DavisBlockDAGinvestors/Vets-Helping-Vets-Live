@@ -11,9 +11,9 @@ export async function GET(req: NextRequest) {
   try {
     const { data: submissions, error } = await supabaseAdmin
       .from('submissions')
-      .select('id, title, status, campaign_id, token_id, contract_address, metadata_uri, created_at, updated_at')
+      .select('id, title, status, campaign_id, token_id, contract_address, metadata_uri, visible_on_marketplace, created_at, updated_at')
       .order('created_at', { ascending: false })
-      .limit(20)
+      .limit(30)
 
     if (error) {
       return NextResponse.json({ error: 'FETCH_ERROR', details: error.message }, { status: 500 })
@@ -45,7 +45,8 @@ export async function GET(req: NextRequest) {
         status: s.status,
         campaign_id: s.campaign_id,
         token_id: s.token_id,
-        has_contract: !!s.contract_address
+        has_contract: !!s.contract_address,
+        visible: s.visible_on_marketplace
       }))
     })
   } catch (e: any) {

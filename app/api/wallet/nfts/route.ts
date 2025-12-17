@@ -7,6 +7,39 @@ export const dynamic = 'force-dynamic'
 
 const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
 
+// Convert IPFS URI to HTTP gateway URL
+function ipfsToHttp(uri: string | null): string {
+  if (!uri) return ''
+  if (uri.startsWith('ipfs://')) {
+    return `https://gateway.pinata.cloud/ipfs/${uri.slice(7)}`
+  }
+  return uri
+}
+
+// Fetch metadata from IPFS with timeout
+async function fetchIpfsMetadata(uri: string, timeoutMs = 5000): Promise<any | null> {
+  if (!uri) return null
+  const httpUrl = ipfsToHttp(uri)
+  if (!httpUrl) return null
+  
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), timeoutMs)
+    
+    const res = await fetch(httpUrl, { 
+      signal: controller.signal,
+      headers: { 'Accept': 'application/json' }
+    })
+    clearTimeout(timeout)
+    
+    if (!res.ok) return null
+    return await res.json()
+  } catch (e) {
+    console.log(`[WalletNFTs] IPFS fetch failed for ${uri.slice(0, 50)}...:`, (e as any)?.message)
+    return null
+  }
+}
+
 /**
  * GET /api/wallet/nfts?address=0x...
  * Returns all NFTs owned by a wallet address
@@ -82,8 +115,16 @@ export async function GET(req: NextRequest) {
         // Try campaign_id first, then token_id (using ACTUAL token ID, not campaign ID)
         const submission = submissionByCampaignId[String(campaignId)] || submissionByTokenId[String(tokenIdNum)] || null
 
-        // Skip metadata fetch to avoid timeouts - use Supabase data only
-        const metadata: any = null
+        // If no submission found, fetch metadata from IPFS as fallback
+        // This handles campaigns that exist on-chain but have no linked Supabase submission
+        let metadata: any = null
+        if (!submission && uri) {
+          console.log(`[WalletNFTs] No submission for campaign ${campaignId}, fetching IPFS metadata...`)
+          metadata = await fetchIpfsMetadata(uri)
+          if (metadata) {
+            console.log(`[WalletNFTs] Got IPFS metadata for campaign ${campaignId}: "${metadata.name?.slice(0, 30)}..."`)
+          }
+        }
 
         // === Get on-chain values (these are the source of truth for calculations) ===
         // getCampaign returns: category, baseURI, goal, grossRaised, netRaised, editionsMinted, maxEditions, pricePerEdition, active, closed
@@ -108,8 +149,12 @@ export async function GET(req: NextRequest) {
         // Tips = Gross Raised - NFT Sales (but never negative)
         const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
         
-        // === Resolve image: prioritize Supabase, then metadata ===
-        const resolvedImage = submission?.image_uri || metadata?.image || ''
+        // === Resolve image: prioritize Supabase, then IPFS metadata ===
+        let resolvedImage = submission?.image_uri || ''
+        if (!resolvedImage && metadata?.image) {
+          // Convert IPFS image URI to HTTP
+          resolvedImage = ipfsToHttp(metadata.image)
+        }
 
         console.log(`[WalletNFTs] Campaign #${campaignId}: goal=$${goalUSD}, editions=${maxEditions}, minted=${editionsMinted}, price=$${pricePerEditionUSD.toFixed(2)}, raised=$${grossRaisedUSD.toFixed(2)}, nftSales=$${nftSalesUSD.toFixed(2)}, tips=$${tipsUSD.toFixed(2)}, image=${resolvedImage ? 'yes' : 'no'}`)
 
