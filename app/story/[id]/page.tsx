@@ -66,6 +66,26 @@ async function tryVerifyCampaign(submissionId: string): Promise<{ campaignId: nu
   }
 }
 
+async function tryLinkCampaign(campaignId: number): Promise<{ submissionId: string | null; linked: boolean }> {
+  try {
+    const baseUrl = getBaseUrl()
+    const res = await fetch(`${baseUrl}/api/submissions/link-campaign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campaignId }),
+      cache: 'no-store'
+    })
+    if (!res.ok) return { submissionId: null, linked: false }
+    const data = await res.json().catch(() => ({}))
+    return { 
+      submissionId: data.submissionId ?? null, 
+      linked: data.linked === true || data.alreadyLinked === true
+    }
+  } catch {
+    return { submissionId: null, linked: false }
+  }
+}
+
 async function loadSubmissionByToken(id: string) {
   try {
     const baseUrl = getBaseUrl()
@@ -109,8 +129,8 @@ export default async function StoryViewer({ params }: { params: { id: string } }
     loadSubmissionByToken(id)
   ])
   
-  // If on-chain data failed to load but submission exists with pending status,
-  // try to verify and fix the campaign_id on the blockchain
+  // Case 1: On-chain data failed to load but submission exists with pending status
+  // Try to verify and fix the campaign_id on the blockchain
   let verificationAttempted = false
   if (!onchain && submission?.id && (submission?.status === 'pending_onchain' || submission?.status === 'approved')) {
     console.log(`[StoryPage] On-chain data missing for campaign ${id}, attempting verification...`)
@@ -123,6 +143,22 @@ export default async function StoryViewer({ params }: { params: { id: string } }
       onchain = await loadOnchainToken(String(verification.campaignId))
       // Reload submission to get updated status
       submission = await loadSubmissionByToken(String(verification.campaignId))
+    }
+  }
+  
+  // Case 2: On-chain data exists but no submission linked (orphaned campaign)
+  // Try to link the campaign to its submission by matching metadata_uri
+  if (onchain && !submission && onchain.uri) {
+    const campaignId = Number(id)
+    if (Number.isFinite(campaignId)) {
+      console.log(`[StoryPage] On-chain campaign ${campaignId} has no linked submission, attempting to link...`)
+      const linkResult = await tryLinkCampaign(campaignId)
+      
+      if (linkResult.linked) {
+        console.log(`[StoryPage] Campaign ${campaignId} linked to submission ${linkResult.submissionId}`)
+        // Reload submission data
+        submission = await loadSubmissionByToken(id)
+      }
     }
   }
   

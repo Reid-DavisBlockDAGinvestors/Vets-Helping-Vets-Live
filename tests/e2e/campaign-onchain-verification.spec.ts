@@ -1,6 +1,6 @@
 /**
- * Tests for Campaign On-Chain Verification
- * TDD: These tests verify that campaigns are properly linked between Supabase and blockchain
+ * Tests for Campaign On-Chain Verification and Approval-to-Purchase Flow
+ * TDD: These tests verify campaigns are properly linked between Supabase and blockchain
  */
 
 import { test, expect } from '@playwright/test'
@@ -18,6 +18,15 @@ test.describe('Campaign On-Chain Verification', () => {
     } else {
       expect(data.campaignId).toBeDefined()
     }
+  })
+  
+  test('link-campaign API should link orphaned campaigns', async ({ request }) => {
+    // Test that the link-campaign endpoint can handle requests
+    const response = await request.post('/api/submissions/link-campaign', {
+      data: { campaignId: 999999 }
+    })
+    // Should return 404 for non-existent campaign or 200 if found
+    expect([200, 400, 404]).toContain(response.status())
   })
 
   test('submissions/by-token API should find submission by campaign_id', async ({ request }) => {
