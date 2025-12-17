@@ -200,6 +200,21 @@ export async function PUT(req: NextRequest) {
         updatePayload[key] = updates[key]
       }
     }
+    
+    // Map new field names to database column names
+    // nft_price -> price_per_copy, nft_editions -> num_copies
+    if ('nft_price' in updatePayload) {
+      updatePayload.price_per_copy = updatePayload.nft_price
+      delete updatePayload.nft_price
+    }
+    if ('nft_editions' in updatePayload) {
+      updatePayload.num_copies = updatePayload.nft_editions
+      delete updatePayload.nft_editions
+    }
+    if ('nft_editions_remaining' in updatePayload) {
+      // This field may not exist in DB yet - remove it to prevent errors
+      delete updatePayload.nft_editions_remaining
+    }
 
     if (Object.keys(updatePayload).length === 0) {
       return NextResponse.json({ error: 'NO_VALID_FIELDS' }, { status: 400 })

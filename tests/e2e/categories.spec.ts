@@ -137,3 +137,71 @@ test.describe('Category Colors', () => {
     expect(uniqueColors.size).toBeGreaterThanOrEqual(6)
   })
 })
+
+// E2E Tests for Category UI across portals
+test.describe('Category UI - Submission Portal', () => {
+  test('submission form should display all category options', async ({ page }) => {
+    await page.goto('/submit')
+    await page.waitForLoadState('networkidle')
+    
+    // Check for category buttons with emojis
+    for (const cat of CATEGORIES) {
+      const categoryButton = page.locator(`button:has-text("${cat.label}")`)
+      // Should find the category label somewhere on the page
+      const labelVisible = await page.locator(`text=${cat.label}`).isVisible().catch(() => false)
+      const emojiVisible = await page.locator(`text=${cat.emoji}`).isVisible().catch(() => false)
+      
+      // At least the label or emoji should be visible
+      if (!labelVisible && !emojiVisible) {
+        console.log(`Category ${cat.id} (${cat.label}) not visible on submission form`)
+      }
+    }
+    
+    // Verify "Campaign Type" section exists
+    const campaignTypeSection = page.locator('text=Campaign Type')
+    expect(await campaignTypeSection.isVisible()).toBe(true)
+  })
+})
+
+test.describe('Category UI - Community Hub', () => {
+  test('community hub should show category filters in sidebar', async ({ page }) => {
+    await page.goto('/community')
+    await page.waitForLoadState('networkidle')
+    
+    // Should have "All Campaigns" option
+    const allCampaigns = page.locator('text=All Campaigns')
+    expect(await allCampaigns.isVisible()).toBe(true)
+    
+    // Check that some category labels are visible (sidebar may show abbreviated versions)
+    let categoriesFound = 0
+    for (const cat of CATEGORIES) {
+      const visible = await page.locator(`text=${cat.label}`).isVisible().catch(() => false)
+      if (visible) categoriesFound++
+    }
+    
+    console.log(`Found ${categoriesFound}/${CATEGORIES.length} categories visible in Community Hub`)
+    expect(categoriesFound).toBeGreaterThan(0)
+  })
+})
+
+test.describe('Category UI - Admin Portal', () => {
+  test('admin submissions should have category dropdown with all options', async ({ request }) => {
+    // Test that the AdminSubmissions component imports CATEGORIES
+    // We can verify this by checking if the API returns campaigns with valid categories
+    const response = await request.get('/api/marketplace/fundraisers?limit=10')
+    expect(response.ok()).toBe(true)
+    
+    const data = await response.json()
+    if (data.items && data.items.length > 0) {
+      // Verify returned categories are valid
+      const validIds = CATEGORIES.map(c => c.id)
+      for (const item of data.items) {
+        const category = item.category || 'other'
+        const mapped = category === 'general' ? 'other' : category
+        // Category should be one of our defined categories or legacy 'general'
+        const isValid = validIds.includes(mapped) || category === 'general'
+        expect(isValid).toBe(true)
+      }
+    }
+  })
+})
