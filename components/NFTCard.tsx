@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ipfsToHttp } from '@/lib/ipfs'
+import { getCategoryById, CategoryId } from '@/lib/categories'
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
 const EXPLORER_URL = 'https://awakening.bdagscan.com'
@@ -14,7 +15,7 @@ export type NFTItem = {
   short_code?: string | null
   title: string
   image: string
-  causeType: 'veteran' | 'general'
+  causeType: CategoryId | string
   location?: string
   urgency?: 'low' | 'medium' | 'high'
   progress: number
@@ -96,12 +97,8 @@ export default function NFTCard({ item }: { item: NFTItem }) {
             </div>
             
             {/* Category Badge - Right Side */}
-            <span className={`rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm ${
-              item.causeType === 'veteran' 
-                ? 'bg-red-500/30 text-red-200 border border-red-500/30' 
-                : 'bg-blue-500/30 text-blue-200 border border-blue-500/30'
-            }`}>
-              {item.causeType === 'veteran' ? 'Veteran' : 'General'}
+            <span className={`rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm bg-${getCategoryById(item.causeType)?.color || 'blue'}-500/30 text-${getCategoryById(item.causeType)?.color || 'blue'}-200 border border-${getCategoryById(item.causeType)?.color || 'blue'}-500/30`}>
+              {getCategoryById(item.causeType)?.emoji} {getCategoryById(item.causeType)?.label || item.causeType}
             </span>
           </div>
 

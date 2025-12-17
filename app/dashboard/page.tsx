@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useWallet } from '@/hooks/useWallet'
 import { ipfsToHttp } from '@/lib/ipfs'
+import { getCategoryById } from '@/lib/categories'
 import ContractStatus from '@/components/ContractStatus'
 import CampaignUpdateForm from '@/components/CampaignUpdateForm'
 
@@ -270,12 +271,8 @@ export default function DashboardPage() {
                               </svg>
                             </a>
                           </div>
-                          <span className={`px-2 py-0.5 rounded-full text-xs ${
-                            nft.category === 'veteran'
-                              ? 'bg-red-500/20 text-red-300'
-                              : 'bg-blue-500/20 text-blue-300'
-                          }`}>
-                            {nft.category}
+                          <span className={`px-2 py-0.5 rounded-full text-xs bg-${getCategoryById(nft.category)?.color || 'blue'}-500/20 text-${getCategoryById(nft.category)?.color || 'blue'}-300`}>
+                            {getCategoryById(nft.category)?.emoji} {getCategoryById(nft.category)?.label || nft.category}
                           </span>
                         </div>
                         <div className="mt-3">

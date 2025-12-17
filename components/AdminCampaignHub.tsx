@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { ipfsToHttp } from '@/lib/ipfs'
+import { CATEGORIES, getCategoryById, mapLegacyCategory } from '@/lib/categories'
 import { supabase } from '@/lib/supabase'
 import ErrorWithBugReport from './ErrorWithBugReport'
 import { openBugReport } from './BugReportButton'
@@ -211,7 +212,7 @@ export default function AdminCampaignHub() {
           title: sub.title || `Campaign #${sub.campaign_id || sub.id.slice(0,8)}`,
           story: sub.story || null,
           image_uri: sub.image_uri || '',
-          category: sub.category || 'general',
+          category: mapLegacyCategory(sub.category || 'other'),
           goal: sub.goal || 0,
           creator_wallet: sub.creator_wallet || '',
           creator_email: sub.creator_email || null,
@@ -281,7 +282,7 @@ export default function AdminCampaignHub() {
     setEditForm({
       title: campaign.title || '',
       story: campaign.story || '',
-      category: campaign.category || 'general',
+      category: mapLegacyCategory(campaign.category || 'other'),
       goal: campaign.goal || 0,
       status: campaign.status || 'pending',
       creator_name: campaign.creator_name || '',
@@ -1009,12 +1010,8 @@ export default function AdminCampaignHub() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold text-white truncate max-w-[300px]">{campaign.title}</h3>
                     {getStatusBadge(campaign.status)}
-                    <span className={`px-2 py-0.5 text-xs rounded-full ${
-                      campaign.category === 'veteran' 
-                        ? 'bg-red-500/20 text-red-300' 
-                        : 'bg-blue-500/20 text-blue-300'
-                    }`}>
-                      {campaign.category}
+                    <span className={`px-2 py-0.5 text-xs rounded-full bg-${getCategoryById(campaign.category)?.color || 'blue'}-500/20 text-${getCategoryById(campaign.category)?.color || 'blue'}-300`}>
+                      {getCategoryById(campaign.category)?.emoji} {getCategoryById(campaign.category)?.label || campaign.category}
                     </span>
                     {/* Milestone badge */}
                     {campaign.approvedUpdates > 0 && (
@@ -1162,11 +1159,9 @@ export default function AdminCampaignHub() {
                           )}
                           <div>
                             <span className="text-white/50">Category:</span>
-                            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-                              campaign.category === 'veteran' 
-                                ? 'bg-red-500/20 text-red-300' 
-                                : 'bg-blue-500/20 text-blue-300'
-                            }`}>{campaign.category}</span>
+                            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full bg-${getCategoryById(campaign.category)?.color || 'blue'}-500/20 text-${getCategoryById(campaign.category)?.color || 'blue'}-300`}>
+                              {getCategoryById(campaign.category)?.emoji} {getCategoryById(campaign.category)?.label || campaign.category}
+                            </span>
                           </div>
                           <div>
                             <span className="text-white/50">Goal:</span>
@@ -1748,12 +1743,13 @@ export default function AdminCampaignHub() {
                 <div>
                   <label className="block text-sm text-white/70 mb-1">Category</label>
                   <select
-                    value={editForm.category || 'general'}
+                    value={editForm.category || 'other'}
                     onChange={e => setEditForm({ ...editForm, category: e.target.value })}
                     className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white"
                   >
-                    <option value="veteran">Veteran</option>
-                    <option value="general">General</option>
+                    {CATEGORIES.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.emoji} {cat.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>

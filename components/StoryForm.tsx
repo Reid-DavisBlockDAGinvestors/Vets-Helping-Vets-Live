@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ipfsToHttp } from '@/lib/ipfs'
+import { CATEGORIES, CategoryId, getCategoryById, mapLegacyCategory } from '@/lib/categories'
 import VerificationUploader from './VerificationUploader'
 import { supabase } from '@/lib/supabase'
 import { openBugReport } from './BugReportButton'
@@ -48,7 +49,7 @@ interface StoryFormProps {
 
 export default function StoryForm({ editSubmissionId }: StoryFormProps) {
   // Form fields - now sectioned
-  const [category, setCategory] = useState<'veteran' | 'general'>('veteran')
+  const [category, setCategory] = useState<CategoryId>('veteran')
   const [title, setTitle] = useState('')
   const [background, setBackground] = useState('')  // Who you are, your situation
   const [need, setNeed] = useState('')              // What you need help with
@@ -172,7 +173,7 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
         console.log('[StoryForm] Loaded submission for editing:', sub.id)
         
         // Populate form fields from submission
-        if (sub.category) setCategory(sub.category)
+        if (sub.category) setCategory(mapLegacyCategory(sub.category))
         if (sub.title) setTitle(sub.title)
         if (sub.goal) setGoal(sub.goal)
         if (sub.creator_name) {
@@ -245,7 +246,7 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
     console.log('[StoryForm] Loading draft:', draft ? 'found' : 'none')
     
     if (draft) {
-      if (draft.category) setCategory(draft.category)
+      if (draft.category) setCategory(mapLegacyCategory(draft.category))
       if (draft.title) setTitle(draft.title)
       if (draft.background) setBackground(draft.background)
       if (draft.need) setNeed(draft.need)
@@ -618,36 +619,29 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
           <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold">1</div>
           <div>
             <h3 className="font-semibold text-white">Campaign Type</h3>
-            <p className="text-sm text-white/50">Who is this fundraiser for?</p>
+            <p className="text-sm text-white/50">Select the category that best describes your fundraiser</p>
           </div>
         </div>
-        <div className="flex gap-3">
-          <button 
-            type="button" 
-            onClick={()=>setCategory('veteran')} 
-            className={`flex-1 rounded-lg px-4 py-3 text-sm font-medium transition-all ${
-              category==='veteran' 
-                ? 'bg-red-500 text-white shadow-lg shadow-red-500/25' 
-                : 'bg-white/10 text-white/70 hover:bg-white/20'
-            }`}
-          >
-            🎖️ Veteran / Military
-          </button>
-          <button 
-            type="button" 
-            onClick={()=>setCategory('general')} 
-            className={`flex-1 rounded-lg px-4 py-3 text-sm font-medium transition-all ${
-              category==='general' 
-                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25' 
-                : 'bg-white/10 text-white/70 hover:bg-white/20'
-            }`}
-          >
-            💙 General / Non-veteran
-          </button>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {CATEGORIES.map((cat) => (
+            <button 
+              key={cat.id}
+              type="button" 
+              onClick={() => setCategory(cat.id)} 
+              className={`rounded-lg px-3 py-3 text-sm font-medium transition-all flex flex-col items-center gap-1 ${
+                category === cat.id 
+                  ? `bg-${cat.color}-500 text-white shadow-lg shadow-${cat.color}-500/25` 
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              <span className="text-xl">{cat.emoji}</span>
+              <span className="text-xs text-center">{cat.label}</span>
+            </button>
+          ))}
         </div>
-        {category === 'general' && (
+        {getCategoryById(category) && (
           <p className="mt-3 text-xs text-white/50">
-            Examples: disaster relief, medical expenses, education, community initiatives
+            {getCategoryById(category)?.description}
           </p>
         )}
       </div>

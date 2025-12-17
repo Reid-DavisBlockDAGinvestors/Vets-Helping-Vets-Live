@@ -2,6 +2,7 @@ import Link from 'next/link'
 import PurchasePanel from '@/components/PurchasePanel'
 import ShareButtons from '@/components/ShareButtons'
 import { ipfsToHttp } from '@/lib/ipfs'
+import { getCategoryById } from '@/lib/categories'
 
 type OnchainItem = {
   tokenId: number
@@ -209,12 +210,8 @@ export default async function StoryViewer({ params }: { params: { id: string } }
             </svg>
             Back to Marketplace
           </Link>
-          <span className={`rounded-full px-4 py-1.5 text-sm font-medium ${
-            category === 'veteran' 
-              ? 'bg-red-500/20 text-red-300 border border-red-500/30' 
-              : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-          }`}>
-            {category === 'veteran' ? '🎖️ Veteran Cause' : '💝 General Cause'}
+          <span className={`rounded-full px-4 py-1.5 text-sm font-medium bg-${getCategoryById(category)?.color || 'blue'}-500/20 text-${getCategoryById(category)?.color || 'blue'}-300 border border-${getCategoryById(category)?.color || 'blue'}-500/30`}>
+            {getCategoryById(category)?.emoji} {getCategoryById(category)?.label || category}
           </span>
         </div>
       </div>
