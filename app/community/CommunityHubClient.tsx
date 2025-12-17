@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { CATEGORIES, getCategoryById } from '@/lib/categories'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
@@ -96,11 +97,15 @@ export default function CommunityHubClient() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['all']))
   const [myExpanded, setMyExpanded] = useState(true)
   
-  // Categories for fundraisers
+  // Categories for fundraisers - dynamically built from shared config
   const categories: Category[] = [
     { id: 'all', name: 'All Campaigns', icon: '🏠', count: allCampaigns.length },
-    { id: 'veteran', name: 'Veterans', icon: '🎖️', count: allCampaigns.filter(c => c.category === 'veteran').length },
-    { id: 'general', name: 'General', icon: '💝', count: allCampaigns.filter(c => c.category === 'general').length },
+    ...CATEGORIES.map(cat => ({
+      id: cat.id,
+      name: cat.label,
+      icon: cat.emoji,
+      count: allCampaigns.filter(c => c.category === cat.id).length
+    }))
   ]
   
   // Toggle category expansion
@@ -784,7 +789,7 @@ export default function CommunityHubClient() {
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-xs">
-                                {campaign.category === 'veteran' ? '🎖️' : '💝'}
+                                {getCategoryById(campaign.category || 'other')?.emoji || '💝'}
                               </div>
                             )}
                           </div>

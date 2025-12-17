@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ipfsToHttp } from '@/lib/ipfs'
+import { CATEGORIES, getCategoryById } from '@/lib/categories'
 
 type Submission = {
   id: string
@@ -418,8 +419,9 @@ export default function AdminSubmissions() {
                 <div>
                   <label className="text-xs opacity-70">Category</label>
                   <select className="w-full rounded bg-white/10 p-2" value={selected.category} onChange={e=>setSelected({ ...selected, category: e.target.value as any })}>
-                    <option value="veteran">veteran</option>
-                    <option value="general">general</option>
+                    {CATEGORIES.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.emoji} {cat.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
