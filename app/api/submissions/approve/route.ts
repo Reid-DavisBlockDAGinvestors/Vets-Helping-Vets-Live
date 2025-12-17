@@ -218,34 +218,53 @@ export async function POST(req: NextRequest) {
     let finalStatus = 'pending_onchain'
     
     try {
-      // Wait a moment for the tx to propagate
-      await new Promise(r => setTimeout(r, 2000))
+      // Wait a moment for the tx to propagate (BlockDAG can be slow)
+      await new Promise(r => setTimeout(r, 3000))
       
       // Check if the predicted campaign ID has our metadata URI
       const verifyContract = getContract(signer)
-      const camp = await verifyContract.getCampaign(BigInt(campaignId))
-      const onChainUri = camp.baseURI ?? camp[1]
+      const total = Number(await verifyContract.totalCampaigns())
+      console.log(`[approve] Total campaigns on-chain: ${total}, predicted ID: ${campaignId}`)
       
-      if (onChainUri === uri) {
-        // Predicted ID is correct!
-        console.log(`[approve] Verified campaign ${campaignId} matches metadata URI`)
-        finalStatus = 'minted'
-        verifiedCampaignId = campaignId
-      } else {
-        // Predicted ID doesn't match - search for correct one
-        console.log(`[approve] Predicted ID ${campaignId} has different URI, searching...`)
-        const total = Number(await verifyContract.totalCampaigns())
+      // First try the predicted ID
+      let foundCorrectId = false
+      if (campaignId < total) {
+        try {
+          const camp = await verifyContract.getCampaign(BigInt(campaignId))
+          const onChainUri = camp.baseURI ?? camp[1]
+          
+          if (onChainUri === uri) {
+            // Predicted ID is correct!
+            console.log(`[approve] Verified campaign ${campaignId} matches metadata URI`)
+            finalStatus = 'minted'
+            verifiedCampaignId = campaignId
+            foundCorrectId = true
+          }
+        } catch (e) {
+          console.log(`[approve] Predicted ID ${campaignId} check failed:`, e)
+        }
+      }
+      
+      // If predicted ID didn't match, search ALL campaigns from 0
+      // This matches what Fix Campaign does and ensures we find the correct ID
+      if (!foundCorrectId) {
+        console.log(`[approve] Predicted ID ${campaignId} didn't match, searching ALL ${total} campaigns...`)
         
-        for (let i = Math.max(0, campaignId - 5); i < total; i++) {
+        for (let i = 0; i < total; i++) {
           try {
             const c = await verifyContract.getCampaign(BigInt(i))
             if ((c.baseURI ?? c[1]) === uri) {
               verifiedCampaignId = i
               finalStatus = 'minted'
               console.log(`[approve] Found correct campaign ID: ${i}`)
+              foundCorrectId = true
               break
             }
           } catch { continue }
+        }
+        
+        if (!foundCorrectId) {
+          console.log(`[approve] Campaign not found on-chain yet (tx may still be pending)`)
         }
       }
     } catch (verifyErr: any) {
