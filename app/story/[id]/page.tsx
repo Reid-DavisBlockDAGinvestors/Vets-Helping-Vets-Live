@@ -46,6 +46,26 @@ async function loadOnchainToken(id: string): Promise<OnchainItem | null> {
   }
 }
 
+async function tryVerifyCampaign(submissionId: string): Promise<{ campaignId: number | null; verified: boolean }> {
+  try {
+    const baseUrl = getBaseUrl()
+    const res = await fetch(`${baseUrl}/api/submissions/verify-campaign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: submissionId }),
+      cache: 'no-store'
+    })
+    if (!res.ok) return { campaignId: null, verified: false }
+    const data = await res.json().catch(() => ({}))
+    return { 
+      campaignId: data.campaignId ?? null, 
+      verified: data.verified === true 
+    }
+  } catch {
+    return { campaignId: null, verified: false }
+  }
+}
+
 async function loadSubmissionByToken(id: string) {
   try {
     const baseUrl = getBaseUrl()
@@ -84,10 +104,27 @@ async function loadCampaignUpdates(submissionId: string): Promise<CampaignUpdate
 
 export default async function StoryViewer({ params }: { params: { id: string } }) {
   const { id } = params
-  const [onchain, submission] = await Promise.all([
+  let [onchain, submission] = await Promise.all([
     loadOnchainToken(id),
     loadSubmissionByToken(id)
   ])
+  
+  // If on-chain data failed to load but submission exists with pending status,
+  // try to verify and fix the campaign_id on the blockchain
+  let verificationAttempted = false
+  if (!onchain && submission?.id && (submission?.status === 'pending_onchain' || submission?.status === 'approved')) {
+    console.log(`[StoryPage] On-chain data missing for campaign ${id}, attempting verification...`)
+    const verification = await tryVerifyCampaign(submission.id)
+    verificationAttempted = true
+    
+    if (verification.verified && verification.campaignId !== null) {
+      console.log(`[StoryPage] Campaign verified! ID: ${verification.campaignId}`)
+      // Reload on-chain data with the correct campaign ID
+      onchain = await loadOnchainToken(String(verification.campaignId))
+      // Reload submission to get updated status
+      submission = await loadSubmissionByToken(String(verification.campaignId))
+    }
+  }
   
   // Load campaign updates if we have a submission ID
   const campaignUpdates = submission?.id 
@@ -120,7 +157,7 @@ export default async function StoryViewer({ params }: { params: { id: string } }
   const benchmarks: string[] = Array.isArray(submission?.benchmarks) ? submission.benchmarks : []
   
   // Check if campaign is pending blockchain confirmation
-  // Only block purchases if we can't load on-chain data
+  // Only block purchases if we can't load on-chain data AND verification failed
   // If on-chain data loads successfully, campaign is ready regardless of Supabase status
   const isPendingOnchain = !onchain && (submission?.status === 'pending_onchain' || submission?.status === 'approved')
   
