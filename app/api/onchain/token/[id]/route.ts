@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { ethers } from 'ethers'
 
 export const dynamic = 'force-dynamic'
@@ -7,14 +8,37 @@ export const dynamic = 'force-dynamic'
 // BDAG to USD conversion rate (configurable via env)
 const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
 
-export async function GET(_req: NextRequest, context: { params: { id: string } }) {
+// Contract addresses
+const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
+const V6_CONTRACT = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
+
+export async function GET(req: NextRequest, context: { params: { id: string } }) {
   try {
     const campaignId = Number(context.params.id)
     if (!Number.isFinite(campaignId) || campaignId < 0) {
       return NextResponse.json({ error: 'INVALID_CAMPAIGN_ID' }, { status: 400 })
     }
 
-    const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
+    // Allow contract address override via query param
+    const url = new URL(req.url)
+    let contractAddress = url.searchParams.get('contract')?.trim() || ''
+    
+    // If no contract specified, look up from submission in Supabase
+    if (!contractAddress) {
+      const { data: submission } = await supabaseAdmin
+        .from('submissions')
+        .select('contract_address')
+        .eq('campaign_id', campaignId)
+        .single()
+      
+      contractAddress = submission?.contract_address || ''
+    }
+    
+    // Fall back to trying both contracts if still no address
+    if (!contractAddress) {
+      contractAddress = V6_CONTRACT || V5_CONTRACT
+    }
+    
     if (!contractAddress) {
       return NextResponse.json({ error: 'NO_CONTRACT_CONFIGURED' }, { status: 500 })
     }

@@ -151,7 +151,10 @@ export async function GET(req: NextRequest) {
         // Use on-chain maxEditions if available and > 0
         const onchainMax = Number(camp.maxEditions ?? 0n)
         if (onchainMax > 0) maxEditions = onchainMax
-      } catch {}
+        console.log(`[fundraisers] Campaign ${campaignId} on-chain: editionsMinted=${editionsMinted}, maxEditions=${maxEditions}`)
+      } catch (err: any) {
+        console.error(`[fundraisers] Failed to fetch on-chain data for campaign ${campaignId} on contract ${subContractAddr}: ${err?.message}`)
+      }
 
       // Price per NFT = Goal ÷ Max Editions (this is always correct for V5 model)
       const pricePerEdition = goal > 0 && maxEditions > 0 ? goal / maxEditions : 1
