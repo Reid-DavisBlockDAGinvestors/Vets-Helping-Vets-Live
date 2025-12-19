@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
-import { getProvider } from '@/lib/onchain'
+import { getProviderWithFallback } from '@/lib/onchain'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getMintableContracts, ContractVersion } from '@/lib/contracts'
 
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const provider = getProvider()
+    const provider = await getProviderWithFallback()
     const nfts: any[] = []
     const errors: any[] = []
     let totalBalance = 0

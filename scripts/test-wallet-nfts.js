@@ -18,25 +18,49 @@ const BASIC_ABI = [
 ]
 
 async function main() {
-  // Try NowNodes RPC with API key header
-  const nowNodesRpc = 'https://bdag.nownodes.io'
+  // Test RPC fallback logic - try standard first, then NowNodes
+  const primaryRpc = process.env.BLOCKDAG_RPC || 'https://rpc.awakening.bdagscan.com'
+  const fallbackRpc = process.env.BLOCKDAG_RPC_FALLBACK || 'https://bdag.nownodes.io'
   const apiKey = process.env.NOWNODES_API_KEY
-  const fallbackRpc = 'https://rpc.awakening.bdagscan.com'
   
+  console.log('=== Testing RPC Fallback Logic ===')
+  console.log('Primary RPC:', primaryRpc)
+  console.log('Fallback RPC:', fallbackRpc)
+  
+  // Try primary RPC first
   let provider
-  if (apiKey) {
-    console.log('Using NowNodes RPC with API key')
-    const fetchReq = new ethers.FetchRequest(nowNodesRpc)
-    fetchReq.setHeader('api-key', apiKey)
-    provider = new ethers.JsonRpcProvider(fetchReq, null, { staticNetwork: true })
-  } else {
-    console.log('Using fallback RPC:', fallbackRpc)
-    provider = new ethers.JsonRpcProvider(fallbackRpc, null, { staticNetwork: true })
+  let usedRpc = primaryRpc
+  
+  const MIN_BLOCK_HEIGHT = 40000000 // Contracts deployed around block 43M
+  
+  console.log('\n--- Testing Primary RPC ---')
+  try {
+    provider = new ethers.JsonRpcProvider(primaryRpc, null, { staticNetwork: true })
+    const blockNum = await provider.getBlockNumber()
+    console.log('Primary RPC block:', blockNum)
+    
+    if (blockNum < MIN_BLOCK_HEIGHT) {
+      console.log(`✗ Primary RPC too far behind (need ${MIN_BLOCK_HEIGHT.toLocaleString()}+)`)
+      throw new Error('RPC not synced')
+    }
+    console.log('✓ Primary RPC synced and working!')
+  } catch (e) {
+    console.log('Falling back to NowNodes...')
+    
+    // Fall back to NowNodes
+    usedRpc = fallbackRpc
+    if (apiKey) {
+      const fetchReq = new ethers.FetchRequest(fallbackRpc)
+      fetchReq.setHeader('api-key', apiKey)
+      provider = new ethers.JsonRpcProvider(fetchReq, null, { staticNetwork: true })
+    } else {
+      provider = new ethers.JsonRpcProvider(fallbackRpc, null, { staticNetwork: true })
+    }
+    const blockNum = await provider.getBlockNumber()
+    console.log('✓ NowNodes fallback works! Block:', blockNum.toLocaleString())
   }
   
-  // Check block number first
-  const blockNum = await provider.getBlockNumber()
-  console.log('Current block:', blockNum)
+  console.log('\nUsing RPC:', usedRpc)
   
   console.log('\n=== V5 Contract ===')
   console.log('Address:', V5_ADDRESS)

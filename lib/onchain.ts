@@ -47,19 +47,77 @@ export const PatriotPledgeV5ABI = [
 // Alias for backwards compatibility
 export const PatriotPledgeV2ABI = PatriotPledgeV5ABI
 
-export function getProvider() {
-  const rpc = process.env.BLOCKDAG_RPC || process.env.BLOCKDAG_RPC_FALLBACK || process.env.BLOCKDAG_RELAYER_RPC
-  if (!rpc) throw new Error('Missing BLOCKDAG RPC url')
-  
-  // Check if using NowNodes and add API key header
+// Cache provider to avoid recreating on every call
+let cachedProvider: ethers.JsonRpcProvider | null = null
+let cachedProviderRpc: string | null = null
+
+/**
+ * Get blockchain provider with automatic fallback
+ * Priority: Standard BlockDAG RPC first, NowNodes as backup
+ */
+export function getProvider(): ethers.JsonRpcProvider {
+  // Primary RPC (standard BlockDAG)
+  const primaryRpc = process.env.BLOCKDAG_RPC || 'https://rpc.awakening.bdagscan.com'
+  // Fallback RPC (NowNodes - paid service, use sparingly)
+  const fallbackRpc = process.env.BLOCKDAG_RPC_FALLBACK || 'https://bdag.nownodes.io'
   const nowNodesKey = process.env.NOWNODES_API_KEY
-  if (rpc.includes('nownodes.io') && nowNodesKey) {
-    const fetchReq = new ethers.FetchRequest(rpc)
+  
+  // Use cached provider if available and same RPC
+  if (cachedProvider && cachedProviderRpc === primaryRpc) {
+    return cachedProvider
+  }
+  
+  // Create provider for primary RPC
+  cachedProviderRpc = primaryRpc
+  cachedProvider = new ethers.JsonRpcProvider(primaryRpc, undefined, { staticNetwork: true })
+  
+  return cachedProvider
+}
+
+/**
+ * Get provider with NowNodes (for when standard RPC fails)
+ * Only use this when you know the standard RPC is down
+ */
+export function getNowNodesProvider(): ethers.JsonRpcProvider {
+  const nowNodesRpc = process.env.BLOCKDAG_RPC_FALLBACK || 'https://bdag.nownodes.io'
+  const nowNodesKey = process.env.NOWNODES_API_KEY
+  
+  if (nowNodesKey) {
+    const fetchReq = new ethers.FetchRequest(nowNodesRpc)
     fetchReq.setHeader('api-key', nowNodesKey)
     return new ethers.JsonRpcProvider(fetchReq, undefined, { staticNetwork: true })
   }
   
-  return new ethers.JsonRpcProvider(rpc)
+  return new ethers.JsonRpcProvider(nowNodesRpc, undefined, { staticNetwork: true })
+}
+
+// V5 Contract address for testing RPC connectivity
+const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
+
+/**
+ * Smart provider that tries primary first, falls back to NowNodes on failure
+ * Tests actual contract data read to ensure RPC is working properly
+ */
+export async function getProviderWithFallback(): Promise<ethers.JsonRpcProvider> {
+  const primaryProvider = getProvider()
+  
+  try {
+    // Test if primary RPC can actually read contract data
+    // This is more reliable than just checking block number
+    const contract = new ethers.Contract(V5_CONTRACT, ['function totalSupply() view returns (uint256)'], primaryProvider)
+    const supply = await contract.totalSupply()
+    
+    // If we get a valid response, primary RPC is working
+    if (supply !== undefined && supply !== null) {
+      console.log(`[onchain] Primary RPC working (V5 supply: ${supply})`)
+      return primaryProvider
+    }
+    
+    throw new Error('Contract returned empty data')
+  } catch (e: any) {
+    console.log(`[onchain] Primary RPC failed: ${e?.message?.slice(0, 50)}... Falling back to NowNodes.`)
+    return getNowNodesProvider()
+  }
 }
 
 export function getRelayerSigner() {
