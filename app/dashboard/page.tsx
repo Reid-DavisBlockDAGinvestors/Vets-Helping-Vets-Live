@@ -46,6 +46,8 @@ type CreatedCampaign = {
   pendingUpdates: number
   canUpdate: boolean
   latestUpdate: any | null
+  contractAddress?: string
+  contractVersion?: string
 }
 
 export default function DashboardPage() {
@@ -261,12 +263,12 @@ export default function DashboardPage() {
                           <div className="flex items-center gap-2">
                             <span className="text-white/50">Token #{nft.tokenId}</span>
                             <a
-                              href={`${EXPLORER_URL}/address/${CONTRACT_ADDRESS}`}
+                              href={`${EXPLORER_URL}/address/${nft.contractAddress || CONTRACT_ADDRESS}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
                               className="p-1 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
-                              title="View on blockchain"
+                              title={`View on blockchain (${nft.contractVersion || 'v5'})`}
                             >
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -372,11 +374,11 @@ export default function DashboardPage() {
                                   <div className="flex items-center gap-2">
                                     <span className="text-white/40">Campaign #{campaign.campaignId}</span>
                                     <a
-                                      href={`${EXPLORER_URL}/address/${CONTRACT_ADDRESS}`}
+                                      href={`${EXPLORER_URL}/address/${campaign.contractAddress || CONTRACT_ADDRESS}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="p-1 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
-                                      title="View on blockchain"
+                                      title={`View on blockchain (${campaign.contractVersion || 'v5'})`}
                                     >
                                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

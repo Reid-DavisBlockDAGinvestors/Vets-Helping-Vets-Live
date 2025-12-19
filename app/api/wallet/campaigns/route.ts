@@ -110,6 +110,9 @@ export async function GET(req: NextRequest) {
           pricePerCopy: sub.price_per_copy,
           benchmarks: sub.benchmarks,
           createdAt: sub.created_at,
+          // Contract info for multi-contract support
+          contractAddress: sub.contract_address,
+          contractVersion: sub.contract_version || 'v5',
           // On-chain data
           raised: onchainData?.grossRaised || 0,
           nftSalesUSD: onchainData?.nftSalesUSD || 0,
