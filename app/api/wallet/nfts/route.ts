@@ -105,90 +105,98 @@ export async function GET(req: NextRequest) {
         
         if (balanceNum === 0) continue
 
-        // Iterate through owned tokens on this contract
-        for (let i = 0; i < balanceNum; i++) {
-          try {
-            const tokenId = await contract.tokenOfOwnerByIndex(address, i)
-            const tokenIdNum = Number(tokenId)
-            console.log(`[WalletNFTs] ${contractInfo.version}: Processing token ${i+1}/${balanceNum}: tokenId=${tokenIdNum}`)
+        // BATCH 1: Get all token IDs in parallel
+        const tokenIdPromises = Array.from({ length: balanceNum }, (_, i) => 
+          contract.tokenOfOwnerByIndex(address, i).catch(() => null)
+        )
+        const tokenIds = (await Promise.all(tokenIdPromises)).filter(t => t !== null).map(t => Number(t))
+        console.log(`[WalletNFTs] ${contractInfo.version}: Got ${tokenIds.length} token IDs`)
 
-            // Get edition info
+        // BATCH 2: Get edition info and URIs for all tokens in parallel
+        const detailPromises = tokenIds.map(async (tokenIdNum) => {
+          try {
             const [editionInfo, uri] = await Promise.all([
               contract.getEditionInfo(tokenIdNum),
               contract.tokenURI(tokenIdNum)
             ])
-
-            const campaignId = Number(editionInfo.campaignId ?? editionInfo[0])
-            const editionNumber = Number(editionInfo.editionNumber ?? editionInfo[1])
-
-            // Get campaign data from contract
-            const camp = await contract.getCampaign(BigInt(campaignId))
-
-            // Look up Supabase submission using string key
-            // Try campaign_id first, then token_id (using ACTUAL token ID, not campaign ID)
-            const submission = submissionByCampaignId[String(campaignId)] || submissionByTokenId[String(tokenIdNum)] || null
-
-            // If no submission found, fetch metadata from IPFS as fallback
-            let metadata: any = null
-            if (!submission && uri) {
-              console.log(`[WalletNFTs] No submission for campaign ${campaignId}, fetching IPFS metadata...`)
-              metadata = await fetchIpfsMetadata(uri)
-              if (metadata) {
-                console.log(`[WalletNFTs] Got IPFS metadata for campaign ${campaignId}: "${metadata.name?.slice(0, 30)}..."`)
-              }
-            }
-
-            // === Get on-chain values ===
-            const editionsMinted = Number(camp.editionsMinted ?? camp[5] ?? 0n)
-            const onchainMaxEditions = Number(camp.maxEditions ?? camp[6] ?? 100n)
-            const grossRaisedWei = BigInt(camp.grossRaised ?? camp[3] ?? 0n)
-            const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
-            const grossRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
-            
-            // === Get goal and editions from Supabase ===
-            const goalUSD = submission?.goal ? Number(submission.goal) : 100
-            const maxEditions = Number(submission?.num_copies || submission?.nft_editions || onchainMaxEditions || 100)
-            
-            // === Calculate price per NFT ===
-            const pricePerEditionUSD = goalUSD > 0 && maxEditions > 0 ? goalUSD / maxEditions : 0
-            const nftSalesUSD = editionsMinted * pricePerEditionUSD
-            const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
-            
-            // === Resolve image ===
-            let resolvedImage = submission?.image_uri || ''
-            if (!resolvedImage && metadata?.image) {
-              resolvedImage = ipfsToHttp(metadata.image)
-            }
-
-            console.log(`[WalletNFTs] ${contractInfo.version} Campaign #${campaignId}: goal=$${goalUSD}, raised=$${grossRaisedUSD.toFixed(2)}`)
-
-            nfts.push({
-              tokenId: tokenIdNum,
-              campaignId,
-              editionNumber,
-              totalEditions: maxEditions,
-              editionsMinted,
-              contractAddress: contractInfo.address,
-              contractVersion: contractInfo.version,
-              uri,
-              metadata,
-              title: submission?.title || metadata?.name || `Campaign #${campaignId}`,
-              image: resolvedImage,
-              story: submission?.story || metadata?.description || '',
-              category: String(camp.category ?? camp[0] ?? 'general'),
-              goal: goalUSD,
-              raised: grossRaisedUSD,
-              nftSalesUSD,
-              tipsUSD,
-              active: Boolean(camp.active ?? camp[8] ?? true),
-              closed: Boolean(camp.closed ?? camp[9] ?? false),
-              submissionId: submission?.id || null,
-              isCreator: submission?.creator_wallet?.toLowerCase() === address.toLowerCase()
-            })
-          } catch (e: any) {
-            console.error(`[WalletNFTs] ${contractInfo.version}: Error fetching token at index ${i}:`, e?.message)
-            errors.push({ contract: contractInfo.version, index: i, error: e?.message })
+            return { tokenIdNum, editionInfo, uri }
+          } catch {
+            return null
           }
+        })
+        const tokenDetails = (await Promise.all(detailPromises)).filter(d => d !== null)
+
+        // BATCH 3: Get unique campaign data (many tokens may share same campaign)
+        const uniqueCampaignIds = [...new Set(tokenDetails.map(d => Number(d!.editionInfo.campaignId ?? d!.editionInfo[0])))]
+        const campaignDataMap: Record<number, any> = {}
+        
+        const campPromises = uniqueCampaignIds.map(async (cid) => {
+          try {
+            const camp = await contract.getCampaign(BigInt(cid))
+            return { cid, camp }
+          } catch {
+            return null
+          }
+        })
+        const campResults = await Promise.all(campPromises)
+        for (const r of campResults) {
+          if (r) campaignDataMap[r.cid] = r.camp
+        }
+
+        // Now build NFT objects (no more RPC calls needed)
+        for (const detail of tokenDetails) {
+          if (!detail) continue
+          const { tokenIdNum, editionInfo, uri } = detail
+          
+          const campaignId = Number(editionInfo.campaignId ?? editionInfo[0])
+          const editionNumber = Number(editionInfo.editionNumber ?? editionInfo[1])
+          const camp = campaignDataMap[campaignId]
+          
+          if (!camp) {
+            errors.push({ contract: contractInfo.version, tokenId: tokenIdNum, error: 'Campaign not found' })
+            continue
+          }
+
+          const submission = submissionByCampaignId[String(campaignId)] || submissionByTokenId[String(tokenIdNum)] || null
+
+          // Skip IPFS fetch to save time - use Supabase data only
+          const editionsMinted = Number(camp.editionsMinted ?? camp[5] ?? 0n)
+          const onchainMaxEditions = Number(camp.maxEditions ?? camp[6] ?? 100n)
+          const grossRaisedWei = BigInt(camp.grossRaised ?? camp[3] ?? 0n)
+          const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
+          const grossRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
+          
+          const goalUSD = submission?.goal ? Number(submission.goal) : 100
+          const maxEditions = Number(submission?.num_copies || submission?.nft_editions || onchainMaxEditions || 100)
+          const pricePerEditionUSD = goalUSD > 0 && maxEditions > 0 ? goalUSD / maxEditions : 0
+          const nftSalesUSD = editionsMinted * pricePerEditionUSD
+          const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
+          
+          const resolvedImage = submission?.image_uri || ''
+
+          nfts.push({
+            tokenId: tokenIdNum,
+            campaignId,
+            editionNumber,
+            totalEditions: maxEditions,
+            editionsMinted,
+            contractAddress: contractInfo.address,
+            contractVersion: contractInfo.version,
+            uri,
+            metadata: null,
+            title: submission?.title || `Campaign #${campaignId}`,
+            image: resolvedImage,
+            story: submission?.story || '',
+            category: String(camp.category ?? camp[0] ?? 'general'),
+            goal: goalUSD,
+            raised: grossRaisedUSD,
+            nftSalesUSD,
+            tipsUSD,
+            active: Boolean(camp.active ?? camp[8] ?? true),
+            closed: Boolean(camp.closed ?? camp[9] ?? false),
+            submissionId: submission?.id || null,
+            isCreator: submission?.creator_wallet?.toLowerCase() === address.toLowerCase()
+          })
         }
       } catch (contractErr: any) {
         console.error(`[WalletNFTs] Error querying ${contractInfo.version}:`, contractErr?.message)
