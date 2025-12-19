@@ -975,7 +975,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
                 <ol className="text-xs text-white/50 space-y-1 list-decimal list-inside">
                   <li>Open MetaMask → NFTs tab</li>
                   <li>Click "Import NFT"</li>
-                  <li>Contract: <span className="font-mono text-white/70">{CONTRACT_ADDRESS.slice(0,6)}...{CONTRACT_ADDRESS.slice(-4)}</span></li>
+                  <li>Contract: <span className="font-mono text-white/70">{effectiveContractAddress.slice(0,6)}...{effectiveContractAddress.slice(-4)}</span></li>
                   <li>Token ID: <span className="font-mono text-green-400">{result.mintedTokenIds[result.mintedTokenIds.length - 1]}</span></li>
                 </ol>
               </div>
