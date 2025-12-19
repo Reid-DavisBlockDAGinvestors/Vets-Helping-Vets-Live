@@ -31,6 +31,8 @@ export type NFTItem = {
   updateCount?: number
   lastUpdated?: string | null
   hasRecentUpdate?: boolean
+  // Multi-contract support
+  contractAddress?: string
 }
 
 export default function NFTCard({ item }: { item: NFTItem }) {
@@ -152,7 +154,7 @@ export default function NFTCard({ item }: { item: NFTItem }) {
             </div>
             <div className="flex items-center gap-2">
               <a
-                href={`${EXPLORER_URL}/address/${CONTRACT_ADDRESS}`}
+                href={`${EXPLORER_URL}/address/${item.contractAddress || CONTRACT_ADDRESS}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}

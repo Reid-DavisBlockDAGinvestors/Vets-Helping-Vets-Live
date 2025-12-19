@@ -54,6 +54,8 @@ export default function MarketplacePage() {
           updateCount: f.updateCount || 0,
           lastUpdated: f.lastUpdated || null,
           hasRecentUpdate: f.hasRecentUpdate || false,
+          // Multi-contract support
+          contractAddress: f.contract_address || null,
         }
       })
       // De-duplicate by id when appending

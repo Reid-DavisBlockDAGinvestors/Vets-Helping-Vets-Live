@@ -223,3 +223,65 @@ describe('Contract Address Validation', () => {
     expect(V6_CONTRACT).toMatch(/^0x[a-fA-F0-9]{40}$/)
   })
 })
+
+// NFTCard/Marketplace item type with contract address
+type MarketplaceItem = {
+  id: string
+  campaignId: number
+  title: string
+  contractAddress?: string
+}
+
+// Function to generate explorer URL for marketplace items (matches NFTCard.tsx logic)
+function getMarketplaceExplorerUrl(item: MarketplaceItem): string {
+  // Must use item's contractAddress, fall back to V5 for legacy items
+  const address = item.contractAddress || V5_CONTRACT
+  return `${EXPLORER_URL}/address/${address}`
+}
+
+describe('Marketplace Explorer URL', () => {
+  it('should use V5 contract for V5 marketplace items', () => {
+    const item: MarketplaceItem = {
+      id: '1',
+      campaignId: 1,
+      title: 'V5 Campaign',
+      contractAddress: V5_CONTRACT
+    }
+    const url = getMarketplaceExplorerUrl(item)
+    expect(url).toBe(`${EXPLORER_URL}/address/${V5_CONTRACT}`)
+    expect(url).toContain('5890') // V5 ends in 5890
+  })
+
+  it('should use V6 contract for V6 marketplace items', () => {
+    const item: MarketplaceItem = {
+      id: '2',
+      campaignId: 2,
+      title: 'V6 Campaign',
+      contractAddress: V6_CONTRACT
+    }
+    const url = getMarketplaceExplorerUrl(item)
+    expect(url).toBe(`${EXPLORER_URL}/address/${V6_CONTRACT}`)
+    expect(url).toContain('7053') // V6 ends in 7053
+  })
+
+  it('should fall back to V5 for legacy items without contract address', () => {
+    const item: MarketplaceItem = {
+      id: '3',
+      campaignId: 3,
+      title: 'Legacy Campaign'
+      // no contractAddress
+    }
+    const url = getMarketplaceExplorerUrl(item)
+    expect(url).toBe(`${EXPLORER_URL}/address/${V5_CONTRACT}`)
+  })
+
+  it('V5 and V6 items should generate different URLs', () => {
+    const v5Item: MarketplaceItem = { id: '1', campaignId: 1, title: 'V5', contractAddress: V5_CONTRACT }
+    const v6Item: MarketplaceItem = { id: '2', campaignId: 1, title: 'V6', contractAddress: V6_CONTRACT }
+    
+    const v5Url = getMarketplaceExplorerUrl(v5Item)
+    const v6Url = getMarketplaceExplorerUrl(v6Item)
+    
+    expect(v5Url).not.toBe(v6Url)
+  })
+})
