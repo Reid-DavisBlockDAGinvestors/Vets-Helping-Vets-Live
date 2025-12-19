@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
-import { getProviderWithFallback } from '@/lib/onchain'
+import { getNowNodesProvider } from '@/lib/onchain'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getMintableContracts, ContractVersion } from '@/lib/contracts'
 
@@ -84,7 +84,9 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const provider = await getProviderWithFallback()
+    // Use NowNodes directly - standard RPC is too inconsistent for contract calls
+    const provider = getNowNodesProvider()
+    console.log('[WalletNFTs] Using NowNodes provider for reliable contract reads')
     const nfts: any[] = []
     const errors: any[] = []
     let totalBalance = 0
