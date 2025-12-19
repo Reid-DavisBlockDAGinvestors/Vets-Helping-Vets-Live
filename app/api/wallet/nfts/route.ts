@@ -209,10 +209,26 @@ export async function GET(req: NextRequest) {
       console.log(`[WalletNFTs] Errors:`, errors)
     }
 
+    // Deduplicate NFTs by composite key (contractAddress-tokenId)
+    const seen = new Set<string>()
+    const dedupedNfts = nfts.filter(nft => {
+      const key = `${nft.contractAddress}-${nft.tokenId}`
+      if (seen.has(key)) {
+        console.log(`[WalletNFTs] Removing duplicate: ${key}`)
+        return false
+      }
+      seen.add(key)
+      return true
+    })
+
+    if (dedupedNfts.length !== nfts.length) {
+      console.log(`[WalletNFTs] Removed ${nfts.length - dedupedNfts.length} duplicate NFTs`)
+    }
+
     return NextResponse.json({
       address,
       balance: totalBalance,
-      nfts,
+      nfts: dedupedNfts,
       contracts: contracts.map(c => ({ version: c.version, address: c.address })),
       errors: errors.length > 0 ? errors : undefined
     })
