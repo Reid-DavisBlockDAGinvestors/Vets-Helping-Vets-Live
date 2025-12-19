@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
+import { getProvider } from '@/lib/onchain'
+import { getAllDeployedContracts, V5_ABI, V6_ABI } from '@/lib/contracts'
 import { ethers } from 'ethers'
 
 export const dynamic = 'force-dynamic'
@@ -15,12 +16,14 @@ export async function GET(_req: NextRequest) {
       { auth: { persistSession: false } }
     )
 
-    const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
+    // Get all deployed contracts (V5, V6, etc.)
+    const deployedContracts = getAllDeployedContracts()
+    console.log(`[Analytics] Querying ${deployedContracts.length} deployed contracts...`)
     
-    // Get minted campaigns from Supabase
+    // Get minted campaigns from Supabase WITH contract_address
     const { data: submissions, error: subError } = await supabase
       .from('submissions')
-      .select('id, campaign_id, title, goal, num_copies')
+      .select('id, campaign_id, title, goal, num_copies, contract_address')
       .eq('status', 'minted')
       .not('campaign_id', 'is', null)
 
@@ -28,40 +31,59 @@ export async function GET(_req: NextRequest) {
       console.error('[Analytics] Supabase error:', subError)
     }
 
-    const campaignIds = (submissions || [])
-      .map(s => s.campaign_id)
-      .filter((id): id is number => id != null)
+    // Group campaigns by contract address
+    const campaignsByContract: Record<string, Array<{ id: number; title: string }>> = {}
+    for (const sub of submissions || []) {
+      const addr = (sub.contract_address || '').toLowerCase()
+      if (addr && sub.campaign_id != null) {
+        if (!campaignsByContract[addr]) campaignsByContract[addr] = []
+        if (!campaignsByContract[addr].find(c => c.id === sub.campaign_id)) {
+          campaignsByContract[addr].push({ id: sub.campaign_id, title: sub.title || '' })
+        }
+      }
+    }
 
-    console.log(`[Analytics] Found ${campaignIds.length} minted campaigns: ${campaignIds.join(', ')}`)
+    console.log('[Analytics] Campaigns by contract:', 
+      Object.entries(campaignsByContract).map(([addr, camps]) => `${addr.slice(0, 10)}...: ${camps.length} campaigns`)
+    )
 
     let totalRaisedUSD = 0
     let totalNftsMinted = 0
-    let totalCampaigns = campaignIds.length
+    let totalCampaigns = 0
 
-    // Get on-chain data for each campaign
-    if (contractAddress && campaignIds.length > 0) {
+    // Query each deployed contract
+    const provider = getProvider()
+    
+    for (const contractInfo of deployedContracts) {
+      const addr = contractInfo.address.toLowerCase()
+      const abi = contractInfo.version === 'v5' ? V5_ABI : V6_ABI
+      const contract = new ethers.Contract(contractInfo.address, abi, provider)
+      
+      const campaigns = campaignsByContract[addr] || []
+      
+      // Get total NFT supply for this contract
       try {
-        const provider = getProvider()
-        const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
-
-        for (const campaignId of campaignIds) {
-          try {
-            const camp = await contract.getCampaign(BigInt(campaignId))
-            const grossRaisedWei = BigInt(camp.grossRaised ?? camp[3] ?? 0n)
-            const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
-            const raisedUSD = grossRaisedBDAG * BDAG_USD_RATE
-            const minted = Number(camp.editionsMinted ?? camp[5] ?? 0)
-            
-            totalRaisedUSD += raisedUSD
-            totalNftsMinted += minted
-            
-            console.log(`[Analytics] Campaign #${campaignId}: raised=$${raisedUSD.toFixed(2)}, minted=${minted}`)
-          } catch (e: any) {
-            console.error(`[Analytics] Error fetching campaign ${campaignId}:`, e?.message)
-          }
+        const supply = await contract.totalSupply()
+        totalNftsMinted += Number(supply)
+      } catch (e: any) {
+        console.error(`[Analytics] Error getting totalSupply for ${contractInfo.version}:`, e?.message)
+      }
+      
+      // Query each campaign's grossRaised
+      for (const campaign of campaigns) {
+        try {
+          const camp = await contract.getCampaign(BigInt(campaign.id))
+          const grossRaisedWei = BigInt(camp.grossRaised ?? camp[3] ?? 0n)
+          const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
+          const raisedUSD = grossRaisedBDAG * BDAG_USD_RATE
+          
+          totalRaisedUSD += raisedUSD
+          totalCampaigns++
+          
+          console.log(`[Analytics] ${contractInfo.version} Campaign #${campaign.id}: raised=$${raisedUSD.toFixed(2)} BDAG=${grossRaisedBDAG.toFixed(2)}`)
+        } catch (e: any) {
+          console.error(`[Analytics] Error fetching ${contractInfo.version} campaign ${campaign.id}:`, e?.message)
         }
-      } catch (e) {
-        console.error('[Analytics] Contract error:', e)
       }
     }
     

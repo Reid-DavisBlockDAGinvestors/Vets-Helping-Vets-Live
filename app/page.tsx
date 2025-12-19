@@ -103,65 +103,80 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
 
 async function loadStats(): Promise<{ raised: number; campaigns: number; nfts: number }> {
   try {
-    const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
-    if (!contractAddress) {
-      console.log('[HomePage Stats] No contract address configured')
-      return { raised: 0, campaigns: 0, nfts: 0 }
-    }
-
-    const provider = getProvider()
-    const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
-
-    // Get total NFTs minted from blockchain
-    let totalNFTs = 0
-    try {
-      const supply = await contract.totalSupply()
-      totalNFTs = Number(supply)
-    } catch (e: any) {
-      console.error('[HomePage Stats] Error getting total supply:', e?.message)
-    }
-
-    // Get campaign IDs from database (only real campaigns with submissions)
-    // This is the source of truth - orphaned blockchain campaigns without submissions don't count
-    let campaignIds: number[] = []
-    try {
-      const { data: submissions } = await supabaseAdmin
-        .from('submissions')
-        .select('campaign_id')
-        .not('campaign_id', 'is', null)
-      
-      campaignIds = (submissions || [])
-        .map(s => s.campaign_id)
-        .filter((id): id is number => id != null)
-      
-      console.log(`[HomePage Stats] Found ${campaignIds.length} campaigns with submissions: ${campaignIds.join(', ')}`)
-    } catch (e: any) {
-      console.error('[HomePage Stats] Error getting campaigns from DB:', e?.message)
-    }
-
-    // Calculate total raised for these campaigns only
-    let totalGrossRaisedWei = BigInt(0)
+    // Use the new platform stats API that aggregates from ALL contracts
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'http://localhost:3000'
     
-    for (const campaignId of campaignIds) {
-      try {
-        const campaign = await contract.getCampaign(campaignId)
-        const grossRaised = BigInt(campaign.grossRaised ?? campaign[3] ?? 0n)
-        totalGrossRaisedWei += grossRaised
-        console.log(`[HomePage Stats] Campaign ${campaignId}: grossRaised=${grossRaised}`)
-      } catch (e) {
-        console.log(`[HomePage Stats] Campaign ${campaignId}: error reading from chain`)
+    // For server-side rendering, call the API directly via internal fetch
+    // This aggregates V5, V6, and future contracts + off-chain payments
+    const { getAllDeployedContracts, V5_ABI, V6_ABI } = await import('@/lib/contracts')
+    const { ethers } = await import('ethers')
+    const provider = getProvider()
+    const deployedContracts = getAllDeployedContracts()
+    
+    console.log(`[HomePage Stats] Querying ${deployedContracts.length} deployed contracts...`)
+    
+    // Get campaign IDs from database grouped by contract
+    const { data: submissions } = await supabaseAdmin
+      .from('submissions')
+      .select('campaign_id, contract_address')
+      .not('campaign_id', 'is', null)
+    
+    const campaignsByContract: Record<string, number[]> = {}
+    for (const sub of submissions || []) {
+      const addr = (sub.contract_address || '').toLowerCase()
+      if (addr && sub.campaign_id != null) {
+        if (!campaignsByContract[addr]) campaignsByContract[addr] = []
+        if (!campaignsByContract[addr].includes(sub.campaign_id)) {
+          campaignsByContract[addr].push(sub.campaign_id)
+        }
       }
     }
-
-    const totalRaisedBDAG = Number(totalGrossRaisedWei) / 1e18
+    
+    let totalRaisedBDAG = 0
+    let totalNFTsMinted = 0
+    let totalCampaigns = 0
+    
+    // Query each deployed contract
+    for (const contractInfo of deployedContracts) {
+      const addr = contractInfo.address.toLowerCase()
+      const abi = contractInfo.version === 'v5' ? V5_ABI : V6_ABI
+      const contract = new ethers.Contract(contractInfo.address, abi, provider)
+      
+      const campaignIds = campaignsByContract[addr] || []
+      
+      // Get total NFT supply for this contract
+      try {
+        const supply = await contract.totalSupply()
+        totalNFTsMinted += Number(supply)
+      } catch (e: any) {
+        console.error(`[HomePage Stats] Error getting totalSupply for ${contractInfo.version}:`, e?.message)
+      }
+      
+      // Query each campaign's grossRaised
+      for (const campaignId of campaignIds) {
+        try {
+          const campaign = await contract.getCampaign(campaignId)
+          const grossRaisedWei = BigInt(campaign.grossRaised ?? campaign[3] ?? 0n)
+          const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
+          totalRaisedBDAG += grossRaisedBDAG
+          totalCampaigns++
+          console.log(`[HomePage Stats] ${contractInfo.version} Campaign ${campaignId}: ${grossRaisedBDAG.toFixed(2)} BDAG`)
+        } catch (e: any) {
+          console.log(`[HomePage Stats] ${contractInfo.version} Campaign ${campaignId}: error - ${e?.message}`)
+        }
+      }
+    }
+    
     const totalRaisedUSD = totalRaisedBDAG * BDAG_USD_RATE
-
-    console.log(`[HomePage Stats] Campaigns: ${campaignIds.length}, NFTs: ${totalNFTs}, Total BDAG: ${totalRaisedBDAG}, Raised: $${totalRaisedUSD.toFixed(2)}`)
+    
+    console.log(`[HomePage Stats] TOTAL: ${totalRaisedBDAG.toFixed(2)} BDAG = $${totalRaisedUSD.toFixed(2)} USD, Campaigns: ${totalCampaigns}, NFTs: ${totalNFTsMinted}`)
 
     return {
       raised: totalRaisedUSD,
-      campaigns: campaignIds.length,
-      nfts: totalNFTs
+      campaigns: totalCampaigns,
+      nfts: totalNFTsMinted
     }
   } catch (e: any) {
     console.error('[HomePage Stats] Error:', e?.message)
