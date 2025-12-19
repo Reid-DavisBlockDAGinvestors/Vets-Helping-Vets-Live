@@ -10,7 +10,10 @@ import { openBugReport } from './BugReportButton'
 
 type PaymentTab = 'card' | 'crypto' | 'other'
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
+// Default contract addresses - can be overridden by props
+const DEFAULT_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
+const CONTRACT_ADDRESS_V5 = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V5 || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
+const CONTRACT_ADDRESS_V6 = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0xaE54e4E8A75a81780361570c17b8660CEaD27053'
 const BDAG_USD_PRICE = 0.05 // Fixed test price: 1 BDAG = $0.05 USD
 
 // V5 ABI for client-side edition minting
@@ -23,16 +26,25 @@ const MINT_EDITION_ABI = [
 ]
 
 type PurchasePanelProps = {
-  campaignId: string  // V5: campaign ID instead of token ID
+  campaignId: string  // V5/V6: campaign ID instead of token ID
   tokenId?: string    // Legacy support
   pricePerNft?: number | null
   remainingCopies?: number | null
   isPendingOnchain?: boolean  // True if campaign is approved but not yet on-chain
+  contractVersion?: string    // 'v5', 'v6', etc - determines which contract to use
+  contractAddress?: string    // Override contract address directly
 }
 
-export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remainingCopies, isPendingOnchain }: PurchasePanelProps) {
-  // V5: Use campaignId, fall back to tokenId for backwards compat
+export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remainingCopies, isPendingOnchain, contractVersion, contractAddress }: PurchasePanelProps) {
+  // Use campaignId, fall back to tokenId for backwards compat
   const targetId = campaignId || tokenId || '0'
+  
+  // Determine which contract to use based on version or explicit address
+  const effectiveContractAddress = contractAddress || (
+    contractVersion === 'v5' ? CONTRACT_ADDRESS_V5 :
+    contractVersion === 'v6' ? CONTRACT_ADDRESS_V6 :
+    DEFAULT_CONTRACT_ADDRESS
+  )
   const hasNftPrice = pricePerNft && pricePerNft > 0
   const [quantity, setQuantity] = useState<number>(1)
   const [tipAmount, setTipAmount] = useState<number>(0)
@@ -146,7 +158,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
     console.log(`[PurchasePanel] isLoggedIn: ${isLoggedIn}, userEmail: ${userEmail}`)
     console.log(`[PurchasePanel] wallet.isConnected: ${wallet.isConnected}, wallet.address: ${wallet.address}`)
     console.log(`[PurchasePanel] wallet.isOnBlockDAG: ${wallet.isOnBlockDAG}`)
-    console.log(`[PurchasePanel] CONTRACT_ADDRESS: ${CONTRACT_ADDRESS}`)
+    console.log(`[PurchasePanel] CONTRACT_ADDRESS: ${effectiveContractAddress} (version: ${contractVersion || 'default'})`)
     console.log(`[PurchasePanel] isPendingOnchain: ${isPendingOnchain}`)
     console.log(`[PurchasePanel] Campaign ID: ${targetId}, Price: ${pricePerNft}, Quantity: ${quantity}`)
     
@@ -177,7 +189,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       return
     }
 
-    if (!CONTRACT_ADDRESS) {
+    if (!effectiveContractAddress) {
       console.log(`[PurchasePanel] BLOCKED: No contract address`)
       setCryptoMsg('Contract not configured')
       return
@@ -213,8 +225,8 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       const signer = await provider.getSigner()
       console.log(`[PurchasePanel] Signer address: ${await signer.getAddress()}`)
       
-      console.log(`[PurchasePanel] Creating contract instance...`)
-      const contract = new Contract(CONTRACT_ADDRESS, MINT_EDITION_ABI, signer)
+      console.log(`[PurchasePanel] Creating contract instance for ${contractVersion || 'default'} at ${effectiveContractAddress}...`)
+      const contract = new Contract(effectiveContractAddress, MINT_EDITION_ABI, signer)
 
       // Pre-flight check: Verify campaign exists and is active on-chain
       // Note: BlockDAG RPC can have latency issues, so we retry a few times
@@ -291,7 +303,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       console.log(`[PurchasePanel] Minting ${quantity} edition(s) for campaign ${targetId}`)
       console.log(`[PurchasePanel] Price per NFT: ${pricePerNftBdag} BDAG (${pricePerNftWei} wei)`)
       console.log(`[PurchasePanel] Tip BDAG: ${bdagTipAmount} (${tipBdagWei} wei)`)
-      console.log(`[PurchasePanel] Contract: ${CONTRACT_ADDRESS}`)
+      console.log(`[PurchasePanel] Contract: ${effectiveContractAddress} (${contractVersion || 'default'})`)
       
       const txHashes: string[] = []
       
@@ -422,6 +434,8 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
             userId: userId, // Link to auth.users for logged-in purchases
             paymentMethod: 'crypto_bdag', // Track payment method
             referrer: typeof window !== 'undefined' ? document.referrer : null, // Marketing attribution
+            contractVersion: contractVersion || 'v6', // Track which contract version
+            contractAddress: effectiveContractAddress, // Track contract address
           })
         })
         console.log(`[PurchasePanel] Purchase recorded for campaign ${targetId}, tokenId=${lastTokenId}`)

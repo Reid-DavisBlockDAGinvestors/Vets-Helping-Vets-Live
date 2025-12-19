@@ -60,6 +60,7 @@ type Campaign = {
   // On-chain data
   tx_hash: string | null
   contract_address: string | null
+  contract_version: string | null
   // On-chain stats (for minted campaigns)
   onchainStats: {
     editionsMinted: number
@@ -239,6 +240,7 @@ export default function AdminCampaignHub() {
           // On-chain data
           tx_hash: sub.tx_hash || null,
           contract_address: sub.contract_address || null,
+          contract_version: sub.contract_version || null,
           onchainStats: null, // Will be populated below for minted campaigns
           // Updates
           updates: subUpdates,
@@ -1155,6 +1157,23 @@ export default function AdminCampaignHub() {
                             <div>
                               <span className="text-white/50">On-chain ID:</span>
                               <span className="text-white ml-2">#{campaign.campaign_id}</span>
+                            </div>
+                          )}
+                          {campaign.contract_version && (
+                            <div>
+                              <span className="text-white/50">Contract:</span>
+                              <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                                campaign.contract_version === 'v6' 
+                                  ? 'bg-purple-500/20 text-purple-300' 
+                                  : 'bg-blue-500/20 text-blue-300'
+                              }`}>
+                                {campaign.contract_version.toUpperCase()}
+                              </span>
+                              {campaign.contract_address && (
+                                <span className="ml-2 text-white/40 font-mono text-xs">
+                                  {campaign.contract_address.slice(0, 6)}...{campaign.contract_address.slice(-4)}
+                                </span>
+                              )}
                             </div>
                           )}
                           <div>

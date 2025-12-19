@@ -30,9 +30,17 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC721Errors__factory>;
     getContractFactory(
+      name: "IERC2981",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC2981__factory>;
+    getContractFactory(
       name: "IERC4906",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC4906__factory>;
+    getContractFactory(
+      name: "ERC2981",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC2981__factory>;
     getContractFactory(
       name: "ERC20",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -53,6 +61,10 @@ declare module "hardhat/types/runtime" {
       name: "ERC721Enumerable",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ERC721Enumerable__factory>;
+    getContractFactory(
+      name: "ERC721Royalty",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC721Royalty__factory>;
     getContractFactory(
       name: "ERC721URIStorage",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -90,6 +102,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Math__factory>;
     getContractFactory(
+      name: "Pausable",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Pausable__factory>;
+    getContractFactory(
       name: "ReentrancyGuard",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ReentrancyGuard__factory>;
@@ -125,6 +141,10 @@ declare module "hardhat/types/runtime" {
       name: "PatriotPledgeNFTV5",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.PatriotPledgeNFTV5__factory>;
+    getContractFactory(
+      name: "PatriotPledgeNFTV6",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.PatriotPledgeNFTV6__factory>;
 
     getContractAt(
       name: "Ownable",
@@ -147,10 +167,20 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IERC721Errors>;
     getContractAt(
+      name: "IERC2981",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC2981>;
+    getContractAt(
       name: "IERC4906",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.IERC4906>;
+    getContractAt(
+      name: "ERC2981",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ERC2981>;
     getContractAt(
       name: "ERC20",
       address: string | ethers.Addressable,
@@ -176,6 +206,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.ERC721Enumerable>;
+    getContractAt(
+      name: "ERC721Royalty",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ERC721Royalty>;
     getContractAt(
       name: "ERC721URIStorage",
       address: string | ethers.Addressable,
@@ -222,6 +257,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.Math>;
     getContractAt(
+      name: "Pausable",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Pausable>;
+    getContractAt(
       name: "ReentrancyGuard",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -266,6 +306,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.PatriotPledgeNFTV5>;
+    getContractAt(
+      name: "PatriotPledgeNFTV6",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.PatriotPledgeNFTV6>;
 
     deployContract(
       name: "Ownable",
@@ -284,9 +329,17 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC721Errors>;
     deployContract(
+      name: "IERC2981",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC2981>;
+    deployContract(
       name: "IERC4906",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC4906>;
+    deployContract(
+      name: "ERC2981",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC2981>;
     deployContract(
       name: "ERC20",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -307,6 +360,10 @@ declare module "hardhat/types/runtime" {
       name: "ERC721Enumerable",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ERC721Enumerable>;
+    deployContract(
+      name: "ERC721Royalty",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC721Royalty>;
     deployContract(
       name: "ERC721URIStorage",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -344,6 +401,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Math>;
     deployContract(
+      name: "Pausable",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Pausable>;
+    deployContract(
       name: "ReentrancyGuard",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ReentrancyGuard>;
@@ -379,6 +440,10 @@ declare module "hardhat/types/runtime" {
       name: "PatriotPledgeNFTV5",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.PatriotPledgeNFTV5>;
+    deployContract(
+      name: "PatriotPledgeNFTV6",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.PatriotPledgeNFTV6>;
 
     deployContract(
       name: "Ownable",
@@ -401,10 +466,20 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC721Errors>;
     deployContract(
+      name: "IERC2981",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC2981>;
+    deployContract(
       name: "IERC4906",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC4906>;
+    deployContract(
+      name: "ERC2981",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC2981>;
     deployContract(
       name: "ERC20",
       args: any[],
@@ -430,6 +505,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ERC721Enumerable>;
+    deployContract(
+      name: "ERC721Royalty",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC721Royalty>;
     deployContract(
       name: "ERC721URIStorage",
       args: any[],
@@ -476,6 +556,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Math>;
     deployContract(
+      name: "Pausable",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Pausable>;
+    deployContract(
       name: "ReentrancyGuard",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -520,6 +605,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.PatriotPledgeNFTV5>;
+    deployContract(
+      name: "PatriotPledgeNFTV6",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.PatriotPledgeNFTV6>;
 
     // default types
     getContractFactory(

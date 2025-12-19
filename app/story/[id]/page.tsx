@@ -346,7 +346,15 @@ export default async function StoryViewer({ params }: { params: { id: string } }
               <h2 className="text-lg font-semibold text-white mb-3">
                 {pricePerCopy ? 'Purchase NFT' : 'Make a Donation'}
               </h2>
-              <PurchasePanel campaignId={id} tokenId={id} pricePerNft={pricePerCopy} remainingCopies={remainingCopies} isPendingOnchain={isPendingOnchain} />
+              <PurchasePanel 
+                campaignId={id} 
+                tokenId={id} 
+                pricePerNft={pricePerCopy} 
+                remainingCopies={remainingCopies} 
+                isPendingOnchain={isPendingOnchain}
+                contractVersion={submission?.contract_version || 'v5'}
+                contractAddress={submission?.contract_address}
+              />
             </div>
           </div>
         </div>

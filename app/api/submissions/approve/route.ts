@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { getRelayerSigner, getContract } from '@/lib/onchain'
+import { getRelayerSigner } from '@/lib/onchain'
 import { sendCampaignApproved } from '@/lib/mailer'
+import { getActiveContractVersion, getContractByVersion, getContractAddress } from '@/lib/contracts'
 
 // Convert IPFS URI to HTTP gateway URL
 function toHttpUrl(uri: string | null): string | null {
@@ -102,7 +103,13 @@ export async function POST(req: NextRequest) {
     // Email will be sent after campaign is created on-chain with campaignId
 
     const signer = getRelayerSigner()
-    const contract = getContract(signer)
+    
+    // Use the active contract version for new campaigns
+    const contractVersion = getActiveContractVersion()
+    const contractAddress = getContractAddress(contractVersion)
+    const contract = getContractByVersion(contractVersion, signer)
+    
+    console.log(`[approve] Using contract ${contractVersion} at ${contractAddress}`)
     
     // V5: Create campaign on-chain
     // Convert goal/copies to numbers first (handles string values from Supabase)
@@ -222,7 +229,7 @@ export async function POST(req: NextRequest) {
       await new Promise(r => setTimeout(r, 3000))
       
       // Check if the predicted campaign ID has our metadata URI
-      const verifyContract = getContract(signer)
+      const verifyContract = getContractByVersion(contractVersion, signer)
       const total = Number(await verifyContract.totalCampaigns())
       console.log(`[approve] Total campaigns on-chain: ${total}, predicted ID: ${campaignId}`)
       
@@ -273,14 +280,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Update submission with verified or pending status
-    const contractAddress = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || null
     const { error: updateError } = await supabaseAdmin
       .from('submissions')
       .update({ 
         status: finalStatus,
         campaign_id: verifiedCampaignId,
         tx_hash: txHash, 
-        contract_address: contractAddress, 
+        contract_address: contractAddress,
+        contract_version: contractVersion,
         visible_on_marketplace: true,
         // Save NFT settings that were used for on-chain campaign
         num_copies: copiesNum || null,
@@ -317,6 +324,8 @@ export async function POST(req: NextRequest) {
       ok: true,
       txHash,
       campaignId: verifiedCampaignId,
+      contractVersion,
+      contractAddress,
       status: finalStatus,
       message
     })
