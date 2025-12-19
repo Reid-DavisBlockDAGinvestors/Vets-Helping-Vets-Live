@@ -430,8 +430,15 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
         console.warn('Failed to record purchase:', e)
       }
 
-      setResult({ success: true, txHash: lastTxHash, txHashes, quantity })
-      setCryptoMsg(`🎉 ${quantity} NFT${quantity > 1 ? 's' : ''} minted successfully!`)
+      setResult({ success: true, txHash: lastTxHash, txHashes, quantity, mintedTokenIds })
+      // Show token ID(s) prominently so user knows what to import
+      if (mintedTokenIds.length === 1) {
+        setCryptoMsg(`🎉 NFT minted successfully! Your Token ID is #${mintedTokenIds[0]}`)
+      } else if (mintedTokenIds.length > 1) {
+        setCryptoMsg(`🎉 ${quantity} NFTs minted! Token IDs: ${mintedTokenIds.join(', ')}`)
+      } else {
+        setCryptoMsg(`🎉 ${quantity} NFT${quantity > 1 ? 's' : ''} minted successfully!`)
+      }
       wallet.updateBalance()
     } catch (e: any) {
       console.error('BDAG purchase error:', e)
@@ -930,11 +937,36 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
         )}
       </div>
 
-      {/* Success Message */}
+      {/* Success Message with NFT Import Instructions */}
       {result?.success && (
-        <div className="rounded-lg bg-green-500/20 border border-green-500/30 p-4 text-center">
-          <p className="text-green-400 font-semibold">Thank you for your donation!</p>
-          <p className="text-sm text-green-400/70 mt-1">Your support makes a difference.</p>
+        <div className="rounded-lg bg-green-500/20 border border-green-500/30 p-4 space-y-3">
+          <div className="text-center">
+            <p className="text-green-400 font-semibold">Thank you for your donation!</p>
+            <p className="text-sm text-green-400/70 mt-1">Your support makes a difference.</p>
+          </div>
+          
+          {/* Show minted token IDs and import instructions */}
+          {result.mintedTokenIds?.length > 0 && (
+            <div className="bg-white/5 rounded-lg p-3 space-y-2">
+              <p className="text-sm text-white/80 font-medium">Your NFT{result.mintedTokenIds.length > 1 ? 's' : ''}:</p>
+              <div className="flex flex-wrap gap-2">
+                {result.mintedTokenIds.map((tid: number) => (
+                  <span key={tid} className="px-3 py-1 bg-green-500/20 rounded-full text-green-400 text-sm font-mono">
+                    Token #{tid}
+                  </span>
+                ))}
+              </div>
+              <div className="pt-2 border-t border-white/10 mt-2">
+                <p className="text-xs text-white/60 mb-2">To view in MetaMask:</p>
+                <ol className="text-xs text-white/50 space-y-1 list-decimal list-inside">
+                  <li>Open MetaMask → NFTs tab</li>
+                  <li>Click "Import NFT"</li>
+                  <li>Contract: <span className="font-mono text-white/70">{CONTRACT_ADDRESS.slice(0,6)}...{CONTRACT_ADDRESS.slice(-4)}</span></li>
+                  <li>Token ID: <span className="font-mono text-green-400">{result.mintedTokenIds[result.mintedTokenIds.length - 1]}</span></li>
+                </ol>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
