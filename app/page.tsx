@@ -111,98 +111,17 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
 async function loadStats(): Promise<{ raised: number; campaigns: number; nfts: number }> {
   try {
     // UNIFIED STATS: Use the same calculation as /api/analytics/summary
-    // This ensures consistency across Homepage, Admin, and Dashboard
-    const { getAllDeployedContracts, V5_ABI, V6_ABI } = await import('@/lib/contracts')
-    const { ethers } = await import('ethers')
-    const provider = getProvider()
-    const deployedContracts = getAllDeployedContracts()
+    // Both use lib/stats.ts calculatePlatformStats() for consistency
+    const { calculatePlatformStats } = await import('@/lib/stats')
     
-    const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'.toLowerCase()
+    const stats = await calculatePlatformStats()
     
-    console.log(`[HomePage Stats] Querying ${deployedContracts.length} deployed contracts...`)
-    
-    // Get minted submissions with campaign_id
-    const { data: submissions, error: subError } = await supabaseAdmin
-      .from('submissions')
-      .select('campaign_id, contract_address')
-      .eq('status', 'minted')
-      .not('campaign_id', 'is', null)
-    
-    if (subError) {
-      console.error('[HomePage Stats] Supabase error:', subError.message)
-    }
-    
-    // Group by contract - FALL BACK TO V5 FOR ORPHANED SUBMISSIONS
-    const campaignsByContract: Record<string, number[]> = {}
-    let orphanedCount = 0
-    
-    for (const sub of submissions || []) {
-      let addr = (sub.contract_address || '').toLowerCase()
-      if (!addr && sub.campaign_id != null) {
-        addr = V5_CONTRACT
-        orphanedCount++
-      }
-      if (addr && sub.campaign_id != null) {
-        if (!campaignsByContract[addr]) campaignsByContract[addr] = []
-        if (!campaignsByContract[addr].includes(sub.campaign_id)) {
-          campaignsByContract[addr].push(sub.campaign_id)
-        }
-      }
-    }
-    
-    if (orphanedCount > 0) {
-      console.log(`[HomePage Stats] ${orphanedCount} orphaned submissions assigned to V5`)
-    }
-    
-    console.log('[HomePage Stats] Campaigns by contract:', 
-      Object.entries(campaignsByContract).map(([addr, camps]) => `${addr.slice(0, 10)}...: ${camps.length} campaigns`)
-    )
-    
-    let totalRaisedUSD = 0
-    let totalNFTsMinted = 0
-    let totalCampaigns = 0
-    
-    // Query each deployed contract - SAME LOGIC AS /api/analytics/summary
-    for (const contractInfo of deployedContracts) {
-      const addr = contractInfo.address.toLowerCase()
-      const abi = contractInfo.version === 'v5' ? V5_ABI : V6_ABI
-      const contract = new ethers.Contract(contractInfo.address, abi, provider)
-      
-      const campaignIds = campaignsByContract[addr] || []
-      
-      // Get total NFT supply for this contract
-      try {
-        const supply = await contract.totalSupply()
-        totalNFTsMinted += Number(supply)
-        console.log(`[HomePage Stats] ${contractInfo.version} totalSupply: ${Number(supply)}`)
-      } catch (e: any) {
-        console.error(`[HomePage Stats] Error getting totalSupply for ${contractInfo.version}:`, e?.message)
-      }
-      
-      // Query each campaign's grossRaised
-      for (const campaignId of campaignIds) {
-        try {
-          const camp = await contract.getCampaign(BigInt(campaignId))
-          const grossRaisedWei = BigInt(camp.grossRaised ?? camp[3] ?? 0n)
-          const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
-          const raisedUSD = grossRaisedBDAG * BDAG_USD_RATE
-          
-          totalRaisedUSD += raisedUSD
-          totalCampaigns++
-          
-          console.log(`[HomePage Stats] ${contractInfo.version} Campaign #${campaignId}: raised=$${raisedUSD.toFixed(2)} BDAG=${grossRaisedBDAG.toFixed(2)}`)
-        } catch (e: any) {
-          console.error(`[HomePage Stats] Error fetching ${contractInfo.version} campaign ${campaignId}:`, e?.message)
-        }
-      }
-    }
-    
-    console.log(`[HomePage Stats] TOTALS: raised=$${totalRaisedUSD.toFixed(2)}, nfts=${totalNFTsMinted}, campaigns=${totalCampaigns}`)
+    console.log(`[HomePage Stats] Unified stats: $${stats.totalRaisedUSD}, ${stats.totalNFTsMinted} NFTs, ${stats.totalCampaigns} campaigns`)
 
     return {
-      raised: Math.round(totalRaisedUSD * 100) / 100, // Round same as API
-      campaigns: totalCampaigns,
-      nfts: totalNFTsMinted
+      raised: stats.totalRaisedUSD,
+      campaigns: stats.totalCampaigns,
+      nfts: stats.totalNFTsMinted
     }
   } catch (e: any) {
     console.error('[HomePage Stats] Error:', e?.message)
