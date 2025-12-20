@@ -110,40 +110,38 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
 
 async function loadStats(): Promise<{ raised: number; campaigns: number; nfts: number }> {
   try {
-    // Use the new platform stats API that aggregates from ALL contracts
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000'
-    
-    // For server-side rendering, call the API directly via internal fetch
-    // This aggregates V5, V6, and future contracts + off-chain payments
+    // UNIFIED STATS: Use the same calculation as /api/analytics/summary
+    // This ensures consistency across Homepage, Admin, and Dashboard
     const { getAllDeployedContracts, V5_ABI, V6_ABI } = await import('@/lib/contracts')
     const { ethers } = await import('ethers')
     const provider = getProvider()
     const deployedContracts = getAllDeployedContracts()
     
+    const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'.toLowerCase()
+    
     console.log(`[HomePage Stats] Querying ${deployedContracts.length} deployed contracts...`)
     
-    // Get campaign IDs from database grouped by contract - ONLY minted submissions
-    const { data: submissions } = await supabaseAdmin
+    // Get minted submissions with campaign_id
+    const { data: submissions, error: subError } = await supabaseAdmin
       .from('submissions')
       .select('campaign_id, contract_address')
       .eq('status', 'minted')
       .not('campaign_id', 'is', null)
     
+    if (subError) {
+      console.error('[HomePage Stats] Supabase error:', subError.message)
+    }
+    
     // Group by contract - FALL BACK TO V5 FOR ORPHANED SUBMISSIONS
-    const V5_CONTRACT_ADDR = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'.toLowerCase()
     const campaignsByContract: Record<string, number[]> = {}
     let orphanedCount = 0
     
     for (const sub of submissions || []) {
-      // If no contract_address, assume V5 (legacy submissions)
       let addr = (sub.contract_address || '').toLowerCase()
       if (!addr && sub.campaign_id != null) {
-        addr = V5_CONTRACT_ADDR
+        addr = V5_CONTRACT
         orphanedCount++
       }
-      
       if (addr && sub.campaign_id != null) {
         if (!campaignsByContract[addr]) campaignsByContract[addr] = []
         if (!campaignsByContract[addr].includes(sub.campaign_id)) {
@@ -156,11 +154,15 @@ async function loadStats(): Promise<{ raised: number; campaigns: number; nfts: n
       console.log(`[HomePage Stats] ${orphanedCount} orphaned submissions assigned to V5`)
     }
     
-    let totalRaisedBDAG = 0
+    console.log('[HomePage Stats] Campaigns by contract:', 
+      Object.entries(campaignsByContract).map(([addr, camps]) => `${addr.slice(0, 10)}...: ${camps.length} campaigns`)
+    )
+    
+    let totalRaisedUSD = 0
     let totalNFTsMinted = 0
     let totalCampaigns = 0
     
-    // Query each deployed contract
+    // Query each deployed contract - SAME LOGIC AS /api/analytics/summary
     for (const contractInfo of deployedContracts) {
       const addr = contractInfo.address.toLowerCase()
       const abi = contractInfo.version === 'v5' ? V5_ABI : V6_ABI
@@ -172,6 +174,7 @@ async function loadStats(): Promise<{ raised: number; campaigns: number; nfts: n
       try {
         const supply = await contract.totalSupply()
         totalNFTsMinted += Number(supply)
+        console.log(`[HomePage Stats] ${contractInfo.version} totalSupply: ${Number(supply)}`)
       } catch (e: any) {
         console.error(`[HomePage Stats] Error getting totalSupply for ${contractInfo.version}:`, e?.message)
       }
@@ -179,24 +182,25 @@ async function loadStats(): Promise<{ raised: number; campaigns: number; nfts: n
       // Query each campaign's grossRaised
       for (const campaignId of campaignIds) {
         try {
-          const campaign = await contract.getCampaign(campaignId)
-          const grossRaisedWei = BigInt(campaign.grossRaised ?? campaign[3] ?? 0n)
+          const camp = await contract.getCampaign(BigInt(campaignId))
+          const grossRaisedWei = BigInt(camp.grossRaised ?? camp[3] ?? 0n)
           const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
-          totalRaisedBDAG += grossRaisedBDAG
+          const raisedUSD = grossRaisedBDAG * BDAG_USD_RATE
+          
+          totalRaisedUSD += raisedUSD
           totalCampaigns++
-          console.log(`[HomePage Stats] ${contractInfo.version} Campaign ${campaignId}: ${grossRaisedBDAG.toFixed(2)} BDAG`)
+          
+          console.log(`[HomePage Stats] ${contractInfo.version} Campaign #${campaignId}: raised=$${raisedUSD.toFixed(2)} BDAG=${grossRaisedBDAG.toFixed(2)}`)
         } catch (e: any) {
-          console.log(`[HomePage Stats] ${contractInfo.version} Campaign ${campaignId}: error - ${e?.message}`)
+          console.error(`[HomePage Stats] Error fetching ${contractInfo.version} campaign ${campaignId}:`, e?.message)
         }
       }
     }
     
-    const totalRaisedUSD = totalRaisedBDAG * BDAG_USD_RATE
-    
-    console.log(`[HomePage Stats] TOTAL: ${totalRaisedBDAG.toFixed(2)} BDAG = $${totalRaisedUSD.toFixed(2)} USD, Campaigns: ${totalCampaigns}, NFTs: ${totalNFTsMinted}`)
+    console.log(`[HomePage Stats] TOTALS: raised=$${totalRaisedUSD.toFixed(2)}, nfts=${totalNFTsMinted}, campaigns=${totalCampaigns}`)
 
     return {
-      raised: totalRaisedUSD,
+      raised: Math.round(totalRaisedUSD * 100) / 100, // Round same as API
       campaigns: totalCampaigns,
       nfts: totalNFTsMinted
     }
