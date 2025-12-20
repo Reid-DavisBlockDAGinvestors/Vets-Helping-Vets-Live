@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
+import { getContractByAddress, V5_ABI, V6_ABI } from '@/lib/contracts'
 
 export const dynamic = 'force-dynamic'
 
 const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
+
+// V5 contract address for fallback
+const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
 
 /**
  * GET /api/wallet/campaigns?address=0x...
@@ -29,15 +33,32 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'QUERY_FAILED', details: error.message }, { status: 500 })
     }
 
-    const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
     const provider = getProvider()
-    const contract = contractAddress ? new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider) : null
+    
+    // Cache contracts by address to avoid recreating them
+    const contractCache: Record<string, ethers.Contract> = {}
+    
+    function getContractForSubmission(subContractAddr: string | null): ethers.Contract | null {
+      const addr = (subContractAddr || V5_CONTRACT).toLowerCase()
+      if (!addr) return null
+      
+      if (!contractCache[addr]) {
+        // Use V5 ABI for V5 contract, V6 ABI for others (V6 extends V5)
+        const isV5 = addr.toLowerCase() === V5_CONTRACT.toLowerCase()
+        const abi = isV5 ? V5_ABI : V6_ABI
+        contractCache[addr] = new ethers.Contract(addr, abi, provider)
+      }
+      return contractCache[addr]
+    }
 
     // Enrich with on-chain data if available
     const campaigns = await Promise.all(
       (submissions || []).map(async (sub) => {
         let onchainData: any = null
 
+        // Use the submission's specific contract_address for on-chain queries
+        const contract = getContractForSubmission(sub.contract_address)
+        
         if (contract && sub.campaign_id != null) {
           try {
             const camp = await contract.getCampaign(sub.campaign_id)

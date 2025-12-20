@@ -15,7 +15,7 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
     // First, get campaigns from database with full metadata - prioritize minted ones
     const { data: submissions, error: dbError } = await supabaseAdmin
       .from('submissions')
-      .select('id, campaign_id, slug, short_code, title, story, image_uri, goal, status, category, creator_name, num_copies, price_per_copy')
+      .select('id, campaign_id, slug, short_code, title, story, image_uri, goal, status, category, creator_name, num_copies, price_per_copy, contract_address')
       .in('status', ['minted', 'approved'])
       .order('status', { ascending: false }) // 'minted' comes before 'approved' alphabetically reversed
       .order('created_at', { ascending: false })
@@ -28,17 +28,21 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
       return []
     }
 
-    // Get on-chain data for raised amounts
-    const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
-    let contract: any = null
+    // Get on-chain data for raised amounts - use each submission's contract_address
+    const { V5_ABI, V6_ABI } = await import('@/lib/contracts')
+    const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
+    const provider = getProvider()
     
-    if (contractAddress) {
-      try {
-        const provider = getProvider()
-        contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
-      } catch (e) {
-        console.log('[loadOnchain] Could not create contract instance')
+    // Cache contracts by address
+    const contractCache: Record<string, ethers.Contract> = {}
+    function getContractForSubmission(subContractAddr: string | null): ethers.Contract | null {
+      const addr = (subContractAddr || V5_CONTRACT).toLowerCase()
+      if (!addr) return null
+      if (!contractCache[addr]) {
+        const isV5 = addr.toLowerCase() === V5_CONTRACT.toLowerCase()
+        contractCache[addr] = new ethers.Contract(addr, isV5 ? V5_ABI : V6_ABI, provider)
       }
+      return contractCache[addr]
     }
 
     const mapped: NFTItem[] = await Promise.all(submissions.map(async (s: any) => {
@@ -51,7 +55,8 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
       const numCopies = Number(s.num_copies || 100)
       const pricePerCopy = Number(s.price_per_copy || (goal > 0 && numCopies > 0 ? goal / numCopies : 0))
 
-      // Get raised amount from blockchain if campaign_id exists
+      // Get raised amount from blockchain using submission's specific contract
+      const contract = getContractForSubmission(s.contract_address)
       if (s.campaign_id && contract) {
         try {
           const campaign = await contract.getCampaign(s.campaign_id)
@@ -71,7 +76,9 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
       }
 
       const pct = goal > 0 ? Math.round((raised / goal) * 100) : 0
-      const cause = s.category === 'veteran' ? 'veteran' : 'general'
+      // Use mapLegacyCategory for consistent category display
+      const { mapLegacyCategory } = await import('@/lib/categories')
+      const cause = mapLegacyCategory(s.category || 'other')
 
       return {
         id: s.id,
@@ -117,10 +124,11 @@ async function loadStats(): Promise<{ raised: number; campaigns: number; nfts: n
     
     console.log(`[HomePage Stats] Querying ${deployedContracts.length} deployed contracts...`)
     
-    // Get campaign IDs from database grouped by contract
+    // Get campaign IDs from database grouped by contract - ONLY minted submissions
     const { data: submissions } = await supabaseAdmin
       .from('submissions')
       .select('campaign_id, contract_address')
+      .eq('status', 'minted')
       .not('campaign_id', 'is', null)
     
     const campaignsByContract: Record<string, number[]> = {}
