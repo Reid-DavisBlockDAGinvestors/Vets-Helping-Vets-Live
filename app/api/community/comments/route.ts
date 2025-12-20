@@ -112,3 +112,156 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
   }
 }
+
+// PUT - Edit a comment (owner only)
+export async function PUT(req: NextRequest) {
+  try {
+    const authHeader = req.headers.get('authorization') || ''
+    const token = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7) : ''
+    
+    if (!token) {
+      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+    }
+
+    const { data: userData, error: authErr } = await supabaseAdmin.auth.getUser(token)
+    if (authErr || !userData?.user?.id) {
+      return NextResponse.json({ error: 'INVALID_TOKEN' }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const { id, content } = body
+
+    if (!id) {
+      return NextResponse.json({ error: 'COMMENT_ID_REQUIRED' }, { status: 400 })
+    }
+
+    if (!content || !content.trim()) {
+      return NextResponse.json({ error: 'CONTENT_REQUIRED' }, { status: 400 })
+    }
+
+    // Fetch the comment to check ownership
+    const { data: comment, error: fetchErr } = await supabaseAdmin
+      .from('community_comments')
+      .select('user_id')
+      .eq('id', id)
+      .single()
+
+    if (fetchErr || !comment) {
+      return NextResponse.json({ error: 'COMMENT_NOT_FOUND' }, { status: 404 })
+    }
+
+    // Only owner can edit their own comments
+    if (comment.user_id !== userData.user.id) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'You can only edit your own comments' }, { status: 403 })
+    }
+
+    // Update the comment
+    const { data: updatedComment, error: updateErr } = await supabaseAdmin
+      .from('community_comments')
+      .update({ 
+        content: content.trim(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (updateErr) {
+      return NextResponse.json({ error: 'UPDATE_FAILED', details: updateErr.message }, { status: 500 })
+    }
+
+    // Get user profile for response
+    const { data: profile } = await supabaseAdmin
+      .from('community_profiles')
+      .select('display_name, avatar_url, is_verified')
+      .eq('user_id', userData.user.id)
+      .maybeSingle()
+
+    return NextResponse.json({ 
+      ok: true, 
+      comment: {
+        ...updatedComment,
+        user: profile || { display_name: 'User', avatar_url: null, is_verified: false }
+      }
+    })
+  } catch (e: any) {
+    return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
+  }
+}
+
+// DELETE - Delete a comment (owner or admin only)
+export async function DELETE(req: NextRequest) {
+  try {
+    const authHeader = req.headers.get('authorization') || ''
+    const token = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7) : ''
+    
+    if (!token) {
+      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+    }
+
+    const { data: userData, error: authErr } = await supabaseAdmin.auth.getUser(token)
+    if (authErr || !userData?.user?.id) {
+      return NextResponse.json({ error: 'INVALID_TOKEN' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const commentId = searchParams.get('id')
+
+    if (!commentId) {
+      return NextResponse.json({ error: 'COMMENT_ID_REQUIRED' }, { status: 400 })
+    }
+
+    // Fetch the comment to check ownership and get post_id
+    const { data: comment, error: fetchErr } = await supabaseAdmin
+      .from('community_comments')
+      .select('user_id, post_id')
+      .eq('id', commentId)
+      .single()
+
+    if (fetchErr || !comment) {
+      return NextResponse.json({ error: 'COMMENT_NOT_FOUND' }, { status: 404 })
+    }
+
+    // Check if user is owner or admin
+    const { data: adminCheck } = await supabaseAdmin
+      .from('admin_users')
+      .select('id')
+      .eq('user_id', userData.user.id)
+      .maybeSingle()
+
+    const isOwner = comment.user_id === userData.user.id
+    const isAdmin = !!adminCheck
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
+    }
+
+    // Delete the comment
+    const { error: deleteErr } = await supabaseAdmin
+      .from('community_comments')
+      .delete()
+      .eq('id', commentId)
+
+    if (deleteErr) {
+      return NextResponse.json({ error: 'DELETE_FAILED', details: deleteErr.message }, { status: 500 })
+    }
+
+    // Update post's comment count
+    const { data: post } = await supabaseAdmin
+      .from('community_posts')
+      .select('comments_count')
+      .eq('id', comment.post_id)
+      .single()
+    
+    if (post) {
+      await supabaseAdmin
+        .from('community_posts')
+        .update({ comments_count: Math.max(0, (post.comments_count || 1) - 1) })
+        .eq('id', comment.post_id)
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
+  }
+}

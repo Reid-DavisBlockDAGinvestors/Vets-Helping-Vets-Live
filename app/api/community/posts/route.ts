@@ -234,6 +234,69 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// PUT - Edit a post (owner only)
+export async function PUT(req: NextRequest) {
+  try {
+    const authHeader = req.headers.get('authorization') || ''
+    const token = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7) : ''
+    
+    if (!token) {
+      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+    }
+
+    const { data: userData, error: authErr } = await supabaseAdmin.auth.getUser(token)
+    if (authErr || !userData?.user?.id) {
+      return NextResponse.json({ error: 'INVALID_TOKEN' }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const { id, content } = body
+
+    if (!id) {
+      return NextResponse.json({ error: 'POST_ID_REQUIRED' }, { status: 400 })
+    }
+
+    if (!content || !content.trim()) {
+      return NextResponse.json({ error: 'CONTENT_REQUIRED' }, { status: 400 })
+    }
+
+    // Fetch the post to check ownership
+    const { data: post, error: fetchErr } = await supabaseAdmin
+      .from('community_posts')
+      .select('user_id')
+      .eq('id', id)
+      .single()
+
+    if (fetchErr || !post) {
+      return NextResponse.json({ error: 'POST_NOT_FOUND' }, { status: 404 })
+    }
+
+    // Only owner can edit (admins cannot edit others' posts, only delete)
+    if (post.user_id !== userData.user.id) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'You can only edit your own posts' }, { status: 403 })
+    }
+
+    // Update the post
+    const { data: updatedPost, error: updateErr } = await supabaseAdmin
+      .from('community_posts')
+      .update({ 
+        content: content.trim(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (updateErr) {
+      return NextResponse.json({ error: 'UPDATE_FAILED', details: updateErr.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true, post: updatedPost })
+  } catch (e: any) {
+    return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
+  }
+}
+
 // DELETE - Delete a post (owner or admin only)
 export async function DELETE(req: NextRequest) {
   try {

@@ -49,6 +49,7 @@ interface Category {
 
 interface Comment {
   id: string
+  user_id: string
   content: string
   created_at: string
   likes_count: number
@@ -88,6 +89,13 @@ export default function CommunityHubClient() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [campaignPreviews, setCampaignPreviews] = useState<Record<string, CampaignPreview>>({})
   const [deletingPost, setDeletingPost] = useState<string | null>(null)
+  const [editingPost, setEditingPost] = useState<Post | null>(null)
+  const [editPostContent, setEditPostContent] = useState('')
+  const [savingPost, setSavingPost] = useState(false)
+  const [editingComment, setEditingComment] = useState<{ postId: string; comment: Comment } | null>(null)
+  const [editCommentContent, setEditCommentContent] = useState('')
+  const [savingComment, setSavingComment] = useState(false)
+  const [deletingComment, setDeletingComment] = useState<string | null>(null)
   const [filterCampaign, setFilterCampaign] = useState<CampaignPreview | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [allCampaigns, setAllCampaigns] = useState<CampaignPreview[]>([])
@@ -290,6 +298,112 @@ export default function CommunityHubClient() {
       alert(e?.message || 'Failed to delete post')
     } finally {
       setDeletingPost(null)
+    }
+  }
+
+  // Edit a post
+  const startEditPost = (post: Post) => {
+    setEditingPost(post)
+    setEditPostContent(post.content)
+  }
+
+  const cancelEditPost = () => {
+    setEditingPost(null)
+    setEditPostContent('')
+  }
+
+  const saveEditPost = async () => {
+    if (!token || !editingPost || !editPostContent.trim()) return
+    
+    setSavingPost(true)
+    try {
+      const res = await fetch('/api/community/posts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: editingPost.id, content: editPostContent.trim() })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPosts(prev => prev.map(p => p.id === editingPost.id ? { ...p, content: editPostContent.trim() } : p))
+        cancelEditPost()
+      } else {
+        const err = await res.json()
+        alert(err?.message || err?.error || 'Failed to update post')
+      }
+    } catch (e: any) {
+      alert(e?.message || 'Failed to update post')
+    } finally {
+      setSavingPost(false)
+    }
+  }
+
+  // Edit a comment
+  const startEditComment = (postId: string, comment: Comment) => {
+    setEditingComment({ postId, comment })
+    setEditCommentContent(comment.content)
+  }
+
+  const cancelEditComment = () => {
+    setEditingComment(null)
+    setEditCommentContent('')
+  }
+
+  const saveEditComment = async () => {
+    if (!token || !editingComment || !editCommentContent.trim()) return
+    
+    setSavingComment(true)
+    try {
+      const res = await fetch('/api/community/comments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: editingComment.comment.id, content: editCommentContent.trim() })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPostComments(prev => ({
+          ...prev,
+          [editingComment.postId]: prev[editingComment.postId]?.map(c => 
+            c.id === editingComment.comment.id ? { ...c, content: editCommentContent.trim() } : c
+          ) || []
+        }))
+        cancelEditComment()
+      } else {
+        const err = await res.json()
+        alert(err?.message || err?.error || 'Failed to update comment')
+      }
+    } catch (e: any) {
+      alert(e?.message || 'Failed to update comment')
+    } finally {
+      setSavingComment(false)
+    }
+  }
+
+  // Delete a comment
+  const deleteComment = async (postId: string, commentId: string) => {
+    if (!token) return
+    if (!confirm('Are you sure you want to delete this comment?')) return
+    
+    setDeletingComment(commentId)
+    try {
+      const res = await fetch(`/api/community/comments?id=${commentId}`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        setPostComments(prev => ({
+          ...prev,
+          [postId]: prev[postId]?.filter(c => c.id !== commentId) || []
+        }))
+        // Update comment count
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: Math.max(0, p.comments_count - 1) } : p))
+      } else {
+        const err = await res.json()
+        alert(err?.error || 'Failed to delete comment')
+      }
+    } catch (e: any) {
+      alert(e?.message || 'Failed to delete comment')
+    } finally {
+      setDeletingComment(null)
     }
   }
 
@@ -1093,20 +1207,33 @@ export default function CommunityHubClient() {
                         </div>
                       </div>
                       {post.is_pinned && <span className="text-yellow-400" title="Pinned">📌</span>}
-                      {/* Delete button for owner or admin */}
+                      {/* Edit/Delete buttons for owner or admin */}
                       {user && (post.user_id === user.id || isAdmin) && (
-                        <button
-                          onClick={() => deletePost(post.id)}
-                          disabled={deletingPost === post.id}
-                          className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                          title="Delete post"
-                        >
-                          {deletingPost === post.id ? (
-                            <span className="animate-spin">⏳</span>
-                          ) : (
-                            <span>🗑️</span>
+                        <div className="flex items-center gap-1">
+                          {/* Edit button - owner only */}
+                          {post.user_id === user.id && (
+                            <button
+                              onClick={() => startEditPost(post)}
+                              className="p-1.5 rounded-lg text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                              title="Edit post"
+                            >
+                              ✏️
+                            </button>
                           )}
-                        </button>
+                          {/* Delete button - owner or admin */}
+                          <button
+                            onClick={() => deletePost(post.id)}
+                            disabled={deletingPost === post.id}
+                            className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                            title="Delete post"
+                          >
+                            {deletingPost === post.id ? (
+                              <span className="animate-spin">⏳</span>
+                            ) : (
+                              <span>🗑️</span>
+                            )}
+                          </button>
+                        </div>
                       )}
                     </div>
 
@@ -1261,18 +1388,46 @@ export default function CommunityHubClient() {
                       <div className="space-y-3">
                         {(postComments[post.id] || []).map(comment => (
                           <div key={comment.id} className="flex gap-3">
-                            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white text-sm font-bold">
+                            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                               {comment.user.avatar_url ? (
                                 <img src={comment.user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
                               ) : (
                                 (comment.user.display_name?.[0] || '?').toUpperCase()
                               )}
                             </div>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <div className="bg-white/5 rounded-2xl px-4 py-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-white text-sm">{comment.user.display_name}</span>
-                                  {comment.user.is_verified && <span className="text-blue-400 text-xs">✓</span>}
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-white text-sm">{comment.user.display_name}</span>
+                                    {comment.user.is_verified && <span className="text-blue-400 text-xs">✓</span>}
+                                  </div>
+                                  {/* Edit/Delete buttons for comment owner or admin */}
+                                  {user && (comment.user_id === user.id || isAdmin) && (
+                                    <div className="flex items-center gap-1">
+                                      {comment.user_id === user.id && (
+                                        <button
+                                          onClick={() => startEditComment(post.id, comment)}
+                                          className="p-1 rounded text-white/30 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                                          title="Edit comment"
+                                        >
+                                          <span className="text-xs">✏️</span>
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => deleteComment(post.id, comment.id)}
+                                        disabled={deletingComment === comment.id}
+                                        className="p-1 rounded text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                        title="Delete comment"
+                                      >
+                                        {deletingComment === comment.id ? (
+                                          <span className="text-xs animate-spin">⏳</span>
+                                        ) : (
+                                          <span className="text-xs">🗑️</span>
+                                        )}
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                                 <p className="text-white/80 text-sm">{comment.content}</p>
                               </div>
@@ -1326,6 +1481,68 @@ export default function CommunityHubClient() {
                 className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-lg transition-colors"
               >
                 Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Post Modal */}
+      {editingPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80" onClick={cancelEditPost} />
+          <div className="relative bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-lg">
+            <h3 className="text-xl font-bold text-white mb-4">Edit Post</h3>
+            <textarea
+              value={editPostContent}
+              onChange={e => setEditPostContent(e.target.value)}
+              className="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50 mb-4 min-h-[150px] resize-none"
+              placeholder="What's on your mind?"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={cancelEditPost}
+                className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEditPost}
+                disabled={!editPostContent.trim() || savingPost}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              >
+                {savingPost ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Comment Modal */}
+      {editingComment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80" onClick={cancelEditComment} />
+          <div className="relative bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-lg">
+            <h3 className="text-xl font-bold text-white mb-4">Edit Comment</h3>
+            <textarea
+              value={editCommentContent}
+              onChange={e => setEditCommentContent(e.target.value)}
+              className="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50 mb-4 min-h-[100px] resize-none"
+              placeholder="Write your comment..."
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={cancelEditComment}
+                className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEditComment}
+                disabled={!editCommentContent.trim() || savingComment}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              >
+                {savingComment ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
