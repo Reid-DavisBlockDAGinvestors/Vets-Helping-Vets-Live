@@ -31,16 +31,29 @@ export async function GET(_req: NextRequest) {
       console.error('[Analytics] Supabase error:', subError)
     }
 
-    // Group campaigns by contract address
+    // Group campaigns by contract address - FALL BACK TO V5 FOR ORPHANED SUBMISSIONS
+    const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'.toLowerCase()
     const campaignsByContract: Record<string, Array<{ id: number; title: string }>> = {}
+    let orphanedCount = 0
+    
     for (const sub of submissions || []) {
-      const addr = (sub.contract_address || '').toLowerCase()
+      // If no contract_address, assume V5 (legacy submissions)
+      let addr = (sub.contract_address || '').toLowerCase()
+      if (!addr && sub.campaign_id != null) {
+        addr = V5_CONTRACT
+        orphanedCount++
+      }
+      
       if (addr && sub.campaign_id != null) {
         if (!campaignsByContract[addr]) campaignsByContract[addr] = []
         if (!campaignsByContract[addr].find(c => c.id === sub.campaign_id)) {
           campaignsByContract[addr].push({ id: sub.campaign_id, title: sub.title || '' })
         }
       }
+    }
+    
+    if (orphanedCount > 0) {
+      console.log(`[Analytics] ${orphanedCount} orphaned submissions (no contract_address) assigned to V5`)
     }
 
     console.log('[Analytics] Campaigns by contract:', 

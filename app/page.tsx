@@ -131,15 +131,29 @@ async function loadStats(): Promise<{ raised: number; campaigns: number; nfts: n
       .eq('status', 'minted')
       .not('campaign_id', 'is', null)
     
+    // Group by contract - FALL BACK TO V5 FOR ORPHANED SUBMISSIONS
+    const V5_CONTRACT_ADDR = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'.toLowerCase()
     const campaignsByContract: Record<string, number[]> = {}
+    let orphanedCount = 0
+    
     for (const sub of submissions || []) {
-      const addr = (sub.contract_address || '').toLowerCase()
+      // If no contract_address, assume V5 (legacy submissions)
+      let addr = (sub.contract_address || '').toLowerCase()
+      if (!addr && sub.campaign_id != null) {
+        addr = V5_CONTRACT_ADDR
+        orphanedCount++
+      }
+      
       if (addr && sub.campaign_id != null) {
         if (!campaignsByContract[addr]) campaignsByContract[addr] = []
         if (!campaignsByContract[addr].includes(sub.campaign_id)) {
           campaignsByContract[addr].push(sub.campaign_id)
         }
       }
+    }
+    
+    if (orphanedCount > 0) {
+      console.log(`[HomePage Stats] ${orphanedCount} orphaned submissions assigned to V5`)
     }
     
     let totalRaisedBDAG = 0

@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
-import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
+import { getProvider } from '@/lib/onchain'
+import { V5_ABI, V6_ABI } from '@/lib/contracts'
 import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
 const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
 const PLATFORM_FEE_PERCENT = 1 // 1% platform fee
+const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
 
 /**
  * GET /api/campaigns/stats?campaignIds=1,2,3
  * Returns on-chain stats for multiple campaigns
+ * 
+ * IMPORTANT: Uses each campaign's contract_address from Supabase, not a hardcoded env var
  */
 export async function GET(req: NextRequest) {
   try {
@@ -24,11 +28,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'No valid campaign IDs' }, { status: 400 })
     }
 
-    const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
-    if (!contractAddress) {
-      return NextResponse.json({ error: 'Contract not configured' }, { status: 500 })
-    }
-
     // Create Supabase client to fetch submission data for accurate pricing
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -36,11 +35,10 @@ export async function GET(req: NextRequest) {
       { auth: { persistSession: false } }
     )
 
-    // Batch fetch all submissions for these campaign IDs
-    // Note: only select columns that exist in the table
+    // Batch fetch all submissions for these campaign IDs - INCLUDE contract_address!
     const { data: submissions, error: subError } = await supabase
       .from('submissions')
-      .select('campaign_id, goal, num_copies, price_per_copy')
+      .select('campaign_id, goal, num_copies, price_per_copy, contract_address')
       .eq('status', 'minted')
       .in('campaign_id', campaignIds)
     
@@ -54,19 +52,36 @@ export async function GET(req: NextRequest) {
       }
     }
     console.log(`[CampaignStats] Found ${submissions?.length || 0} submissions for ${campaignIds.length} campaigns`)
-    console.log(`[CampaignStats] SubmissionMap keys:`, Object.keys(submissionMap))
 
     const provider = getProvider()
-    const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
+    
+    // Cache contracts by address
+    const contractCache: Record<string, ethers.Contract> = {}
+    function getContractForAddress(addr: string): ethers.Contract {
+      const normalizedAddr = addr.toLowerCase()
+      if (!contractCache[normalizedAddr]) {
+        const isV5 = normalizedAddr === V5_CONTRACT.toLowerCase()
+        const abi = isV5 ? V5_ABI : V6_ABI
+        contractCache[normalizedAddr] = new ethers.Contract(addr, abi, provider)
+      }
+      return contractCache[normalizedAddr]
+    }
 
     const stats: Record<number, any> = {}
 
     await Promise.all(campaignIds.map(async (campaignId) => {
       try {
-        const camp = await contract.getCampaign(BigInt(campaignId))
         const submission = submissionMap[campaignId]
         
-        console.log(`[CampaignStats] Campaign ${campaignId}: submission found=${!!submission}, goal=${submission?.goal}, num_copies=${submission?.num_copies}, nft_editions=${submission?.nft_editions}`)
+        // Get contract address from submission, fallback to V5
+        const contractAddr = submission?.contract_address || V5_CONTRACT
+        const contract = getContractForAddress(contractAddr)
+        
+        console.log(`[CampaignStats] Campaign ${campaignId}: using contract ${contractAddr.slice(0, 10)}..., submission found=${!!submission}`)
+        
+        const camp = await contract.getCampaign(BigInt(campaignId))
+        
+        console.log(`[CampaignStats] Campaign ${campaignId}: goal=${submission?.goal}, num_copies=${submission?.num_copies}`)
         
         const grossRaisedWei = BigInt(camp.grossRaised ?? 0n)
         const editionsMinted = Number(camp.editionsMinted ?? 0)
