@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import Filters, { FilterValues } from '@/components/Filters'
 import NFTCard, { NFTItem } from '@/components/NFTCard'
+import { mapLegacyCategory } from '@/lib/categories'
 
 export default function MarketplacePage() {
   const [filters, setFilters] = useState<FilterValues>({ causeType: 'all', urgency: 'all' })
@@ -40,7 +41,7 @@ export default function MarketplacePage() {
           short_code: f.short_code || null,
           title,
           image,
-          causeType: (cause === 'veteran' ? 'veteran' : 'general'),
+          causeType: mapLegacyCategory(cause),
           progress: pct,
           goal,
           raised,
