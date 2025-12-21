@@ -5,6 +5,7 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import { loadStripe } from '@stripe/stripe-js'
 import { useWallet } from '@/hooks/useWallet'
 import { BrowserProvider, Contract, parseEther, formatEther, Interface } from 'ethers'
+import { withRetry, IRetryConfig } from '@/lib/retry'
 import { supabase } from '@/lib/supabase'
 import { openBugReport } from './BugReportButton'
 
@@ -229,28 +230,26 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       const contract = new Contract(effectiveContractAddress, MINT_EDITION_ABI, signer)
 
       // Pre-flight check: Verify campaign exists and is active on-chain
-      // Note: BlockDAG RPC can have latency issues, so we retry a few times
+      // Using exponential backoff retry logic for RPC latency issues
       console.log(`[PurchasePanel] Checking campaign ${targetId} on-chain...`)
-      let verifyAttempts = 0
-      const maxVerifyAttempts = 3
-      let lastVerifyError: any = null
       
-      while (verifyAttempts < maxVerifyAttempts) {
-        try {
+      const verifyConfig: Partial<IRetryConfig> = {
+        maxAttempts: 5,
+        initialDelayMs: 2000,
+        maxDelayMs: 10000,
+        backoffMultiplier: 1.5,
+      }
+      
+      // Define verification result type
+      type VerifyResult = { campaign: any; totalCampaigns: number }
+      
+      const verifyResult = await withRetry<VerifyResult>(
+        async () => {
           const totalCampaigns = await contract.totalCampaigns()
-          console.log(`[PurchasePanel] Total campaigns on-chain: ${totalCampaigns} (attempt ${verifyAttempts + 1})`)
+          console.log(`[PurchasePanel] Total campaigns on-chain: ${totalCampaigns}`)
           
           if (Number(targetId) >= Number(totalCampaigns)) {
-            // Campaign ID is beyond total - might be RPC latency, retry
-            if (verifyAttempts < maxVerifyAttempts - 1) {
-              console.log(`[PurchasePanel] Campaign ${targetId} >= total ${totalCampaigns}, retrying...`)
-              verifyAttempts++
-              await new Promise(r => setTimeout(r, 2000)) // Wait 2 seconds
-              continue
-            }
-            setCryptoMsg(`Campaign #${targetId} does not exist on-chain yet. Total campaigns: ${totalCampaigns}. The blockchain may be slow - please wait a moment and try again.`)
-            setLoading(false)
-            return
+            throw new Error(`CAMPAIGN_NOT_FOUND:${totalCampaigns}`)
           }
           
           const campaign = await contract.getCampaign(BigInt(targetId))
@@ -263,32 +262,38 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
             maxEditions: Number(campaign[6])
           })
           
-          if (!campaign[8]) { // active is at index 8
-            setCryptoMsg(`Campaign #${targetId} is not active on-chain. The campaign may need to be fixed in the admin panel.`)
-            setLoading(false)
-            return
-          }
-          
-          if (campaign[9]) { // closed is at index 9
-            setCryptoMsg(`Campaign #${targetId} is closed and no longer accepting purchases.`)
-            setLoading(false)
-            return
-          }
-          
-          // Verification passed!
-          break
-        } catch (verifyErr: any) {
-          lastVerifyError = verifyErr
-          console.error(`[PurchasePanel] Campaign verification failed (attempt ${verifyAttempts + 1}):`, verifyErr?.message?.slice(0, 100))
-          verifyAttempts++
-          if (verifyAttempts < maxVerifyAttempts) {
-            await new Promise(r => setTimeout(r, 2000)) // Wait 2 seconds before retry
-          }
+          return { campaign, totalCampaigns: Number(totalCampaigns) }
+        },
+        verifyConfig,
+        (status) => {
+          const delaySeconds = Math.round(status.delayMs / 1000)
+          setCryptoMsg(`Verifying campaign... Attempt ${status.attempt}/${status.maxAttempts}${delaySeconds > 0 ? ` (retrying in ${delaySeconds}s)` : ''}`)
+          console.log(`[PurchasePanel] Verification attempt ${status.attempt}/${status.maxAttempts}:`, status.error?.message?.slice(0, 50))
         }
+      )
+      
+      if (!verifyResult.success) {
+        const errorMsg = verifyResult.error?.message || ''
+        if (errorMsg.startsWith('CAMPAIGN_NOT_FOUND:')) {
+          const total = errorMsg.split(':')[1]
+          setCryptoMsg(`Campaign #${targetId} does not exist on-chain yet. Total campaigns: ${total}. The blockchain may be slow - please wait a moment and try again.`)
+        } else {
+          setCryptoMsg(`Failed to verify campaign after ${verifyResult.attempts} attempts (${Math.round(verifyResult.totalTimeMs / 1000)}s). The blockchain may be experiencing delays. Please try again in a moment.`)
+        }
+        setLoading(false)
+        return
       }
       
-      if (verifyAttempts >= maxVerifyAttempts && lastVerifyError) {
-        setCryptoMsg(`Failed to verify campaign after ${maxVerifyAttempts} attempts. The blockchain may be experiencing delays. Please try again in a moment.`)
+      const { campaign } = verifyResult.data!
+      
+      if (!campaign[8]) { // active is at index 8
+        setCryptoMsg(`Campaign #${targetId} is not active on-chain. The campaign may need to be fixed in the admin panel.`)
+        setLoading(false)
+        return
+      }
+      
+      if (campaign[9]) { // closed is at index 9
+        setCryptoMsg(`Campaign #${targetId} is closed and no longer accepting purchases.`)
         setLoading(false)
         return
       }
