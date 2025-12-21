@@ -69,6 +69,8 @@ export default function AdminBugReports() {
   const [updating, setUpdating] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [resolutionNotes, setResolutionNotes] = useState('')
+  const [adminMessage, setAdminMessage] = useState('')
+  const [sendEmailOnUpdate, setSendEmailOnUpdate] = useState(true)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const fetchReports = async () => {
@@ -138,7 +140,7 @@ export default function AdminBugReports() {
     return opt?.color || 'text-gray-400'
   }
 
-  const updateReport = async (id: string, updates: { status?: string; priority?: string; resolution_notes?: string }) => {
+  const updateReport = async (id: string, updates: { status?: string; priority?: string; resolution_notes?: string }, withEmail = true) => {
     setUpdating(true)
     try {
       const { data: session } = await supabase.auth.getSession()
@@ -151,7 +153,12 @@ export default function AdminBugReports() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ id, ...updates })
+        body: JSON.stringify({ 
+          id, 
+          ...updates,
+          admin_message: adminMessage || undefined,
+          send_email: withEmail && sendEmailOnUpdate
+        })
       })
 
       if (res.ok) {
@@ -160,6 +167,10 @@ export default function AdminBugReports() {
         setReports(prev => prev.map(r => r.id === id ? { ...r, ...data.report } : r))
         if (selectedReport?.id === id) {
           setSelectedReport({ ...selectedReport, ...data.report })
+        }
+        // Clear admin message after successful update
+        if (data.emailSent) {
+          setAdminMessage('')
         }
         // Refresh stats
         fetchReports()
@@ -458,6 +469,39 @@ export default function AdminBugReports() {
                 >
                   {updating ? 'Saving...' : 'Save Notes'}
                 </button>
+              </div>
+
+              {/* Admin Message & Email Settings */}
+              <div className="border-t border-white/10 pt-4">
+                <h4 className="text-sm font-medium text-white/70 mb-2">Message to User (included in email)</h4>
+                <textarea
+                  value={adminMessage}
+                  onChange={(e) => setAdminMessage(e.target.value)}
+                  placeholder="Add a personal message to the user about this update..."
+                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500 min-h-[80px] text-sm"
+                />
+                <div className="flex items-center gap-2 mt-3">
+                  <input
+                    type="checkbox"
+                    id="sendEmail"
+                    checked={sendEmailOnUpdate}
+                    onChange={(e) => setSendEmailOnUpdate(e.target.checked)}
+                    className="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-500 focus:ring-blue-500"
+                  />
+                  <label htmlFor="sendEmail" className="text-sm text-white/70">
+                    Send email notification to user when status changes
+                  </label>
+                </div>
+                {selectedReport.user_email && (
+                  <p className="text-xs text-white/40 mt-2">
+                    Email will be sent to: {selectedReport.user_email}
+                  </p>
+                )}
+                {!selectedReport.user_email && (
+                  <p className="text-xs text-orange-400 mt-2">
+                    ⚠️ No email on file - user won't be notified
+                  </p>
+                )}
               </div>
 
               {/* Quick Actions */}

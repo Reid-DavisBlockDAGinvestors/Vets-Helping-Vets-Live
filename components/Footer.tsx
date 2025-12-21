@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import SocialLinks from './SocialLinks'
 
 export default function Footer() {
@@ -14,6 +15,8 @@ export default function Footer() {
           <SocialLinks />
         </div>
         <div className="mt-4 flex flex-wrap gap-3">
+          <Link className="underline hover:text-white transition-colors" href="/my-bug-reports">My Bug Reports</Link>
+          <span className="text-white/30">·</span>
           <a className="underline" href="https://awakening.bdagscan.com" target="_blank" rel="noreferrer">BlockDAG Explorer</a>
           <a className="underline" href="https://awakening.bdagscan.com/faucet" target="_blank" rel="noreferrer">Faucet</a>
           <a className="underline" href="https://rpc.awakening.bdagscan.com" target="_blank" rel="noreferrer">RPC</a>

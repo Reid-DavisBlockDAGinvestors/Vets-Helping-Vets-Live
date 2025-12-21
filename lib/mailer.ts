@@ -10,7 +10,7 @@ const EXPLORER_URL = 'https://awakening.bdagscan.com'
 
 export async function sendEmail(payload: EmailPayload) {
   const apiKey = process.env.RESEND_API_KEY
-  const from = process.env.FROM_EMAIL || 'PatriotPledgeNFTs@vetshelpingvets.life'
+  const from = process.env.FROM_EMAIL || 'patriotpledgenfts@vetshelpingvets.life'
   
   console.log('[mailer] Attempting to send email:', {
     to: payload.to,
@@ -616,6 +616,133 @@ export async function sendPasswordResetEmail(data: PasswordResetData) {
   return sendEmail({
     to: data.email,
     subject: '🔑 Reset Your PatriotPledge Password',
+    html: wrapEmail(content)
+  })
+}
+
+// Bug Report Status Update Email
+export type BugReportStatusData = {
+  email: string
+  reportId: string
+  reportTitle: string
+  oldStatus: string
+  newStatus: string
+  resolutionNotes?: string
+  adminMessage?: string
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  new: '🆕 New',
+  investigating: '🔍 Investigating',
+  in_progress: '🔧 In Progress',
+  resolved: '✅ Resolved',
+  wont_fix: '❌ Won\'t Fix',
+  duplicate: '📋 Duplicate',
+}
+
+export async function sendBugReportStatusEmail(data: BugReportStatusData) {
+  const reportUrl = `${SITE_URL}/my-bug-reports/${data.reportId}`
+  const statusLabel = STATUS_LABELS[data.newStatus] || data.newStatus
+  const isResolved = ['resolved', 'wont_fix', 'duplicate'].includes(data.newStatus)
+  
+  const content = `
+    <h1 style="color: #fff; font-size: 24px; margin: 0 0 20px 0;">
+      ${isResolved ? '🎉 Your Bug Report Has Been Addressed!' : '📬 Bug Report Status Update'}
+    </h1>
+    
+    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6;">
+      Your bug report has been updated by our team.
+    </p>
+    
+    <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin: 20px 0;">
+      <p style="color: #64748b; font-size: 12px; margin: 0 0 5px 0;">Bug Report</p>
+      <h2 style="color: #fff; font-size: 18px; margin: 0;">${data.reportTitle}</h2>
+    </div>
+    
+    <div style="display: flex; gap: 20px; margin: 20px 0;">
+      <div style="flex: 1; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px;">
+        <p style="color: #64748b; font-size: 12px; margin: 0 0 5px 0;">Previous Status</p>
+        <p style="color: #94a3b8; font-size: 14px; margin: 0;">${STATUS_LABELS[data.oldStatus] || data.oldStatus}</p>
+      </div>
+      <div style="flex: 1; background: rgba(59, 130, 246, 0.2); border-radius: 12px; padding: 15px;">
+        <p style="color: #64748b; font-size: 12px; margin: 0 0 5px 0;">New Status</p>
+        <p style="color: #3b82f6; font-size: 14px; font-weight: 600; margin: 0;">${statusLabel}</p>
+      </div>
+    </div>
+    
+    ${data.resolutionNotes ? `
+    <div style="background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 0 12px 12px 0;">
+      <p style="color: #64748b; font-size: 12px; margin: 0 0 8px 0;">Resolution Notes</p>
+      <p style="color: #fff; font-size: 14px; line-height: 1.5; margin: 0;">${data.resolutionNotes}</p>
+    </div>
+    ` : ''}
+    
+    ${data.adminMessage ? `
+    <div style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8b5cf6; padding: 15px; margin: 20px 0; border-radius: 0 12px 12px 0;">
+      <p style="color: #64748b; font-size: 12px; margin: 0 0 8px 0;">Message from Admin</p>
+      <p style="color: #fff; font-size: 14px; line-height: 1.5; margin: 0;">${data.adminMessage}</p>
+    </div>
+    ` : ''}
+    
+    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">
+      You can view the full details and continue the conversation about this bug report by clicking the button below.
+    </p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${reportUrl}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">View Bug Report →</a>
+    </div>
+    
+    <p style="color: #64748b; font-size: 12px; margin-top: 20px;">
+      Report ID: ${data.reportId}
+    </p>
+  `
+  
+  return sendEmail({
+    to: data.email,
+    subject: isResolved 
+      ? `✅ Your bug report has been resolved: ${data.reportTitle}`
+      : `📬 Update on your bug report: ${data.reportTitle}`,
+    html: wrapEmail(content)
+  })
+}
+
+// Bug Report New Message Email
+export type BugReportMessageData = {
+  email: string
+  reportId: string
+  reportTitle: string
+  senderName: string
+  message: string
+}
+
+export async function sendBugReportMessageEmail(data: BugReportMessageData) {
+  const reportUrl = `${SITE_URL}/my-bug-reports/${data.reportId}`
+  
+  const content = `
+    <h1 style="color: #fff; font-size: 24px; margin: 0 0 20px 0;">💬 New Message on Your Bug Report</h1>
+    
+    <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin: 20px 0;">
+      <p style="color: #64748b; font-size: 12px; margin: 0 0 5px 0;">Bug Report</p>
+      <h2 style="color: #fff; font-size: 18px; margin: 0;">${data.reportTitle}</h2>
+    </div>
+    
+    <div style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8b5cf6; padding: 15px; margin: 20px 0; border-radius: 0 12px 12px 0;">
+      <p style="color: #64748b; font-size: 12px; margin: 0 0 8px 0;">Message from ${data.senderName}</p>
+      <p style="color: #fff; font-size: 14px; line-height: 1.5; margin: 0;">${data.message}</p>
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${reportUrl}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">Reply to Message →</a>
+    </div>
+    
+    <p style="color: #64748b; font-size: 12px; margin-top: 20px;">
+      Report ID: ${data.reportId}
+    </p>
+  `
+  
+  return sendEmail({
+    to: data.email,
+    subject: `💬 New message on your bug report: ${data.reportTitle}`,
     html: wrapEmail(content)
   })
 }

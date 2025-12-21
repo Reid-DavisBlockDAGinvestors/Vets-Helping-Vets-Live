@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sendBugReportStatusEmail } from '@/lib/mailer'
 
 export const dynamic = 'force-dynamic'
 
@@ -195,11 +196,24 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { id, status, priority, resolution_notes, assigned_to } = body
+    const { id, status, priority, resolution_notes, assigned_to, admin_message, send_email } = body
 
     if (!id) {
       return NextResponse.json({ error: 'Report ID is required' }, { status: 400 })
     }
+
+    // Fetch current report to get old status and user email
+    const { data: currentReport } = await supabaseAdmin
+      .from('bug_reports')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (!currentReport) {
+      return NextResponse.json({ error: 'Report not found' }, { status: 404 })
+    }
+
+    const oldStatus = currentReport.status
 
     const updates: any = {
       updated_at: new Date().toISOString()
@@ -216,6 +230,9 @@ export async function PATCH(req: NextRequest) {
       updates.resolved_by = user.id
     }
 
+    // Track admin response time
+    updates.last_admin_response_at = new Date().toISOString()
+
     const { data, error } = await supabaseAdmin
       .from('bug_reports')
       .update(updates)
@@ -230,7 +247,29 @@ export async function PATCH(req: NextRequest) {
 
     console.log(`[bug-reports] Report ${id} updated by ${user.email}: status=${status || 'unchanged'}`)
 
-    return NextResponse.json({ success: true, report: data })
+    // Send email notification if status changed and user has email
+    const shouldSendEmail = send_email !== false && currentReport.user_email && status && status !== oldStatus
+    let emailSent = false
+
+    if (shouldSendEmail) {
+      const emailResult = await sendBugReportStatusEmail({
+        email: currentReport.user_email,
+        reportId: id,
+        reportTitle: currentReport.title,
+        oldStatus,
+        newStatus: status,
+        resolutionNotes: resolution_notes || currentReport.resolution_notes,
+        adminMessage: admin_message,
+      })
+      emailSent = !!emailResult.id
+      if (emailResult.id) {
+        console.log(`[bug-reports] Status email sent to ${currentReport.user_email}`)
+      } else {
+        console.log(`[bug-reports] Email failed: ${emailResult.error || 'skipped'}`)
+      }
+    }
+
+    return NextResponse.json({ success: true, report: data, emailSent })
   } catch (e: any) {
     console.error('[bug-reports] PATCH error:', e)
     return NextResponse.json({ error: 'Failed to update bug report', details: e?.message }, { status: 500 })
