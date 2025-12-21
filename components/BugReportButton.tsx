@@ -56,6 +56,11 @@ export default function BugReportButton() {
   const [mounted, setMounted] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
+  // Auth state
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [authChecked, setAuthChecked] = useState(false)
+  
   // Form state
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -70,6 +75,25 @@ export default function BugReportButton() {
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState<'success' | 'error'>('success')
   const [submitted, setSubmitted] = useState(false)
+
+  // Check auth state
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setIsLoggedIn(!!session?.user)
+      setUserEmail(session?.user?.email || null)
+      setAuthChecked(true)
+    }
+    checkAuth()
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session?.user)
+      setUserEmail(session?.user?.email || null)
+      setAuthChecked(true)
+    })
+    
+    return () => subscription.unsubscribe()
+  }, [])
 
   useEffect(() => {
     setMounted(true)
@@ -283,12 +307,38 @@ export default function BugReportButton() {
                 </button>
               </div>
 
-              {submitted ? (
+              {!isLoggedIn ? (
+                // Login required state
+                <div className="p-8 text-center">
+                  <div className="text-6xl mb-4">🔐</div>
+                  <h3 className="text-xl font-bold text-white mb-2">Login Required</h3>
+                  <p className="text-white/60 mb-6">
+                    Please log in or create an account to submit a bug report. This helps us track your issue and send you updates.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <a
+                      href="/auth?redirect=/&openBugReport=true"
+                      className="w-full px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors text-center"
+                    >
+                      Log In / Sign Up
+                    </a>
+                    <button
+                      onClick={() => setIsOpen(false)}
+                      className="w-full px-4 py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <p className="text-xs text-white/40 mt-4">
+                    Creating an account only takes a moment and allows us to keep you updated on your bug report.
+                  </p>
+                </div>
+              ) : submitted ? (
                 // Success state
                 <div className="p-8 text-center">
                   <div className="text-6xl mb-4">✅</div>
                   <h3 className="text-xl font-bold text-white mb-2">Thank You!</h3>
-                  <p className="text-white/60">Your bug report has been submitted. We'll look into it soon.</p>
+                  <p className="text-white/60">Your bug report has been submitted. We'll send updates to {userEmail}.</p>
                 </div>
               ) : (
                 // Form

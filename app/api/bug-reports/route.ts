@@ -35,18 +35,33 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Try to get user info from auth header
-    let userId: string | null = null
-    let userEmail: string | null = null
-    
+    // Require authentication for bug reports
     const authHeader = req.headers.get('authorization')
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.slice(7)
-      const { data: { user } } = await supabaseAdmin.auth.getUser(token)
-      if (user) {
-        userId = user.id
-        userEmail = user.email || null
-      }
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'AUTH_REQUIRED', message: 'Please log in to submit a bug report' },
+        { status: 401 }
+      )
+    }
+
+    const token = authHeader.slice(7)
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'AUTH_REQUIRED', message: 'Please log in to submit a bug report' },
+        { status: 401 }
+      )
+    }
+
+    const userId = user.id
+    const userEmail = user.email || null
+    
+    if (!userEmail) {
+      return NextResponse.json(
+        { error: 'EMAIL_REQUIRED', message: 'Your account must have a verified email to submit bug reports' },
+        { status: 400 }
+      )
     }
 
     // Insert bug report
