@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { logger } from '@/lib/logger'
 import Link from 'next/link'
 import { useWallet } from '@/hooks/useWallet'
 import { ipfsToHttp } from '@/lib/ipfs'
@@ -87,7 +88,7 @@ export default function DashboardPage() {
           setOwnedNfts(data.nfts || [])
         }
       } catch (e) {
-        console.error('Failed to fetch owned NFTs:', e)
+        logger.error('Failed to fetch owned NFTs:', e)
       } finally {
         setLoadingNfts(false)
       }
@@ -110,7 +111,7 @@ export default function DashboardPage() {
           setCreatedCampaigns(data.campaigns || [])
         }
       } catch (e) {
-        console.error('Failed to fetch created campaigns:', e)
+        logger.error('Failed to fetch created campaigns:', e)
       } finally {
         setLoadingCampaigns(false)
       }

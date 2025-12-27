@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { ethers } from 'ethers'
 import { getNowNodesProvider } from '@/lib/onchain'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
@@ -36,7 +37,7 @@ async function fetchIpfsMetadata(uri: string, timeoutMs = 5000): Promise<any | n
     if (!res.ok) return null
     return await res.json()
   } catch (e) {
-    console.log(`[WalletNFTs] IPFS fetch failed for ${uri.slice(0, 50)}...:`, (e as any)?.message)
+    logger.debug(`[WalletNFTs] IPFS fetch failed for ${uri.slice(0, 50)}...:`, (e as any)?.message)
     return null
   }
 }
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'NO_CONTRACTS_CONFIGURED' }, { status: 500 })
     }
     
-    console.log(`[WalletNFTs] Querying ${contracts.length} contracts: ${contracts.map(c => c.version).join(', ')}`)
+    logger.debug(`[WalletNFTs] Querying ${contracts.length} contracts: ${contracts.map(c => c.version).join(', ')}`)
 
     // Pre-fetch ALL minted submissions to build lookup maps
     const { data: allSubmissions, error: subError } = await supabaseAdmin
@@ -67,10 +68,10 @@ export async function GET(req: NextRequest) {
       .eq('status', 'minted')
     
     if (subError) {
-      console.error('[WalletNFTs] Supabase error:', subError)
+      logger.error('[WalletNFTs] Supabase error:', subError)
     }
     
-    console.log(`[WalletNFTs] Loaded ${allSubmissions?.length || 0} minted submissions`)
+    logger.debug(`[WalletNFTs] Loaded ${allSubmissions?.length || 0} minted submissions`)
     
     // Build lookup maps - use string keys to avoid type issues
     const submissionByCampaignId: Record<string, any> = {}
@@ -86,7 +87,7 @@ export async function GET(req: NextRequest) {
 
     // Use NowNodes directly - standard RPC is too inconsistent for contract calls
     const provider = getNowNodesProvider()
-    console.log('[WalletNFTs] Using NowNodes provider for reliable contract reads')
+    logger.debug('[WalletNFTs] Using NowNodes provider for reliable contract reads')
     const nfts: any[] = []
     const errors: any[] = []
     let totalBalance = 0
@@ -101,7 +102,7 @@ export async function GET(req: NextRequest) {
         const balanceNum = Number(balance)
         totalBalance += balanceNum
         
-        console.log(`[WalletNFTs] ${contractInfo.version}: Wallet ${address.slice(0, 8)}... owns ${balanceNum} NFTs`)
+        logger.debug(`[WalletNFTs] ${contractInfo.version}: Wallet ${address.slice(0, 8)}... owns ${balanceNum} NFTs`)
         
         if (balanceNum === 0) continue
 
@@ -110,7 +111,7 @@ export async function GET(req: NextRequest) {
           contract.tokenOfOwnerByIndex(address, i).catch(() => null)
         )
         const tokenIds = (await Promise.all(tokenIdPromises)).filter(t => t !== null).map(t => Number(t))
-        console.log(`[WalletNFTs] ${contractInfo.version}: Got ${tokenIds.length} token IDs`)
+        logger.debug(`[WalletNFTs] ${contractInfo.version}: Got ${tokenIds.length} token IDs`)
 
         // BATCH 2: Get edition info and URIs for all tokens in parallel
         const detailPromises = tokenIds.map(async (tokenIdNum) => {
@@ -199,14 +200,14 @@ export async function GET(req: NextRequest) {
           })
         }
       } catch (contractErr: any) {
-        console.error(`[WalletNFTs] Error querying ${contractInfo.version}:`, contractErr?.message)
+        logger.error(`[WalletNFTs] Error querying ${contractInfo.version}:`, contractErr?.message)
         errors.push({ contract: contractInfo.version, error: contractErr?.message })
       }
     }
 
-    console.log(`[WalletNFTs] Completed: ${nfts.length} NFTs loaded across ${contracts.length} contracts, ${errors.length} errors`)
+    logger.debug(`[WalletNFTs] Completed: ${nfts.length} NFTs loaded across ${contracts.length} contracts, ${errors.length} errors`)
     if (errors.length > 0) {
-      console.log(`[WalletNFTs] Errors:`, errors)
+      logger.debug(`[WalletNFTs] Errors:`, errors)
     }
 
     // Deduplicate NFTs by composite key (contractAddress-tokenId)
@@ -214,7 +215,7 @@ export async function GET(req: NextRequest) {
     const dedupedNfts = nfts.filter(nft => {
       const key = `${nft.contractAddress}-${nft.tokenId}`
       if (seen.has(key)) {
-        console.log(`[WalletNFTs] Removing duplicate: ${key}`)
+        logger.debug(`[WalletNFTs] Removing duplicate: ${key}`)
         return false
       }
       seen.add(key)
@@ -222,7 +223,7 @@ export async function GET(req: NextRequest) {
     })
 
     if (dedupedNfts.length !== nfts.length) {
-      console.log(`[WalletNFTs] Removed ${nfts.length - dedupedNfts.length} duplicate NFTs`)
+      logger.debug(`[WalletNFTs] Removed ${nfts.length - dedupedNfts.length} duplicate NFTs`)
     }
 
     return NextResponse.json({
@@ -233,7 +234,7 @@ export async function GET(req: NextRequest) {
       errors: errors.length > 0 ? errors : undefined
     })
   } catch (e: any) {
-    console.error('[WalletNFTs] Error:', e)
+    logger.error('[WalletNFTs] Error:', e)
     return NextResponse.json({ error: 'FETCH_FAILED', details: e?.message || String(e) }, { status: 500 })
   }
 }

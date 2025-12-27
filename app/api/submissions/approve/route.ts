@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getRelayerSigner } from '@/lib/onchain'
 import { sendCampaignApproved } from '@/lib/mailer'
 import { getActiveContractVersion, getContractByVersion, getContractAddress } from '@/lib/contracts'
+import { logger } from '@/lib/logger'
 
 // Convert IPFS URI to HTTP gateway URL
 function toHttpUrl(uri: string | null): string | null {
@@ -109,7 +110,7 @@ export async function POST(req: NextRequest) {
     const contractAddress = getContractAddress(contractVersion)
     const contract = getContractByVersion(contractVersion, signer)
     
-    console.log(`[approve] Using contract ${contractVersion} at ${contractAddress}`)
+    logger.debug(`[approve] Using contract ${contractVersion} at ${contractAddress}`)
     
     // V5: Create campaign on-chain
     // Convert goal/copies to numbers first (handles string values from Supabase)
@@ -141,8 +142,8 @@ export async function POST(req: NextRequest) {
     const maxEditions = BigInt(copiesNum)
     const feeRateBps = 100n // 1% nonprofit fee
     
-    console.log(`[approve] Creating campaign: goal=$${goalUSD} USD = ${goalBDAG} BDAG (${goalWei} wei), copies=${copiesNum}, price=$${priceUSD} USD = ${priceBDAG} BDAG (${priceWei} wei)`)
-    console.log(`[approve] Creator wallet: ${creatorWallet}, metadata: ${uri.slice(0, 50)}...`)
+    logger.debug(`[approve] Creating campaign: goal=$${goalUSD} USD = ${goalBDAG} BDAG (${goalWei} wei), copies=${copiesNum}, price=$${priceUSD} USD = ${priceBDAG} BDAG (${priceWei} wei)`)
+    logger.debug(`[approve] Creator wallet: ${creatorWallet}, metadata: ${uri.slice(0, 50)}...`)
 
     let campaignId: number | null = null
     let txHash: string | null = null
@@ -159,9 +160,9 @@ export async function POST(req: NextRequest) {
       try {
         const total: bigint = await (contract as any).totalCampaigns()
         predictedCampaignId = Number(total) // Next ID will be current total
-        console.log(`[createCampaign] Predicted campaignId: ${predictedCampaignId}`)
+        logger.debug(`[createCampaign] Predicted campaignId: ${predictedCampaignId}`)
       } catch (e) {
-        console.error(`[createCampaign] Failed to get totalCampaigns:`, e)
+        logger.error(`[createCampaign] Failed to get totalCampaigns:`, e)
         throw new Error('Could not predict campaignId')
       }
       
@@ -175,7 +176,7 @@ export async function POST(req: NextRequest) {
           const multiplier = 100n + BigInt(attempt * 20)
           const gasPrice = (baseGasPrice * multiplier) / 100n
           
-          console.log(`[createCampaign] Attempt ${attempt + 1}: nonce=${nonce}, gasPrice=${gasPrice}`)
+          logger.debug(`[createCampaign] Attempt ${attempt + 1}: nonce=${nonce}, gasPrice=${gasPrice}`)
           const tx = await contract.createCampaign(
             category,
             uri,
@@ -187,7 +188,7 @@ export async function POST(req: NextRequest) {
             { nonce, gasPrice }
           )
           
-          console.log(`[createCampaign] Tx submitted: ${tx.hash}`)
+          logger.debug(`[createCampaign] Tx submitted: ${tx.hash}`)
           
           // Don't wait for confirmation - Netlify has a 10-second timeout
           // Return immediately with predicted campaignId
@@ -198,14 +199,14 @@ export async function POST(req: NextRequest) {
           const code = err?.code || ''
           
           if (msg.includes('already known')) {
-            console.log(`[createCampaign] Tx already in mempool`)
+            logger.debug(`[createCampaign] Tx already in mempool`)
             return { hash: '(pending in mempool)', campaignId: predictedCampaignId }
           }
           
           if (msg.includes('nonce') || msg.includes('NONCE') || 
               msg.includes('replacement') || code === 'REPLACEMENT_UNDERPRICED' ||
               code === 'NONCE_EXPIRED') {
-            console.log(`[createCampaign] Tx error on attempt ${attempt + 1}: ${code || msg.slice(0, 50)}... retrying...`)
+            logger.debug(`[createCampaign] Tx error on attempt ${attempt + 1}: ${code || msg.slice(0, 50)}... retrying...`)
             await new Promise(r => setTimeout(r, 1000 * (attempt + 1)))
             continue
           }
@@ -231,7 +232,7 @@ export async function POST(req: NextRequest) {
       // Check if the predicted campaign ID has our metadata URI
       const verifyContract = getContractByVersion(contractVersion, signer)
       const total = Number(await verifyContract.totalCampaigns())
-      console.log(`[approve] Total campaigns on-chain: ${total}, predicted ID: ${campaignId}`)
+      logger.debug(`[approve] Total campaigns on-chain: ${total}, predicted ID: ${campaignId}`)
       
       // First try the predicted ID
       let foundCorrectId = false
@@ -242,20 +243,20 @@ export async function POST(req: NextRequest) {
           
           if (onChainUri === uri) {
             // Predicted ID is correct!
-            console.log(`[approve] Verified campaign ${campaignId} matches metadata URI`)
+            logger.debug(`[approve] Verified campaign ${campaignId} matches metadata URI`)
             finalStatus = 'minted'
             verifiedCampaignId = campaignId
             foundCorrectId = true
           }
         } catch (e) {
-          console.log(`[approve] Predicted ID ${campaignId} check failed:`, e)
+          logger.debug(`[approve] Predicted ID ${campaignId} check failed:`, e)
         }
       }
       
       // If predicted ID didn't match, search ALL campaigns from 0
       // This matches what Fix Campaign does and ensures we find the correct ID
       if (!foundCorrectId) {
-        console.log(`[approve] Predicted ID ${campaignId} didn't match, searching ALL ${total} campaigns...`)
+        logger.debug(`[approve] Predicted ID ${campaignId} didn't match, searching ALL ${total} campaigns...`)
         
         for (let i = 0; i < total; i++) {
           try {
@@ -263,7 +264,7 @@ export async function POST(req: NextRequest) {
             if ((c.baseURI ?? c[1]) === uri) {
               verifiedCampaignId = i
               finalStatus = 'minted'
-              console.log(`[approve] Found correct campaign ID: ${i}`)
+              logger.debug(`[approve] Found correct campaign ID: ${i}`)
               foundCorrectId = true
               break
             }
@@ -271,11 +272,11 @@ export async function POST(req: NextRequest) {
         }
         
         if (!foundCorrectId) {
-          console.log(`[approve] Campaign not found on-chain yet (tx may still be pending)`)
+          logger.debug(`[approve] Campaign not found on-chain yet (tx may still be pending)`)
         }
       }
     } catch (verifyErr: any) {
-      console.log(`[approve] Quick verification failed (tx may still be pending): ${verifyErr?.message}`)
+      logger.debug(`[approve] Quick verification failed (tx may still be pending): ${verifyErr?.message}`)
       // Keep pending_onchain status - user can verify later
     }
 
@@ -296,9 +297,9 @@ export async function POST(req: NextRequest) {
       .eq('id', id)
     
     if (updateError) {
-      console.error('[approve] Failed to update submission:', updateError)
+      logger.error('[approve] Failed to update submission:', updateError)
     } else {
-      console.log(`[approve] Submission ${id} updated: campaign_id=${verifiedCampaignId}, status=${finalStatus}, tx=${txHash}`)
+      logger.debug(`[approve] Submission ${id} updated: campaign_id=${verifiedCampaignId}, status=${finalStatus}, tx=${txHash}`)
     }
     
     // Send campaign approved email
@@ -311,9 +312,9 @@ export async function POST(req: NextRequest) {
         imageUrl: toHttpUrl(sub.image_uri) || undefined,
         txHash: txHash || undefined
       })
-      console.log(`[approve] Sent campaign approved email to ${sub.creator_email} with txHash: ${txHash}`)
+      logger.debug(`[approve] Sent campaign approved email to ${sub.creator_email} with txHash: ${txHash}`)
     } catch (emailErr) {
-      console.error('[approve] Failed to send campaign approved email:', emailErr)
+      logger.error('[approve] Failed to send campaign approved email:', emailErr)
     }
 
     const message = finalStatus === 'minted'
@@ -330,8 +331,8 @@ export async function POST(req: NextRequest) {
       message
     })
   } catch (e:any) {
-    console.error('[approve] Error:', e?.message || String(e))
-    console.error('[approve] Full error:', e)
+    logger.error('[approve] Error:', e?.message || String(e))
+    logger.error('[approve] Full error:', e)
     return NextResponse.json({ error: 'APPROVE_AND_CREATE_CAMPAIGN_FAILED', details: e?.message || String(e) }, { status: 500 })
   }
 }

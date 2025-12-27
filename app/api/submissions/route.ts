@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 export const dynamic = 'force-dynamic'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { sendSubmissionConfirmation, sendAdminNewSubmission } from '@/lib/mailer'
@@ -6,7 +7,7 @@ import { auditLog } from '@/lib/audit'
 
 // POST /api/submissions  -> create a new creator submission (status=pending)
 export async function POST(req: NextRequest) {
-  console.log('[submissions] POST request received')
+  logger.debug('[submissions] POST request received')
   try {
     // Require authentication
     const authHeader = req.headers.get('authorization') || ''
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
     
     // Require authenticated user
     if (!userId || !authEmail) {
-      console.log('[submissions] BLOCKED: No authenticated user')
+      logger.debug('[submissions] BLOCKED: No authenticated user')
       return NextResponse.json({ 
         error: 'AUTHENTICATION_REQUIRED', 
         message: 'Please log in to submit a campaign. Create an account if you don\'t have one.' 
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
     
     // Require verified email
     if (!isEmailVerified) {
-      console.log('[submissions] BLOCKED: Email not verified for user:', authEmail)
+      logger.debug('[submissions] BLOCKED: Email not verified for user:', authEmail)
       return NextResponse.json({ 
         error: 'EMAIL_NOT_VERIFIED', 
         message: 'Please verify your email address before submitting a campaign. Check your inbox for the verification link.' 
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
     }
     
     const body = await req.json().catch(()=>null)
-    console.log('[submissions] Body parsed:', body ? 'success' : 'failed')
+    logger.debug('[submissions] Body parsed:', body ? 'success' : 'failed')
     if (!body) return NextResponse.json({ error: 'INVALID_JSON' }, { status: 400 })
     const { 
       title, story, category, goal, 
@@ -84,13 +85,13 @@ export async function POST(req: NextRequest) {
       didit_session_id: didit_session_id || null,
       didit_status: didit_status || 'Not Started',
     }
-    console.log('[submissions] Inserting submission for:', creator_email)
+    logger.debug('[submissions] Inserting submission for:', creator_email)
     const { data, error } = await supabaseAdmin.from('submissions').insert(payload).select('*').single()
     if (error) {
-      console.error('[submissions] Insert failed:', error.code, error.message)
+      logger.error('[submissions] Insert failed:', error.code, error.message)
       return NextResponse.json({ error: 'SUBMISSION_INSERT_FAILED', code: error.code, details: error.message }, { status: 500 })
     }
-    console.log('[submissions] Insert successful, id:', data.id)
+    logger.debug('[submissions] Insert successful, id:', data.id)
     // Best-effort: ensure a profiles row exists for this email (for wallet-only users)
     try {
       // Try update-by-email if such row exists
@@ -104,21 +105,21 @@ export async function POST(req: NextRequest) {
     } catch {}
     // Send receipt email to creator (best-effort)
     try {
-      console.log('[submissions] Sending confirmation email to:', verifiedEmail)
+      logger.debug('[submissions] Sending confirmation email to:', verifiedEmail)
       const emailResult = await sendSubmissionConfirmation({
         email: verifiedEmail,
         submissionId: data.id,
         title: title || 'Your Campaign',
         creatorName: creator_name
       })
-      console.log('[submissions] Email result:', emailResult)
+      logger.debug('[submissions] Email result:', emailResult)
     } catch (emailErr) {
-      console.error('[submissions] Failed to send confirmation email:', emailErr)
+      logger.error('[submissions] Failed to send confirmation email:', emailErr)
     }
     
     // Send notification email to admins who can approve campaigns (best-effort)
     try {
-      console.log('[submissions] Fetching admins with campaign approval permissions')
+      logger.debug('[submissions] Fetching admins with campaign approval permissions')
       // Get all admins with canManageCampaigns permission (super_admin and admin roles)
       const { data: admins } = await supabaseAdmin
         .from('profiles')
@@ -127,7 +128,7 @@ export async function POST(req: NextRequest) {
         .not('email', 'is', null)
       
       const adminEmails = admins?.map(a => a.email).filter(Boolean) as string[] || []
-      console.log('[submissions] Found admins to notify:', adminEmails.length)
+      logger.debug('[submissions] Found admins to notify:', adminEmails.length)
       
       if (adminEmails.length > 0) {
         const adminEmailResult = await sendAdminNewSubmission({
@@ -139,9 +140,9 @@ export async function POST(req: NextRequest) {
           goal: typeof goal === 'number' ? goal : undefined,
           adminEmails
         })
-        console.log('[submissions] Admin notification result:', adminEmailResult)
+        logger.debug('[submissions] Admin notification result:', adminEmailResult)
       } else {
-        console.log('[submissions] No admins found, using fallback email')
+        logger.debug('[submissions] No admins found, using fallback email')
         await sendAdminNewSubmission({
           submissionId: data.id,
           title: title || 'Untitled Campaign',
@@ -152,7 +153,7 @@ export async function POST(req: NextRequest) {
         })
       }
     } catch (adminEmailErr) {
-      console.error('[submissions] Failed to send admin notification:', adminEmailErr)
+      logger.error('[submissions] Failed to send admin notification:', adminEmailErr)
     }
     
     return NextResponse.json({ id: data.id, status: data.status })
@@ -287,7 +288,7 @@ export async function DELETE(req: NextRequest) {
       .eq('submission_id', id)
 
     if (updatesError) {
-      console.error('[DELETE] Failed to delete campaign updates:', updatesError)
+      logger.error('[DELETE] Failed to delete campaign updates:', updatesError)
       // Continue anyway - updates might not exist
     }
 
@@ -312,7 +313,7 @@ export async function DELETE(req: NextRequest) {
           await supabaseAdmin.storage.from(bucket).remove([path])
         }
       } catch (fileErr) {
-        console.error('[DELETE] File deletion failed (non-critical):', fileErr)
+        logger.error('[DELETE] File deletion failed (non-critical):', fileErr)
       }
     }
 
