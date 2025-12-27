@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useWallet } from '@/hooks/useWallet'
 import UserAccountPortal from './UserAccountPortal'
+import ThemeToggle from './ThemeToggle'
 
 const NAV_LINKS = [
   { href: '/marketplace', label: 'Marketplace' },
@@ -141,8 +142,11 @@ export default function NavBar() {
             ))}
           </nav>
 
-          {/* Right Side - Account, Wallet & Mobile Menu */}
+          {/* Right Side - Theme, Account, Wallet & Mobile Menu */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+            
             {/* User Account */}
             <UserAccountPortal />
             
