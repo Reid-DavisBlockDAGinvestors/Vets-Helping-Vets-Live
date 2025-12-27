@@ -1,4 +1,5 @@
 "use client"
+import { logger } from '@/lib/logger'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ipfsToHttp } from '@/lib/ipfs'
@@ -60,14 +61,14 @@ export default function AdminSubmissions() {
       const data = await res.json().catch(()=>({}))
       if (res.ok) {
         const src = res.headers.get('X-Supabase-Url') || ''
-        console.log('[admin] submissions source:', src, 'count:', data?.count)
+        logger.debug('[admin] submissions source:', src, 'count:', data?.count)
         setSrcUrl(src)
         setApiCount(typeof data?.count === 'number' ? data.count : null)
         setItems(data.items || [])
         setUsernames(data.usernames || {})
         setMsg('')
       } else {
-        console.error('[admin] GET /api/submissions failed', res.status, data)
+        logger.error('[admin] GET /api/submissions failed', res.status, data)
         setItems([])
         setUsernames({})
         setMsg([data?.error, data?.code, data?.details].filter(Boolean).join(' | ') || 'Failed to load submissions')

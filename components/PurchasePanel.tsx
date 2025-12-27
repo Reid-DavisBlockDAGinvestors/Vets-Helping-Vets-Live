@@ -8,6 +8,7 @@ import { BrowserProvider, Contract, parseEther, formatEther, Interface } from 'e
 import { withRetry, IRetryConfig } from '@/lib/retry'
 import { supabase } from '@/lib/supabase'
 import { openBugReport } from './BugReportButton'
+import { logger } from '@/lib/logger'
 
 type PaymentTab = 'card' | 'crypto' | 'other'
 
@@ -155,83 +156,83 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
   // Purchase with connected wallet (direct on-chain)
   const purchaseWithWallet = async () => {
     // IMMEDIATE LOG - at the very start before any checks
-    console.log(`[PurchasePanel] ========== BUTTON CLICKED ==========`)
-    console.log(`[PurchasePanel] isLoggedIn: ${isLoggedIn}, userEmail: ${userEmail}`)
-    console.log(`[PurchasePanel] wallet.isConnected: ${wallet.isConnected}, wallet.address: ${wallet.address}`)
-    console.log(`[PurchasePanel] wallet.isOnBlockDAG: ${wallet.isOnBlockDAG}`)
-    console.log(`[PurchasePanel] CONTRACT_ADDRESS: ${effectiveContractAddress} (version: ${contractVersion || 'default'})`)
-    console.log(`[PurchasePanel] isPendingOnchain: ${isPendingOnchain}`)
-    console.log(`[PurchasePanel] Campaign ID: ${targetId}, Price: ${pricePerNft}, Quantity: ${quantity}`)
+    logger.debug(`[PurchasePanel] ========== BUTTON CLICKED ==========`)
+    logger.debug(`[PurchasePanel] isLoggedIn: ${isLoggedIn}, userEmail: ${userEmail}`)
+    logger.debug(`[PurchasePanel] wallet.isConnected: ${wallet.isConnected}, wallet.address: ${wallet.address}`)
+    logger.debug(`[PurchasePanel] wallet.isOnBlockDAG: ${wallet.isOnBlockDAG}`)
+    logger.debug(`[PurchasePanel] CONTRACT_ADDRESS: ${effectiveContractAddress} (version: ${contractVersion || 'default'})`)
+    logger.debug(`[PurchasePanel] isPendingOnchain: ${isPendingOnchain}`)
+    logger.debug(`[PurchasePanel] Campaign ID: ${targetId}, Price: ${pricePerNft}, Quantity: ${quantity}`)
     
     // Require login for NFT purchases to ensure we have email for receipt
     if (!isLoggedIn || !userEmail) {
-      console.log(`[PurchasePanel] BLOCKED: Not logged in`)
+      logger.debug(`[PurchasePanel] BLOCKED: Not logged in`)
       setCryptoMsg('⚠️ Account required: Please click the profile icon in the top right to log in or create an account. Your email is needed for the purchase receipt.')
       return
     }
     
     // Require verified email for purchases
     if (!isEmailVerified) {
-      console.log(`[PurchasePanel] BLOCKED: Email not verified`)
+      logger.debug(`[PurchasePanel] BLOCKED: Email not verified`)
       setCryptoMsg('Please verify your email address before making a purchase. Check your inbox for the verification link.')
       return
     }
     
     if (!wallet.isConnected || !wallet.address) {
-      console.log(`[PurchasePanel] BLOCKED: Wallet not connected`)
+      logger.debug(`[PurchasePanel] BLOCKED: Wallet not connected`)
       setCryptoMsg('Please connect your wallet first')
       return
     }
     
     if (!wallet.isOnBlockDAG) {
-      console.log(`[PurchasePanel] BLOCKED: Not on BlockDAG network`)
+      logger.debug(`[PurchasePanel] BLOCKED: Not on BlockDAG network`)
       setCryptoMsg('Please switch to BlockDAG network')
       await wallet.switchToBlockDAG()
       return
     }
 
     if (!effectiveContractAddress) {
-      console.log(`[PurchasePanel] BLOCKED: No contract address`)
+      logger.debug(`[PurchasePanel] BLOCKED: No contract address`)
       setCryptoMsg('Contract not configured')
       return
     }
 
     // Block purchases for pending campaigns
     if (isPendingOnchain) {
-      console.log(`[PurchasePanel] BLOCKED: Campaign pending on-chain`)
+      logger.debug(`[PurchasePanel] BLOCKED: Campaign pending on-chain`)
       setCryptoMsg('⏳ Campaign is awaiting blockchain confirmation. Please wait for admin to verify the transaction.')
       return
     }
 
-    console.log(`[PurchasePanel] All checks passed, proceeding with purchase...`)
+    logger.debug(`[PurchasePanel] All checks passed, proceeding with purchase...`)
 
     try {
       setLoading(true)
       setCryptoMsg('Verifying campaign on blockchain...')
       setTxHash(null)
 
-      console.log(`[PurchasePanel] Getting ethereum provider...`)
+      logger.debug(`[PurchasePanel] Getting ethereum provider...`)
       const ethereum = (window as any).ethereum
       if (!ethereum) {
-        console.error('[PurchasePanel] No ethereum provider found!')
+        logger.error('[PurchasePanel] No ethereum provider found!')
         setCryptoMsg('No wallet detected. Please install MetaMask.')
         setLoading(false)
         return
       }
       
-      console.log(`[PurchasePanel] Creating BrowserProvider...`)
+      logger.debug(`[PurchasePanel] Creating BrowserProvider...`)
       const provider = new BrowserProvider(ethereum)
       
-      console.log(`[PurchasePanel] Getting signer...`)
+      logger.debug(`[PurchasePanel] Getting signer...`)
       const signer = await provider.getSigner()
-      console.log(`[PurchasePanel] Signer address: ${await signer.getAddress()}`)
+      logger.debug(`[PurchasePanel] Signer address: ${await signer.getAddress()}`)
       
-      console.log(`[PurchasePanel] Creating contract instance for ${contractVersion || 'default'} at ${effectiveContractAddress}...`)
+      logger.debug(`[PurchasePanel] Creating contract instance for ${contractVersion || 'default'} at ${effectiveContractAddress}...`)
       const contract = new Contract(effectiveContractAddress, MINT_EDITION_ABI, signer)
 
       // Pre-flight check: Verify campaign exists and is active on-chain
       // Using exponential backoff retry logic for RPC latency issues
-      console.log(`[PurchasePanel] Checking campaign ${targetId} on-chain...`)
+      logger.debug(`[PurchasePanel] Checking campaign ${targetId} on-chain...`)
       
       const verifyConfig: Partial<IRetryConfig> = {
         maxAttempts: 5,
@@ -246,14 +247,14 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       const verifyResult = await withRetry<VerifyResult>(
         async () => {
           const totalCampaigns = await contract.totalCampaigns()
-          console.log(`[PurchasePanel] Total campaigns on-chain: ${totalCampaigns}`)
+          logger.debug(`[PurchasePanel] Total campaigns on-chain: ${totalCampaigns}`)
           
           if (Number(targetId) >= Number(totalCampaigns)) {
             throw new Error(`CAMPAIGN_NOT_FOUND:${totalCampaigns}`)
           }
           
           const campaign = await contract.getCampaign(BigInt(targetId))
-          console.log(`[PurchasePanel] Campaign ${targetId} data:`, {
+          logger.debug(`[PurchasePanel] Campaign ${targetId} data:`, {
             category: campaign[0],
             baseURI: campaign[1]?.slice(0, 50),
             active: campaign[8],
@@ -268,7 +269,7 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
         (status) => {
           const delaySeconds = Math.round(status.delayMs / 1000)
           setCryptoMsg(`Verifying campaign... Attempt ${status.attempt}/${status.maxAttempts}${delaySeconds > 0 ? ` (retrying in ${delaySeconds}s)` : ''}`)
-          console.log(`[PurchasePanel] Verification attempt ${status.attempt}/${status.maxAttempts}:`, status.error?.message?.slice(0, 50))
+          logger.debug(`[PurchasePanel] Verification attempt ${status.attempt}/${status.maxAttempts}:`, status.error?.message?.slice(0, 50))
         }
       )
       
@@ -305,10 +306,10 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       const pricePerNftWei = parseEther(pricePerNftBdag.toFixed(18))
       const tipBdagWei = bdagTipAmount > 0 ? parseEther(bdagTipAmount.toFixed(18)) : 0n
 
-      console.log(`[PurchasePanel] Minting ${quantity} edition(s) for campaign ${targetId}`)
-      console.log(`[PurchasePanel] Price per NFT: ${pricePerNftBdag} BDAG (${pricePerNftWei} wei)`)
-      console.log(`[PurchasePanel] Tip BDAG: ${bdagTipAmount} (${tipBdagWei} wei)`)
-      console.log(`[PurchasePanel] Contract: ${effectiveContractAddress} (${contractVersion || 'default'})`)
+      logger.debug(`[PurchasePanel] Minting ${quantity} edition(s) for campaign ${targetId}`)
+      logger.debug(`[PurchasePanel] Price per NFT: ${pricePerNftBdag} BDAG (${pricePerNftWei} wei)`)
+      logger.debug(`[PurchasePanel] Tip BDAG: ${bdagTipAmount} (${tipBdagWei} wei)`)
+      logger.debug(`[PurchasePanel] Contract: ${effectiveContractAddress} (${contractVersion || 'default'})`)
       
       const txHashes: string[] = []
       
@@ -326,33 +327,33 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
         try {
           if (isLast && tipBdagWei > 0n) {
             const valueWithTip = pricePerNftWei + tipBdagWei
-            console.log(`[PurchasePanel] Calling mintWithBDAGAndTip(${targetId}, ${tipBdagWei}) with value ${valueWithTip}`)
+            logger.debug(`[PurchasePanel] Calling mintWithBDAGAndTip(${targetId}, ${tipBdagWei}) with value ${valueWithTip}`)
             
             // Log the encoded call data for debugging
             const iface = new Interface(MINT_EDITION_ABI)
             const callData = iface.encodeFunctionData('mintWithBDAGAndTip', [BigInt(targetId), tipBdagWei])
-            console.log(`[PurchasePanel] Encoded call data: ${callData}`)
+            logger.debug(`[PurchasePanel] Encoded call data: ${callData}`)
             
             // Use contract method directly - this ensures data is properly included
             tx = await contract.mintWithBDAGAndTip(BigInt(targetId), tipBdagWei, {
               value: valueWithTip,
               gasLimit,
             })
-            console.log(`[PurchasePanel] Transaction sent via contract method`)
+            logger.debug(`[PurchasePanel] Transaction sent via contract method`)
           } else {
-            console.log(`[PurchasePanel] Calling mintWithBDAG(${targetId}) with value ${pricePerNftWei}`)
+            logger.debug(`[PurchasePanel] Calling mintWithBDAG(${targetId}) with value ${pricePerNftWei}`)
             
             // Log the encoded call data for debugging
             const iface = new Interface(MINT_EDITION_ABI)
             const callData = iface.encodeFunctionData('mintWithBDAG', [BigInt(targetId)])
-            console.log(`[PurchasePanel] Encoded call data: ${callData}`)
+            logger.debug(`[PurchasePanel] Encoded call data: ${callData}`)
             
             // Build the transaction explicitly to ensure data is included
             const populatedTx = await contract.mintWithBDAG.populateTransaction(BigInt(targetId), {
               value: pricePerNftWei,
               gasLimit,
             })
-            console.log(`[PurchasePanel] Populated transaction:`, JSON.stringify({
+            logger.debug(`[PurchasePanel] Populated transaction:`, JSON.stringify({
               to: populatedTx.to,
               data: populatedTx.data,
               value: populatedTx.value?.toString(),
@@ -366,10 +367,10 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
             
             // Send the populated transaction
             tx = await signer.sendTransaction(populatedTx)
-            console.log(`[PurchasePanel] Transaction sent, hash: ${tx.hash}`)
+            logger.debug(`[PurchasePanel] Transaction sent, hash: ${tx.hash}`)
           }
         } catch (mintErr: any) {
-          console.error('[PurchasePanel] Mint call failed:', mintErr)
+          logger.error('[PurchasePanel] Mint call failed:', mintErr)
           // Extract meaningful error message
           let errorMsg = mintErr?.reason || mintErr?.message || 'Transaction failed'
           if (errorMsg.includes('user rejected')) {
@@ -386,12 +387,12 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
         
         txHashes.push(tx.hash)
         setTxHash(tx.hash)
-        console.log(`[PurchasePanel] Tx ${i + 1}/${quantity} submitted: ${tx.hash}`)
+        logger.debug(`[PurchasePanel] Tx ${i + 1}/${quantity} submitted: ${tx.hash}`)
         
         // Wait for each tx to confirm before the next (prevents nonce issues)
         setCryptoMsg(`Waiting for NFT ${i + 1} of ${quantity} to confirm...`)
         const receipt = await tx.wait(1)
-        console.log(`[PurchasePanel] Tx ${i + 1}/${quantity} confirmed`)
+        logger.debug(`[PurchasePanel] Tx ${i + 1}/${quantity} confirmed`)
         
         // Extract token ID from EditionMinted event in the receipt
         try {
@@ -406,15 +407,15 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
             const tokenId = Number(parsed?.args?.tokenId || parsed?.args?.[1])
             if (tokenId > 0) {
               mintedTokenIds.push(tokenId)
-              console.log(`[PurchasePanel] Minted token ID: ${tokenId}`)
+              logger.debug(`[PurchasePanel] Minted token ID: ${tokenId}`)
             }
           }
         } catch (e) {
-          console.warn('[PurchasePanel] Could not parse EditionMinted event:', e)
+          logger.warn('[PurchasePanel] Could not parse EditionMinted event:', e)
         }
       }
       
-      console.log(`[PurchasePanel] All ${quantity} NFTs minted!`)
+      logger.debug(`[PurchasePanel] All ${quantity} NFTs minted!`)
       
       // Record the purchase in our backend (use last tx hash)
       const lastTxHash = txHashes[txHashes.length - 1]
@@ -443,10 +444,10 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
             contractAddress: effectiveContractAddress, // Track contract address
           })
         })
-        console.log(`[PurchasePanel] Purchase recorded for campaign ${targetId}, tokenId=${lastTokenId}`)
+        logger.debug(`[PurchasePanel] Purchase recorded for campaign ${targetId}, tokenId=${lastTokenId}`)
       } catch (e) {
         // Non-critical - tx is already on-chain
-        console.warn('Failed to record purchase:', e)
+        logger.warn('Failed to record purchase:', e)
       }
 
       setResult({ success: true, txHash: lastTxHash, txHashes, quantity, mintedTokenIds })
@@ -460,8 +461,8 @@ export default function PurchasePanel({ campaignId, tokenId, pricePerNft, remain
       }
       wallet.updateBalance()
     } catch (e: any) {
-      console.error('BDAG purchase error:', e)
-      console.error('Error details:', JSON.stringify({
+      logger.error('BDAG purchase error:', e)
+      logger.error('Error details:', JSON.stringify({
         code: e?.code,
         reason: e?.reason,
         data: e?.data,

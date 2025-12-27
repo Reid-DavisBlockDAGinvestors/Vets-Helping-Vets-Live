@@ -1,5 +1,7 @@
 'use client'
 
+import { logger } from '@/lib/logger'
+
 import { useState, useEffect } from 'react'
 import { ipfsToHttp } from '@/lib/ipfs'
 import { supabase } from '@/lib/supabase'
@@ -37,24 +39,24 @@ export default function AdminCampaignUpdateHistory() {
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set())
   const [statusFilter, setStatusFilter] = useState<'all' | 'with_updates'>('with_updates')
 
-  console.log('[AdminCampaignUpdateHistory] Component mounted')
+  logger.debug('[AdminCampaignUpdateHistory] Component mounted')
 
   useEffect(() => {
-    console.log('[AdminCampaignUpdateHistory] useEffect triggered, loading data in 500ms')
+    logger.debug('[AdminCampaignUpdateHistory] useEffect triggered, loading data in 500ms')
     // Small delay to ensure auth session is ready
     const timer = setTimeout(() => loadData(), 500)
     return () => clearTimeout(timer)
   }, [])
 
   const loadData = async () => {
-    console.log('[AdminCampaignUpdateHistory] loadData called')
+    logger.debug('[AdminCampaignUpdateHistory] loadData called')
     setLoading(true)
     setError('')
     try {
       // Get auth token
       const { data: session } = await supabase.auth.getSession()
       const token = session?.session?.access_token
-      console.log('[AdminCampaignUpdateHistory] Token:', token ? 'present' : 'missing')
+      logger.debug('[AdminCampaignUpdateHistory] Token:', token ? 'present' : 'missing')
       if (!token) {
         setError('Not authenticated')
         setLoading(false)
@@ -88,7 +90,7 @@ export default function AdminCampaignUpdateHistory() {
         updatesBySubmission[u.submission_id].push(u)
       }
       
-      console.log('[AdminCampaignUpdateHistory] Got', mintedSubs.length, 'minted subs and', updates.length, 'updates')
+      logger.debug('[AdminCampaignUpdateHistory] Got', mintedSubs.length, 'minted subs and', updates.length, 'updates')
       
       // Combine into campaigns with updates
       const campaignsWithUpdates: CampaignWithUpdates[] = mintedSubs.map((sub: any) => ({

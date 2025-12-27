@@ -1,5 +1,7 @@
 'use client'
 
+import { logger } from '@/lib/logger'
+
 import { useState, useEffect, useCallback } from 'react'
 
 interface DiditVerificationProps {
@@ -60,15 +62,15 @@ export default function DiditVerification({
   // }, [status, sessionId])
 
   const checkStatus = async () => {
-    console.log('[DiditVerification] Checking status...', { uniqueId, submissionId, sessionId })
+    logger.debug('[DiditVerification] Checking status...', { uniqueId, submissionId, sessionId })
     
     try {
       // If we have a submissionId, check submission status
       if (submissionId) {
-        console.log('[DiditVerification] Checking submission:', submissionId)
+        logger.debug('[DiditVerification] Checking submission:', submissionId)
         const res = await fetch(`/api/submissions/${submissionId}/verification`)
         const data = await res.json().catch(() => ({ success: false, error: 'Invalid response' }))
-        console.log('[DiditVerification] Submission response:', data)
+        logger.debug('[DiditVerification] Submission response:', data)
         
         if (data.success) {
           const diditStatus = data.diditStatus || data.didit_status || data.verification_status
@@ -100,20 +102,20 @@ export default function DiditVerification({
         }
       } else if (sessionId) {
         // If no submissionId but we have a sessionId, check Didit directly
-        console.log('[DiditVerification] Checking Didit session directly:', sessionId)
+        logger.debug('[DiditVerification] Checking Didit session directly:', sessionId)
         const res = await fetch(`/api/didit/session?sessionId=${sessionId}`)
-        console.log('[DiditVerification] Didit response status:', res.status)
+        logger.debug('[DiditVerification] Didit response status:', res.status)
         const data = await res.json().catch(() => ({ success: false, error: 'Invalid response' }))
         
-        console.log('[DiditVerification] Full session response:', JSON.stringify(data, null, 2))
+        logger.debug('[DiditVerification] Full session response:', JSON.stringify(data, null, 2))
         
         if (data.success && data.session) {
           const diditStatus = data.session.status
-          console.log('[DiditVerification] Didit status:', diditStatus)
+          logger.debug('[DiditVerification] Didit status:', diditStatus)
           
           // Handle various Didit status values (case-insensitive)
           const normalizedStatus = (diditStatus || '').toLowerCase()
-          console.log('[DiditVerification] Normalized status:', normalizedStatus)
+          logger.debug('[DiditVerification] Normalized status:', normalizedStatus)
           
           if (normalizedStatus === 'approved' || normalizedStatus === 'completed' || normalizedStatus === 'verified' || normalizedStatus === 'success') {
             setStatus('completed')

@@ -7,6 +7,7 @@ import VerificationUploader from './VerificationUploader'
 import { supabase } from '@/lib/supabase'
 import { openBugReport } from './BugReportButton'
 import CaptchaWidget, { useCaptcha } from './CaptchaWidget'
+import { logger } from '@/lib/logger'
 
 const SUPPORTED_FORMATS = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
 const HEIC_FORMATS = ['image/heic', 'image/heif']
@@ -174,7 +175,7 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
         }
         
         const sub = data.submission
-        console.log('[StoryForm] Loaded submission for editing:', sub.id)
+        logger.debug('[StoryForm] Loaded submission for editing:', sub.id)
         
         // Populate form fields from submission
         if (sub.category) setCategory(mapLegacyCategory(sub.category))
@@ -247,7 +248,7 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
     if (editSubmissionId) return // Don't load draft if editing
     
     const draft = getStoredDraft()
-    console.log('[StoryForm] Loading draft:', draft ? 'found' : 'none')
+    logger.debug('[StoryForm] Loading draft:', draft ? 'found' : 'none')
     
     if (draft) {
       if (draft.category) setCategory(mapLegacyCategory(draft.category))
@@ -1209,7 +1210,7 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  console.log('[StoryForm] Opening bug report for error:', mintMsg)
+                  logger.debug('[StoryForm] Opening bug report for error:', mintMsg)
                   openBugReport({
                     title: 'Campaign Submission Error',
                     description: `I encountered an error while trying to submit my campaign.\n\nCampaign Title: ${title || 'Not set'}\nCategory: ${category}`,

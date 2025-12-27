@@ -1,5 +1,7 @@
 'use client'
 
+import { logger } from '@/lib/logger'
+
 import { openBugReport } from './BugReportButton'
 
 interface ErrorWithBugReportProps {
@@ -26,7 +28,7 @@ export default function ErrorWithBugReport({
   const handleReportBug = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    console.log('[ErrorWithBugReport] Opening bug report modal')
+    logger.debug('[ErrorWithBugReport] Opening bug report modal')
     openBugReport({
       title: `Error: ${error}`,
       description: details 

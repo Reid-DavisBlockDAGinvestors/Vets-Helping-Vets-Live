@@ -17,26 +17,22 @@ const isDebugEnabled = process.env.DEBUG === 'true'
  * Structured logger with environment awareness
  */
 export const logger = {
-  debug: (message: string, options?: LogOptions) => {
+  debug: (message: string, ...args: any[]) => {
     if (isDev || isDebugEnabled) {
-      const prefix = options?.context ? `[${options.context}]` : ''
-      console.log(`🔍 ${prefix} ${message}`, options?.data || '')
+      console.log(`🔍 ${message}`, ...args)
     }
   },
 
-  info: (message: string, options?: LogOptions) => {
-    const prefix = options?.context ? `[${options.context}]` : ''
-    console.log(`ℹ️ ${prefix} ${message}`, options?.data || '')
+  info: (message: string, ...args: any[]) => {
+    console.log(`ℹ️ ${message}`, ...args)
   },
 
-  warn: (message: string, options?: LogOptions) => {
-    const prefix = options?.context ? `[${options.context}]` : ''
-    console.warn(`⚠️ ${prefix} ${message}`, options?.data || '')
+  warn: (message: string, ...args: any[]) => {
+    console.warn(`⚠️ ${message}`, ...args)
   },
 
-  error: (message: string, error?: Error | unknown, options?: LogOptions) => {
-    const prefix = options?.context ? `[${options.context}]` : ''
-    console.error(`❌ ${prefix} ${message}`, error || '', options?.data || '')
+  error: (message: string, ...args: any[]) => {
+    console.error(`❌ ${message}`, ...args)
   },
 
   // Specific loggers for common contexts

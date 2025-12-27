@@ -1,5 +1,7 @@
 'use client'
 
+import { logger } from '@/lib/logger'
+
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
@@ -82,18 +84,18 @@ export default function AdminUsers() {
         headers: { authorization: `Bearer ${token}` }
       })
       const data = await res.json()
-      console.log('[AdminUsers] API response:', data)
-      console.log('[AdminUsers] Debug info:', data?.debug)
+      logger.debug('[AdminUsers] API response:', data)
+      logger.debug('[AdminUsers] Debug info:', data?.debug)
       
       if (!res.ok) {
         setError(data?.error || 'Failed to load users')
         return
       }
       
-      console.log('[AdminUsers] Users count:', data?.users?.length, 'Total:', data?.total)
+      logger.debug('[AdminUsers] Users count:', data?.users?.length, 'Total:', data?.total)
       // Show debug info in error message if no wallet owners found
       if (data?.debug?.walletOwnersCount === 0 && data?.debug?.mintedCampaignsWithSales > 0) {
-        console.warn('[AdminUsers] Blockchain query may have failed - minted campaigns exist but no wallet owners found')
+        logger.warn('[AdminUsers] Blockchain query may have failed - minted campaigns exist but no wallet owners found')
       }
       setUsers(data?.users || [])
     } catch (e: any) {
@@ -109,12 +111,12 @@ export default function AdminUsers() {
     setCreatedCampaigns([])
     setPurchasedCampaigns([])
     setPurchaseStats(null)
-    console.log('[AdminUsers] Loading purchases for userId:', userId)
+    logger.debug('[AdminUsers] Loading purchases for userId:', userId)
     try {
       const { data: session } = await supabase.auth.getSession()
       const token = session?.session?.access_token
       if (!token) {
-        console.log('[AdminUsers] No auth token!')
+        logger.debug('[AdminUsers] No auth token!')
         return
       }
 
@@ -123,7 +125,7 @@ export default function AdminUsers() {
       })
       const data = await res.json()
       
-      console.log('[AdminUsers] API response:', {
+      logger.debug('[AdminUsers] API response:', {
         ok: res.ok,
         status: res.status,
         purchases: data?.purchases?.length,

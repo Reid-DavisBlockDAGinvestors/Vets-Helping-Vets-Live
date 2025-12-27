@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 
 interface Screenshot {
   url: string
@@ -100,7 +101,7 @@ export default function BugReportButton() {
     
     // Subscribe to bug report events from other components
     const unsubscribe = bugReportEmitter.subscribe((context) => {
-      console.log('[BugReportButton] Received event, opening modal with context:', context)
+      logger.debug('[BugReportButton] Received event, opening modal with context:', context)
       
       // Reset form first to clear any stale state
       setSubmitted(false)
@@ -129,7 +130,7 @@ export default function BugReportButton() {
       
       // Open the modal with a small delay to ensure state is set
       setTimeout(() => {
-        console.log('[BugReportButton] Setting isOpen to true')
+        logger.debug('[BugReportButton] Setting isOpen to true')
         setIsOpen(true)
       }, 10)
     })
