@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
+import { debugGuard } from '@/lib/debugGuard'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +12,9 @@ export const dynamic = 'force-dynamic'
  * And which submissions exist but have wrong campaign_id
  */
 export async function GET(req: NextRequest) {
+  const blocked = debugGuard()
+  if (blocked) return blocked
+
   try {
     const contractAddress = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
     const provider = getProvider()

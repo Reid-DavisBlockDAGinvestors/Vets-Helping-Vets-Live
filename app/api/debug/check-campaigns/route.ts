@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { debugGuard } from '@/lib/debugGuard'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,6 +9,9 @@ export const dynamic = 'force-dynamic'
  * GET /api/debug/check-campaigns?ids=23,26,30,32,38,40
  */
 export async function GET(req: NextRequest) {
+  const blocked = debugGuard()
+  if (blocked) return blocked
+
   try {
     const idsParam = req.nextUrl.searchParams.get('ids') || '23,26,30,32,38,40'
     const ids = idsParam.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))

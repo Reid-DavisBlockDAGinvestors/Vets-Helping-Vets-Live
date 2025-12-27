@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { ethers } from 'ethers'
 import { getProvider } from '@/lib/onchain'
 import { V5_ABI, V6_ABI } from '@/lib/contracts'
+import { debugGuard } from '@/lib/debugGuard'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,8 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const blocked = debugGuard()
+  if (blocked) return blocked
   const { id } = await params
   const campaignId = parseInt(id)
   

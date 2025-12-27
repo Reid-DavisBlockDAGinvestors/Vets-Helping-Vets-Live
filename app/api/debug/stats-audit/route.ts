@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { ethers } from 'ethers'
 import { getProvider } from '@/lib/onchain'
 import { getAllDeployedContracts, V5_ABI, V6_ABI } from '@/lib/contracts'
+import { debugGuard } from '@/lib/debugGuard'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,8 @@ const BDAG_USD_RATE = 0.05
  * GET /api/debug/stats-audit
  */
 export async function GET(_req: NextRequest) {
+  const blocked = debugGuard()
+  if (blocked) return blocked
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
     process.env.SUPABASE_SERVICE_ROLE_KEY || '',

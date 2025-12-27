@@ -4,6 +4,7 @@ import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { createClient } from '@supabase/supabase-js'
 import { ipfsToHttp } from '@/lib/ipfs'
 import { verifyAdminAuth } from '@/lib/adminAuth'
+import { debugGuard } from '@/lib/debugGuard'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +12,9 @@ const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLI
 
 export async function GET(req: NextRequest) {
   try {
+    const blocked = debugGuard()
+    if (blocked) return blocked
+
     const auth = await verifyAdminAuth(req)
     if (!auth.authorized) return auth.response
 

@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { debugGuard } from '@/lib/debugGuard'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * Debug endpoint to view recent submissions and their campaign_id mappings
- * No auth required for debugging
+ * Protected by debugGuard in production
  */
 export async function GET(req: NextRequest) {
+  const blocked = debugGuard()
+  if (blocked) return blocked
+
   try {
     const { data: submissions, error } = await supabaseAdmin
       .from('submissions')

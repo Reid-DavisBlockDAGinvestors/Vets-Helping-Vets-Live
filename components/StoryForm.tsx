@@ -6,6 +6,7 @@ import { CATEGORIES, CategoryId, getCategoryById, mapLegacyCategory } from '@/li
 import VerificationUploader from './VerificationUploader'
 import { supabase } from '@/lib/supabase'
 import { openBugReport } from './BugReportButton'
+import CaptchaWidget, { useCaptcha } from './CaptchaWidget'
 
 const SUPPORTED_FORMATS = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
 const HEIC_FORMATS = ['image/heic', 'image/heif']
@@ -98,6 +99,9 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
   const [submittedId, setSubmittedId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [draftLoaded, setDraftLoaded] = useState(false)
+  
+  // CAPTCHA state
+  const captcha = useCaptcha()
   
   // Auth state
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -432,6 +436,13 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
       if (!email?.trim()) { showMsg('Email is required', 'error'); setIsSubmitting(false); return }
       // Wallet is optional - we can set it up later during the verification process
       if (!image) { showMsg('Please upload an image', 'error'); setIsSubmitting(false); return }
+      
+      // CAPTCHA validation (if enabled)
+      if (captcha.isRequired && !captcha.isVerified) { 
+        showMsg('Please complete the CAPTCHA verification', 'error'); 
+        setIsSubmitting(false); 
+        return 
+      }
       
       // KYC is optional - they can submit without it and verify later or use manual documents
       
@@ -1114,25 +1125,37 @@ export default function StoryForm({ editSubmissionId }: StoryFormProps) {
                 <p className="text-sm text-white/60">Identity verification is optional but speeds up approval. You can also submit documents manually.</p>
               )}
             </div>
-            <div className="flex gap-3">
-              <button 
-                type="button" 
-                onClick={mintPreview} 
-                disabled={isSubmitting}
-                className="rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 px-5 py-3 text-white transition-all disabled:opacity-50"
-              >
-                Preview NFT
-              </button>
-              <button 
-                type="button" 
-                onClick={submitForApproval} 
-                disabled={isSubmitting}
-                className={`rounded-lg px-6 py-3 font-medium transition-all ${!isSubmitting
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25' 
-                  : 'bg-white/10 text-white/40 cursor-not-allowed'}`}
-              >
-                {isSubmitting ? 'Submitting...' : 'Submit for Approval'}
-              </button>
+            <div className="flex flex-col gap-3">
+              {/* CAPTCHA Widget */}
+              <CaptchaWidget
+                onVerify={captcha.handleVerify}
+                onExpire={captcha.handleExpire}
+                onError={captcha.handleError}
+                theme="dark"
+              />
+              {captcha.error && (
+                <p className="text-red-400 text-sm">CAPTCHA error: {captcha.error}</p>
+              )}
+              <div className="flex gap-3">
+                <button 
+                  type="button" 
+                  onClick={mintPreview} 
+                  disabled={isSubmitting}
+                  className="rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 px-5 py-3 text-white transition-all disabled:opacity-50"
+                >
+                  Preview NFT
+                </button>
+                <button 
+                  type="button" 
+                  onClick={submitForApproval} 
+                  disabled={isSubmitting || (captcha.isRequired && !captcha.isVerified)}
+                  className={`rounded-lg px-6 py-3 font-medium transition-all ${!isSubmitting && (!captcha.isRequired || captcha.isVerified)
+                    ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25' 
+                    : 'bg-white/10 text-white/40 cursor-not-allowed'}`}
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit for Approval'}
+                </button>
+              </div>
             </div>
           </div>
         

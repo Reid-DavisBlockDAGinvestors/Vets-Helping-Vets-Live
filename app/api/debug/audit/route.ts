@@ -3,10 +3,15 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { verifyAdminAuth } from '@/lib/adminAuth'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
+import { debugGuard } from '@/lib/debugGuard'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
+  // Block in production unless explicitly enabled
+  const blocked = debugGuard()
+  if (blocked) return blocked
+  
   // Admin auth required for debug endpoints
   const auth = await verifyAdminAuth(req)
   if (!auth.authorized) return auth.response

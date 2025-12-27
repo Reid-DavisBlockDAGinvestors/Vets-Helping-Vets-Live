@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { sendSubmissionConfirmation, sendAdminNewSubmission } from '@/lib/mailer'
+import { auditLog } from '@/lib/audit'
 
 // POST /api/submissions  -> create a new creator submission (status=pending)
 export async function POST(req: NextRequest) {
@@ -231,8 +232,19 @@ export async function PUT(req: NextRequest) {
       .single()
 
     if (error) {
+      // Audit failed update
+      await auditLog('UPDATE', 'submission', 
+        { id: uid!, email: userData?.user?.email, role: profile?.role },
+        { resourceId: id, success: false, errorMessage: error.message }
+      )
       return NextResponse.json({ error: 'UPDATE_FAILED', details: error.message }, { status: 500 })
     }
+
+    // Audit successful update
+    await auditLog('UPDATE', 'submission',
+      { id: uid!, email: userData?.user?.email, role: profile?.role },
+      { resourceId: id, details: { fieldsUpdated: Object.keys(updatePayload) }, success: true }
+    )
 
     return NextResponse.json({ success: true, data })
   } catch (e: any) {
@@ -311,8 +323,19 @@ export async function DELETE(req: NextRequest) {
       .eq('id', id)
 
     if (deleteError) {
+      // Audit failed delete
+      await auditLog('DELETE', 'submission',
+        { id: uid!, email: userData?.user?.email, role: profile?.role },
+        { resourceId: id, success: false, errorMessage: deleteError.message }
+      )
       return NextResponse.json({ error: 'DELETE_FAILED', details: deleteError.message }, { status: 500 })
     }
+
+    // Audit successful delete
+    await auditLog('DELETE', 'submission',
+      { id: uid!, email: userData?.user?.email, role: profile?.role },
+      { resourceId: id, details: { title: submission.title, status: submission.status }, success: true }
+    )
 
     return NextResponse.json({ 
       success: true, 

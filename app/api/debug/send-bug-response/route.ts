@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendBugReportStatusEmail } from '@/lib/mailer'
+import { debugGuard } from '@/lib/debugGuard'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +12,9 @@ const supabaseAdmin = createClient(
 
 // Debug endpoint to send bug report response emails
 export async function POST(req: NextRequest) {
+  const blocked = debugGuard()
+  if (blocked) return blocked
+
   const debugKey = req.headers.get('x-debug-key') || req.nextUrl.searchParams.get('key')
   const expectedKey = process.env.DEBUG_API_KEY || 'dev-debug-key'
   

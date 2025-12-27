@@ -3,6 +3,7 @@ import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
 import { ipfsToHttp } from '@/lib/ipfs'
 import { verifyAdminAuth } from '@/lib/adminAuth'
+import { debugGuard } from '@/lib/debugGuard'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,9 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(req: NextRequest, context: { params: { tokenId: string } }) {
   try {
+    const blocked = debugGuard()
+    if (blocked) return blocked
+    
     const auth = await verifyAdminAuth(req)
     if (!auth.authorized) return auth.response
 
