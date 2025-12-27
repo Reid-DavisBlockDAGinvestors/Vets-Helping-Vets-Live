@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { createClient } from '@supabase/supabase-js'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
@@ -87,8 +88,8 @@ export async function GET(req: NextRequest) {
       s.status === 'minted' || s.status === 'pending_onchain'
     )
     
-    console.log(`[fundraisers] Total submissions: ${allSubs?.length || 0}, minted: ${mintedSubs.length}`)
-    console.log('[fundraisers] Minted subs:', JSON.stringify(mintedSubs.map((s: any) => ({
+    logger.debug(`[fundraisers] Total submissions: ${allSubs?.length || 0}, minted: ${mintedSubs.length}`)
+    logger.debug('[fundraisers] Minted subs:', JSON.stringify(mintedSubs.map((s: any) => ({
       id: s.id?.slice(0,8),
       campaign_id: s.campaign_id,
       visible: s.visible_on_marketplace,
@@ -120,11 +121,11 @@ export async function GET(req: NextRequest) {
       const rowAddr = (sub.contract_address || '').toLowerCase()
       // MUST have a contract_address to appear in marketplace
       if (!rowAddr) {
-        console.log(`[fundraisers] Skipping ${sub.id?.slice(0,8)} - no contract_address`)
+        logger.debug(`[fundraisers] Skipping ${sub.id?.slice(0,8)} - no contract_address`)
         return null
       }
       if (!enabledAddresses.includes(rowAddr)) {
-        console.log(`[fundraisers] Skipping ${sub.id?.slice(0,8)} - contract ${rowAddr} not in enabled list`)
+        logger.debug(`[fundraisers] Skipping ${sub.id?.slice(0,8)} - contract ${rowAddr} not in enabled list`)
         return null
       }
       
@@ -151,9 +152,9 @@ export async function GET(req: NextRequest) {
         // Use on-chain maxEditions if available and > 0
         const onchainMax = Number(camp.maxEditions ?? 0n)
         if (onchainMax > 0) maxEditions = onchainMax
-        console.log(`[fundraisers] Campaign ${campaignId} on-chain: editionsMinted=${editionsMinted}, maxEditions=${maxEditions}`)
+        logger.debug(`[fundraisers] Campaign ${campaignId} on-chain: editionsMinted=${editionsMinted}, maxEditions=${maxEditions}`)
       } catch (err: any) {
-        console.error(`[fundraisers] Failed to fetch on-chain data for campaign ${campaignId} on contract ${subContractAddr}: ${err?.message}`)
+        logger.error(`[fundraisers] Failed to fetch on-chain data for campaign ${campaignId} on contract ${subContractAddr}: ${err?.message}`)
       }
 
       // Price per NFT = Goal ÷ Max Editions (this is always correct for V5 model)

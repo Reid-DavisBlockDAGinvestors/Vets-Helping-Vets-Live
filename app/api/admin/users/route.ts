@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { createClient } from '@supabase/supabase-js'
 import { ethers } from 'ethers'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (profilesErr) {
-      console.error('[admin/users] profiles error:', profilesErr)
+      logger.error('[admin/users] profiles error:', profilesErr)
     }
 
     // Build purchase stats from multiple sources
@@ -81,8 +82,8 @@ export async function GET(req: NextRequest) {
       const fallbackEnv = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
       const targetContracts = enabledAddrs.length > 0 ? enabledAddrs : (fallbackEnv ? [fallbackEnv] : [])
 
-      console.log('[admin/users] Target contracts:', targetContracts)
-      console.log('[admin/users] RPC URL:', process.env.BLOCKDAG_RPC ? 'set' : 'not set')
+      logger.debug('[admin/users] Target contracts:', targetContracts)
+      logger.debug('[admin/users] RPC URL:', process.env.BLOCKDAG_RPC ? 'set' : 'not set')
 
       if (targetContracts.length > 0) {
         const provider = getProvider()
@@ -99,7 +100,7 @@ export async function GET(req: NextRequest) {
             
             const totalSupply = await Promise.race([totalSupplyPromise, timeoutPromise]) as bigint
             const total = Number(totalSupply)
-            console.log(`[admin/users] Contract ${addr}: ${total} NFTs`)
+            logger.debug(`[admin/users] Contract ${addr}: ${total} NFTs`)
 
             // Fetch owners in parallel batches with timeout
             const batchSize = 5
@@ -148,16 +149,16 @@ export async function GET(req: NextRequest) {
             blockchainQueried = true
           } catch (contractErr: any) {
             blockchainError = contractErr?.message || 'Unknown error'
-            console.error(`[admin/users] Contract ${addr} error:`, blockchainError)
+            logger.error(`[admin/users] Contract ${addr} error:`, blockchainError)
           }
         }
       }
     } catch (e: any) {
       blockchainError = e?.message || 'Unknown error'
-      console.error('[admin/users] Blockchain query failed:', blockchainError)
+      logger.error('[admin/users] Blockchain query failed:', blockchainError)
     }
 
-    console.log('[admin/users] Blockchain queried:', blockchainQueried, 'Wallet owners:', Object.keys(userPurchaseStats).length, 'Error:', blockchainError)
+    logger.debug('[admin/users] Blockchain queried:', blockchainQueried, 'Wallet owners:', Object.keys(userPurchaseStats).length, 'Error:', blockchainError)
 
     // 2. Query purchases table for spending data (primary source for USD amounts)
     const { data: purchases } = await supabaseAdmin
@@ -165,7 +166,7 @@ export async function GET(req: NextRequest) {
       .select('wallet_address, amount_usd, tip_usd, email, user_id, created_at')
       .order('created_at', { ascending: false })
 
-    console.log('[admin/users] DB: purchases:', purchases?.length)
+    logger.debug('[admin/users] DB: purchases:', purchases?.length)
 
     // Build spending stats from purchases table
     const walletSpending: Record<string, { total: number, count: number, first_purchase: string | null }> = {}
@@ -227,7 +228,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    console.log('[admin/users] Final: profiles:', profiles?.length, 'wallet owners:', Object.keys(userPurchaseStats).length)
+    logger.debug('[admin/users] Final: profiles:', profiles?.length, 'wallet owners:', Object.keys(userPurchaseStats).length)
 
     // Get campaigns created per user (by email) and also get sold_count data
     const { data: submissions } = await supabaseAdmin
@@ -237,7 +238,7 @@ export async function GET(req: NextRequest) {
 
     // Log minted campaigns with sales for debugging
     const mintedWithSales = (submissions || []).filter((s: any) => s.status === 'minted' && s.sold_count > 0)
-    console.log('[admin/users] Minted campaigns with sales:', mintedWithSales.map((s: any) => ({
+    logger.debug('[admin/users] Minted campaigns with sales:', mintedWithSales.map((s: any) => ({
       campaign_id: s.campaign_id,
       sold_count: s.sold_count
     })))
@@ -324,7 +325,7 @@ export async function GET(req: NextRequest) {
       }
     })
   } catch (e: any) {
-    console.error('[admin/users] Error:', e)
+    logger.error('[admin/users] Error:', e)
     return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
   }
 }
