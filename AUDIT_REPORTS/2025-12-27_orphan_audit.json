@@ -1,0 +1,1132 @@
+{
+  "timestamp": "2025-12-27T23:52:37.508Z",
+  "summary": {
+    "totalOnChain": 56,
+    "matched": 32,
+    "orphanOnChain": 24,
+    "orphanWithZeroSales": 17,
+    "orphanWithSales": 7
+  },
+  "orphanCampaigns": [
+    0,
+    1,
+    2,
+    3,
+    16,
+    19,
+    20,
+    21,
+    24,
+    25,
+    26,
+    27,
+    28,
+    31,
+    32,
+    36,
+    38,
+    40,
+    46,
+    47,
+    48,
+    52,
+    53,
+    55
+  ],
+  "matchedCampaigns": [
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    17,
+    18,
+    22,
+    23,
+    29,
+    30,
+    33,
+    34,
+    35,
+    37,
+    39,
+    41,
+    42,
+    43,
+    44,
+    45,
+    49,
+    50,
+    51,
+    54
+  ],
+  "zeroSalesCampaigns": [
+    3,
+    16,
+    19,
+    20,
+    21,
+    24,
+    25,
+    27,
+    28,
+    31,
+    36,
+    46,
+    47,
+    48,
+    52,
+    53,
+    55
+  ],
+  "comparisons": [
+    {
+      "campaignId": 0,
+      "onChain": {
+        "baseURI": "https://ecwqzakvbkdywnfsrsfs.supabase.co/storage/v1/object/public/nft-assets/metadata/1764343158978.json",
+        "goal": "0.0000000000000001",
+        "grossRaised": "20.0",
+        "editionsMinted": 1,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found"
+      ]
+    },
+    {
+      "campaignId": 1,
+      "onChain": {
+        "baseURI": "https://ecwqzakvbkdywnfsrsfs.supabase.co/storage/v1/object/public/nft-assets/metadata/1764349390280.json",
+        "goal": "100.0",
+        "grossRaised": "20.0",
+        "editionsMinted": 1,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found"
+      ]
+    },
+    {
+      "campaignId": 2,
+      "onChain": {
+        "baseURI": "ipfs://bafkreib4vbuhuproyyojsg3lctm3iz6h5qshoageb7harhttfrhcmwfx3q",
+        "goal": "100.0",
+        "grossRaised": "20.0",
+        "editionsMinted": 1,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found"
+      ]
+    },
+    {
+      "campaignId": 3,
+      "onChain": {
+        "baseURI": "ipfs://bafkreiai5vnida2xttflptuwcnvtku65y7qqvk7t6ludru3bllal4neeuu",
+        "goal": "99999.999999999991611392",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 4,
+      "onChain": {
+        "baseURI": "ipfs://bafkreiea5jzmuabxto6d2gditagqk4g5o4uyqb5ehgnqxrgs4mv7p2wuze",
+        "goal": "100.0",
+        "grossRaised": "36520.0",
+        "editionsMinted": 100,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "a8b70e98-c656-481c-a55d-89a2c945b0de",
+        "title": "Larry Odom II: A Beacon of Resilience in the Fight Against CRPS",
+        "image_uri": "ipfs://bafybeigigyysnio4w7c7rkw7pxibtp6wzhozr5wdmiwtemfmprkjp25g3y",
+        "goal": 100,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 5,
+      "onChain": {
+        "baseURI": "ipfs://bafkreieimc7bc2kvzyujkdytdi6qnjhiwmhbfolmuryjnvyuhuxgeowqze",
+        "goal": "100.0",
+        "grossRaised": "1420.0",
+        "editionsMinted": 33,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "cec6bb16-cb39-49fd-ac17-bea170805594",
+        "title": "Reid Davis – Leading the Rebirth of BlockDAG: The People’s Blockchain",
+        "image_uri": "ipfs://bafybeid43z3lxki3pvsjqhia2zt7uhdxeb3viuv3kpfrj7q4wtf6f6lkii",
+        "goal": 100,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 6,
+      "onChain": {
+        "baseURI": "ipfs://bafkreiamscvysrgsrh7qw26ppzipzm2xezykforwdj25w3p3bhbae7yn4i",
+        "goal": "100.0",
+        "grossRaised": "3120.0",
+        "editionsMinted": 6,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "d65fda1f-fae5-4e2e-a74b-b14d613614a6",
+        "title": "Erica Stanford's fundraiser for taking care of our handicapped friend Bob Griffiths!",
+        "image_uri": "ipfs://bafkreihqkt2tpjb2gmdwf5t7ug3xkcxffiqdah4mydrbtcgbbcr5nzvgqe",
+        "goal": 100,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 7,
+      "onChain": {
+        "baseURI": "ipfs://bafkreicen6f4qm25h5rnyslko2t6sqzlkwoe25jnazb5uzecrfnidfxufq",
+        "goal": "100.0",
+        "grossRaised": "3260.0",
+        "editionsMinted": 13,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "3e3bc929-8e20-47ba-9525-9e32dde0ced6",
+        "title": "Michael Elkins needs to be able to keep up with Larry Odom II",
+        "image_uri": "ipfs://bafkreihiwlvtbvgnwfwjqp2l2wvenfiedq5xwskmeokptfttd26txonwza",
+        "goal": 100,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 8,
+      "onChain": {
+        "baseURI": "ipfs://bafkreiaavouuavu4wttavbce7cmftvgmd2vj5ajddcaqx2nmahshuzsnqa",
+        "goal": "100.0",
+        "grossRaised": "3060.0",
+        "editionsMinted": 5,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "38bac29e-17ec-4ce0-a8ed-92d2d3dbf6f1",
+        "title": "Jerry Wicks Needs Money to Support His Ai Research Addiction",
+        "image_uri": "ipfs://bafkreigsuqmijhvmulajpkccghtk47xnkk77ed4ubbzmllppruehramvge",
+        "goal": 100,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 9,
+      "onChain": {
+        "baseURI": "ipfs://bafkreib3nmqqoflsp3af2zt2yoidxbyqpvf7exm2uxzttiv5re33ovcjzi",
+        "goal": "100.0",
+        "grossRaised": "3720.0",
+        "editionsMinted": 27,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "3a99fb70-daf7-47d4-9c4a-2b581a02a308",
+        "title": "Chanelle's Campaign For a New Pony",
+        "image_uri": "ipfs://bafkreidxjwhlloozioxdrtprazyie65zhbozltuorcugtx3ykcgy3tuqsy",
+        "goal": 100,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 10,
+      "onChain": {
+        "baseURI": "ipfs://bafkreibpblj2zm44cekquvykks5b7573aq7dfjxuvyka6bu35ixcozcn6m",
+        "goal": "100.0",
+        "grossRaised": "120.0",
+        "editionsMinted": 6,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "d61a9b95-f555-4468-ae96-2fa6ffb703f7",
+        "title": "Help Rob Nicholson Get off the S#$% List",
+        "image_uri": "ipfs://bafkreiawvyllvs42belwlns6tyvy7nk6h7j4q2zczdq3uqj2vqu2ikzoy4",
+        "goal": 100,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 11,
+      "onChain": {
+        "baseURI": "ipfs://bafkreifggaoynd7haic4vx7jmgqz77ineqx3k4lhnjnpus7dznxvlijxw4",
+        "goal": "1000.0",
+        "grossRaised": "110.0",
+        "editionsMinted": 10,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "42d06d85-f2b8-45c8-8081-3c2bba54f5f0",
+        "title": "Help Perry get back on his feet after knee replacement",
+        "image_uri": "ipfs://bafkreibevzojysint6wub2rrl45b2wojdu6ummlxd6do745nkdswjwnkq4",
+        "goal": 50,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 12,
+      "onChain": {
+        "baseURI": "ipfs://bafkreih6lolrynb7jlqqgoklp6wtsnml5ebiwc63cldxngvbjtfc24b2hm",
+        "goal": "20000.0",
+        "grossRaised": "600.0",
+        "editionsMinted": 3,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "393a6827-66e5-43a9-a645-5fd81c474972",
+        "title": "Leo's Animal Sanctury (Udon Thani) Thailand.",
+        "image_uri": "ipfs://bafkreichfguqtn6n36fatcjppsh4jwatymbznxkiv6khwtljkj7yszbfwm",
+        "goal": 1000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 13,
+      "onChain": {
+        "baseURI": "ipfs://bafkreieha26oidikkinm4mzbfu5oulytxmgh2kwddqpiiu6sjwm3yjck4y",
+        "goal": "10000.0",
+        "grossRaised": "800.0",
+        "editionsMinted": 6,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "ce9d1ba3-a4ed-4dcc-aded-f49473d33663",
+        "title": "Go BeerMe",
+        "image_uri": "ipfs://bafybeibpyqre6pfpo2wxzvt5hwzm7qutfks7lr3vq7twddajiiy534mmdm",
+        "goal": 500,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 14,
+      "onChain": {
+        "baseURI": "ipfs://bafkreianxdksxpvx3k46nhj7sbpzd5vk624k3b2cbore7u2gwf2qaynqnu",
+        "goal": "2400000.000000000067108864",
+        "grossRaised": "2000.0",
+        "editionsMinted": 8,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "16394aeb-810d-4665-a6fd-f96c9cabe8ba",
+        "title": "Help Puddlejacked save Christmas",
+        "image_uri": "ipfs://bafybeifqhvpt6bxwrxdvyx635o37nujkbhgjkqxnzsg23ov7evg3l436su",
+        "goal": 120000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 15,
+      "onChain": {
+        "baseURI": "ipfs://bafkreigvjbe2vqy3mh2ksrddepgjnsakgpuyhvhfa33xlfgoaliofets2m",
+        "goal": "10000.0",
+        "grossRaised": "400.0",
+        "editionsMinted": 4,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "ad39696f-0868-4087-9ab2-ac97b2907565",
+        "title": "Ricky Vega and Reid Davis Might Just Be Crazy Enough To Save BlockDAG!!!",
+        "image_uri": "ipfs://bafybeifzzzebwx576ejp5mzbqzr7qnwpyyqvgwp2q7ocdvwdvoq6bluwg4",
+        "goal": 500,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 16,
+      "onChain": {
+        "baseURI": "ipfs://bafkreigvjbe2vqy3mh2ksrddepgjnsakgpuyhvhfa33xlfgoaliofets2m",
+        "goal": "10000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 17,
+      "onChain": {
+        "baseURI": "ipfs://bafkreig2txapnohpequdrba2547a2hnzw656ichtnhnh65rtjwy5umq5ye",
+        "goal": "20000.0",
+        "grossRaised": "400.0",
+        "editionsMinted": 2,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "f85ad4e6-df75-4467-9783-aca7f3e7e033",
+        "title": "Reid Davis and Lethaniel Take Over Chicago!!",
+        "image_uri": "ipfs://bafybeidzvg5hxadgfexf2jocectin4llu76l5b54u4xyxqyftl5lf7iw3m",
+        "goal": 1000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 18,
+      "onChain": {
+        "baseURI": "ipfs://bafkreih2xuelil74ukrf43vv4k7r6refds23zf35d2cz6qna7opy3kxl6i",
+        "goal": "20000.0",
+        "grossRaised": "800.0",
+        "editionsMinted": 4,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "8a48f295-80fe-4c22-a239-78bea08a6678",
+        "title": "That Time Street DOJO Saved The Free World!!!!!",
+        "image_uri": "ipfs://bafkreibf3lrqrpif53rpru6ox5w55hfcjyvmohkformha5jl2cyb3blabe",
+        "goal": 1000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 19,
+      "onChain": {
+        "baseURI": "ipfs://bafkreih2xuelil74ukrf43vv4k7r6refds23zf35d2cz6qna7opy3kxl6i",
+        "goal": "20000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 20,
+      "onChain": {
+        "baseURI": "ipfs://bafkreih2xuelil74ukrf43vv4k7r6refds23zf35d2cz6qna7opy3kxl6i",
+        "goal": "20000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 21,
+      "onChain": {
+        "baseURI": "ipfs://bafkreihdupujshu4tzj73567h4l3jtaryboolyselp34tmrfpmpuopg4nm",
+        "goal": "20000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 22,
+      "onChain": {
+        "baseURI": "ipfs://bafkreihdupujshu4tzj73567h4l3jtaryboolyselp34tmrfpmpuopg4nm",
+        "goal": "20000.0",
+        "grossRaised": "400.0",
+        "editionsMinted": 2,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "964188ad-6675-4323-9d3d-71ae69fc5e42",
+        "title": "Travis Thomas Spent All His Money Getting Married!",
+        "image_uri": "ipfs://bafybeiaaw2qbsgdo5h4oc5d2j34c2quftlsyrgknse3fbcqtuewuketcue",
+        "goal": 1000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 23,
+      "onChain": {
+        "baseURI": "ipfs://bafkreidbwnau4d3gxbtxkghkzz7wkkumbdqke5vkdsqsnacg2mcpeu2huy",
+        "goal": "3999999.999999999932891136",
+        "grossRaised": "80000.0",
+        "editionsMinted": 2,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "8ebd6b09-11ff-4728-a6f8-cb18a2cdea95",
+        "title": "Support a SWCC",
+        "image_uri": "ipfs://bafybeif6vpu4ykqjk5jskzvg5judaapdb4wewok5iqbjffeyriu76q5grq",
+        "goal": 200000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 24,
+      "onChain": {
+        "baseURI": "ipfs://bafkreidbwnau4d3gxbtxkghkzz7wkkumbdqke5vkdsqsnacg2mcpeu2huy",
+        "goal": "3999999.999999999932891136",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 25,
+      "onChain": {
+        "baseURI": "ipfs://bafkreidbwnau4d3gxbtxkghkzz7wkkumbdqke5vkdsqsnacg2mcpeu2huy",
+        "goal": "3999999.999999999932891136",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 26,
+      "onChain": {
+        "baseURI": "ipfs://bafkreifb3xnbcl43zx7kdqom2kvvxmv62co27plfpkh3qtps5leb6nj7ay",
+        "goal": "20000.0",
+        "grossRaised": "200.0",
+        "editionsMinted": 1,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found"
+      ]
+    },
+    {
+      "campaignId": 27,
+      "onChain": {
+        "baseURI": "ipfs://bafkreifb3xnbcl43zx7kdqom2kvvxmv62co27plfpkh3qtps5leb6nj7ay",
+        "goal": "20000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 28,
+      "onChain": {
+        "baseURI": "ipfs://bafkreifb3xnbcl43zx7kdqom2kvvxmv62co27plfpkh3qtps5leb6nj7ay",
+        "goal": "20000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 29,
+      "onChain": {
+        "baseURI": "ipfs://bafkreifb3xnbcl43zx7kdqom2kvvxmv62co27plfpkh3qtps5leb6nj7ay",
+        "goal": "20000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "fe21c52c-e3d8-4583-b38e-f0a4435c29f8",
+        "title": "Daniel Van Damme Has Been Patient!!",
+        "image_uri": "ipfs://bafkreifkalzq2p3u7l5ktco5rmyd6c4qxrnvzhfydvmu3n3il5j3zffheq",
+        "goal": 1000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 30,
+      "onChain": {
+        "baseURI": "ipfs://bafkreidvzhdhikijhpzkihhm2ldi6ou2malxrljlibxfulcolqzjzs6e5e",
+        "goal": "20000.0",
+        "grossRaised": "200.0",
+        "editionsMinted": 1,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "08b099ac-b1b8-433a-b5f9-1ac90e9780ef",
+        "title": "Carlos A Linhares Is a strong advocate for BlockDAG!",
+        "image_uri": "ipfs://bafybeic2l5iec2nyt7ck7lsgycd4xdai5lve2bqx3v4pexprwnshqmdbga",
+        "goal": 1000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 31,
+      "onChain": {
+        "baseURI": "ipfs://bafkreidvzhdhikijhpzkihhm2ldi6ou2malxrljlibxfulcolqzjzs6e5e",
+        "goal": "20000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 32,
+      "onChain": {
+        "baseURI": "ipfs://bafkreifknu34fe64ystypcxbkmxztyqa56aww5jav36yalcivye3jt323e",
+        "goal": "20000.0",
+        "grossRaised": "200.0",
+        "editionsMinted": 1,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found"
+      ]
+    },
+    {
+      "campaignId": 33,
+      "onChain": {
+        "baseURI": "ipfs://bafkreifknu34fe64ystypcxbkmxztyqa56aww5jav36yalcivye3jt323e",
+        "goal": "20000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "037831f9-40af-4b76-960e-450c2fdf4e98",
+        "title": "Dave wants to start a mobile tire service in anchorage",
+        "image_uri": "ipfs://bafybeifukwg64uvbc3k7igzzr3teo5ascllucowfrokqc2irkraxlfvhne",
+        "goal": 1000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 34,
+      "onChain": {
+        "baseURI": "ipfs://bafkreigf2wpozrgeeiobpri6brc2pnrys3fgduzyz6e4pe7qglmg6mpmfq",
+        "goal": "20000.0",
+        "grossRaised": "200.0",
+        "editionsMinted": 1,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "9071051f-a13a-47ae-b422-8d8e08b5e361",
+        "title": "Tim Kelly Needs some funds to retain his sanity due to the extended BlockDAG presale",
+        "image_uri": "ipfs://bafkreifjotyuhwcfwqibuo6hi6u4crn4vjigx7lk2oofjw2ja5ht3o523i",
+        "goal": 1000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 35,
+      "onChain": {
+        "baseURI": "ipfs://bafkreicik3lh577rt5f7dzotiofldszengmjzx4vkzsmujq6tlhhczvupa",
+        "goal": "20000.0",
+        "grossRaised": "200.0",
+        "editionsMinted": 1,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "dfcbe75a-ad8b-46c3-b878-2e97237e2a7e",
+        "title": "Patrick Irvine needs money so he can quit his job!!",
+        "image_uri": "ipfs://bafkreih3frneo2nufpxwksngz6vwq6dpvj4trnmwtpvosupyfglfuzjwz4",
+        "goal": 1000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 36,
+      "onChain": {
+        "baseURI": "ipfs://bafkreicik3lh577rt5f7dzotiofldszengmjzx4vkzsmujq6tlhhczvupa",
+        "goal": "20000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 37,
+      "onChain": {
+        "baseURI": "ipfs://bafkreife5ivzn4p2dvr4f76bjies7i6igl6uz4pf5uxx55iwvf5t5wc7lq",
+        "goal": "20000.0",
+        "grossRaised": "800.0",
+        "editionsMinted": 4,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "a38ffd99-e71a-4339-9a18-359048ad7b36",
+        "title": "Shawn Wilson Needs money for midgets and alpacas with funny hats",
+        "image_uri": "ipfs://bafkreifxh5iv5g3wrlztjbkm4zlqnsp2lczgv2gvbxc557rwpso4lv3r2e",
+        "goal": 1000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 38,
+      "onChain": {
+        "baseURI": "ipfs://bafkreigu3zie46b45ar6unwb3lq3mfjs5sgfvr2m65j745oq3k53ljtogq",
+        "goal": "20000.0",
+        "grossRaised": "98100.0",
+        "editionsMinted": 100,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found"
+      ]
+    },
+    {
+      "campaignId": 39,
+      "onChain": {
+        "baseURI": "ipfs://bafkreigu3zie46b45ar6unwb3lq3mfjs5sgfvr2m65j745oq3k53ljtogq",
+        "goal": "20000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "b14cf8cf-b501-4506-a2ce-db28065023ed",
+        "title": "Antonty Turner needs funds to fight Gurhan Kiziloz",
+        "image_uri": "ipfs://bafkreic4hwboytmmyri373t4mqqxbduhimcdxg2pbiaadullruxcoknkyy",
+        "goal": 1000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 40,
+      "onChain": {
+        "baseURI": "ipfs://bafkreicbyma4ulg43sycpgbr4mu24gs5xys7uz6xaxkukq3ufoek23gauq",
+        "goal": "20000.0",
+        "grossRaised": "500.0",
+        "editionsMinted": 2,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found"
+      ]
+    },
+    {
+      "campaignId": 41,
+      "onChain": {
+        "baseURI": "ipfs://bafkreicbyma4ulg43sycpgbr4mu24gs5xys7uz6xaxkukq3ufoek23gauq",
+        "goal": "20000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "73f65eec-8dd4-4508-8133-eae16b420426",
+        "title": "Sponsor sports for kids",
+        "image_uri": "ipfs://bafybeiakqdss6j4gexka3rebicfhapwelw65nncimeegaz6k3b5gm5saym",
+        "goal": 1000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 42,
+      "onChain": {
+        "baseURI": "ipfs://bafkreidprr3e2ldh22an66cjdwbckefklyezopg5tnapwdrjlxa2gkuhvu",
+        "goal": "1000.0",
+        "grossRaised": "250.0",
+        "editionsMinted": 5,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "76eb3b57-fc02-40f3-9efd-4255534a1313",
+        "title": "Help Harris’ dogs chase the rainbow",
+        "image_uri": "ipfs://bafybeif7qg25udrn44istwx4ed5uqqvag6vfens4nktow7gxs5bgbp4yvq",
+        "goal": 50,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 43,
+      "onChain": {
+        "baseURI": "ipfs://bafkreifkcdtva3l6r4jdlvoemthnxquuky7drsiyapklszfgu7o25bt5nq",
+        "goal": "359999.999999999983222784",
+        "grossRaised": "720.0",
+        "editionsMinted": 2,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "1c4cc9cf-eab9-4a40-918f-63b66f94455a",
+        "title": "Project Harvest Guard- End Food Waste. Power a Farmer’s Future with a Solar-Cool Box.",
+        "image_uri": "ipfs://bafybeiesj56v3j5ihjxo5dxb3f5mbswbpajj4d2eodfffoeodfuxc3etsm",
+        "goal": 18000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 44,
+      "onChain": {
+        "baseURI": "ipfs://bafkreiaxqpeliw6rj2afubuti4bodponfjcngbmb4ca367s5xgqvotkpwu",
+        "goal": "199999.999999999983222784",
+        "grossRaised": "40000.0",
+        "editionsMinted": 2,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "6c9824b1-dd62-4b8c-9f61-4ada80a43158",
+        "title": "Watch the kitty loose her pink.",
+        "image_uri": "ipfs://bafybeignedkqwqmmfzy7to4tfi3tcm7fjiifpiy5w4b65vt66dq65y6tv4",
+        "goal": 10000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 45,
+      "onChain": {
+        "baseURI": "ipfs://bafkreid35nmcd76egmb4zhb6kevd7pnkex4t6bzbftulywvgccc57mcyxi",
+        "goal": "199999.999999999983222784",
+        "grossRaised": "2000.0",
+        "editionsMinted": 1,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "b2ff3054-c5fd-4d3b-9ffa-55b25e4f24dc",
+        "title": "Olivier and Oskar: My Sons’ Dreams, Our Shared Struggle♥️🚀",
+        "image_uri": "ipfs://bafybeic7upwc5esvszumpkrt6json7v66jgav7rk45z3xq3t5usf7r4iki",
+        "goal": 10000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 46,
+      "onChain": {
+        "baseURI": "ipfs://bafkreid35nmcd76egmb4zhb6kevd7pnkex4t6bzbftulywvgccc57mcyxi",
+        "goal": "199999.999999999983222784",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 47,
+      "onChain": {
+        "baseURI": "ipfs://bafkreid35nmcd76egmb4zhb6kevd7pnkex4t6bzbftulywvgccc57mcyxi",
+        "goal": "199999.999999999983222784",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 48,
+      "onChain": {
+        "baseURI": "ipfs://bafkreibnu7nqkcbsosn3wdru66ve5lk3q7u2ti2okr2is3k53rz45d6ccu",
+        "goal": "1777759.999999999907725312",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 49,
+      "onChain": {
+        "baseURI": "ipfs://bafkreibnu7nqkcbsosn3wdru66ve5lk3q7u2ti2okr2is3k53rz45d6ccu",
+        "goal": "1777759.999999999907725312",
+        "grossRaised": "600.0",
+        "editionsMinted": 3,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "8cb8ac0a-0e30-4be9-8c38-4a250fb90458",
+        "title": "Lucky 8",
+        "image_uri": "ipfs://bafybeif35vl6wasm7i6xyqd4ry3clbwcxzb7bmgp2ski7ceuylcx2abcdq",
+        "goal": 88888,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 50,
+      "onChain": {
+        "baseURI": "ipfs://bafkreiaxvpflulxjm3jcqkg4ln3kkbdqbyznukqjgs7wgl6bqhrc35deg4",
+        "goal": "7999999.999999999865782272",
+        "grossRaised": "800.0",
+        "editionsMinted": 4,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "116789b5-56ab-4682-8a44-03a88ae0a896",
+        "title": "Plight of Animal Lovers League",
+        "image_uri": "ipfs://bafkreibahf33nbfqd22y5gduzz62bhw3vsgh4kbvmr3f54jesnhxj3tyzi",
+        "goal": 400000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 51,
+      "onChain": {
+        "baseURI": "ipfs://bafkreiaso2ofsumbwklz2iiwqaydeyusb3z6p7lcqb2vc6txatshbaqdw4",
+        "goal": "399999.999999999966445568",
+        "grossRaised": "1600.0",
+        "editionsMinted": 4,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "433b58da-4a85-4814-a9c2-199755f46ae6",
+        "title": "Help Jesse Pay for his Daughter Noelle's Wedding",
+        "image_uri": "ipfs://bafybeidpcojtrxnuzgxo5xcdxtxx5qpxxqx3dqknzk4eebxsst7jk2jf3i",
+        "goal": 20000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 52,
+      "onChain": {
+        "baseURI": "ipfs://bafkreiaso2ofsumbwklz2iiwqaydeyusb3z6p7lcqb2vc6txatshbaqdw4",
+        "goal": "399999.999999999966445568",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 53,
+      "onChain": {
+        "baseURI": "ipfs://bafkreiefapwpu4qntafvoict22xlokqb5nrrkjf5psgheanmhxkamfv55e",
+        "goal": "20000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    },
+    {
+      "campaignId": 54,
+      "onChain": {
+        "baseURI": "ipfs://bafkreiefapwpu4qntafvoict22xlokqb5nrrkjf5psgheanmhxkamfv55e",
+        "goal": "20000.0",
+        "grossRaised": "1000.0",
+        "editionsMinted": 5,
+        "active": true,
+        "closed": false
+      },
+      "database": {
+        "id": "739801dc-4331-462f-b666-c8d060b55319",
+        "title": "The Myriad Mirage",
+        "image_uri": "ipfs://bafybeiajexxb7uldekcccjmcbqrz7gl5kionvgxythnvigzgx4cjj3lal4",
+        "goal": 1000,
+        "status": "minted"
+      },
+      "status": "matched",
+      "notes": []
+    },
+    {
+      "campaignId": 55,
+      "onChain": {
+        "baseURI": "ipfs://bafkreiefapwpu4qntafvoict22xlokqb5nrrkjf5psgheanmhxkamfv55e",
+        "goal": "20000.0",
+        "grossRaised": "0.0",
+        "editionsMinted": 0,
+        "active": true,
+        "closed": false
+      },
+      "database": null,
+      "status": "orphan_onchain",
+      "notes": [
+        "No database record found",
+        "Zero sales - likely a test/duplicate campaign"
+      ]
+    }
+  ]
+}

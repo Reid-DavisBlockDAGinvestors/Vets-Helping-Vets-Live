@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import Script from 'next/script'
 
 interface CaptchaWidgetProps {
@@ -17,6 +17,8 @@ const PROVIDER = process.env.NEXT_PUBLIC_CAPTCHA_PROVIDER || 'turnstile'
 /**
  * CAPTCHA Widget Component
  * Supports Turnstile (Cloudflare) and hCaptcha
+ * 
+ * IMPORTANT: Only renders ONE widget instance to prevent multiple "Verifying..." loops
  */
 export default function CaptchaWidget({
   onVerify,
@@ -27,43 +29,71 @@ export default function CaptchaWidget({
 }: CaptchaWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<string | null>(null)
+  const renderAttemptedRef = useRef(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [isEnabled, setIsEnabled] = useState(false)
+
+  // Store callbacks in refs to avoid re-renders causing widget recreation
+  const onVerifyRef = useRef(onVerify)
+  const onExpireRef = useRef(onExpire)
+  const onErrorRef = useRef(onError)
+  
+  // Update refs when callbacks change
+  useEffect(() => {
+    onVerifyRef.current = onVerify
+    onExpireRef.current = onExpire
+    onErrorRef.current = onError
+  }, [onVerify, onExpire, onError])
 
   useEffect(() => {
     setIsEnabled(!!SITE_KEY)
   }, [])
 
-  // Render widget after script loads
+  // Render widget ONCE after script loads
   useEffect(() => {
     if (!isLoaded || !containerRef.current || !SITE_KEY) return
+    
+    // Prevent multiple render attempts
+    if (renderAttemptedRef.current || widgetIdRef.current) {
+      return
+    }
+    renderAttemptedRef.current = true
 
     const renderWidget = () => {
+      // Double-check we haven't already rendered
+      if (widgetIdRef.current) return
+      
+      // Clear container first to prevent duplicates
+      if (containerRef.current) {
+        containerRef.current.innerHTML = ''
+      }
+      
       if (PROVIDER === 'turnstile' && (window as any).turnstile) {
         widgetIdRef.current = (window as any).turnstile.render(containerRef.current, {
           sitekey: SITE_KEY,
           theme,
           size,
-          callback: onVerify,
-          'expired-callback': onExpire,
-          'error-callback': onError,
+          callback: (token: string) => onVerifyRef.current(token),
+          'expired-callback': () => onExpireRef.current?.(),
+          'error-callback': (err: string) => onErrorRef.current?.(err),
         })
       } else if (PROVIDER === 'hcaptcha' && (window as any).hcaptcha) {
         widgetIdRef.current = (window as any).hcaptcha.render(containerRef.current, {
           sitekey: SITE_KEY,
           theme,
           size,
-          callback: onVerify,
-          'expired-callback': onExpire,
-          'error-callback': onError,
+          callback: (token: string) => onVerifyRef.current(token),
+          'expired-callback': () => onExpireRef.current?.(),
+          'error-callback': (err: string) => onErrorRef.current?.(err),
         })
       }
     }
 
     // Small delay to ensure DOM is ready
-    setTimeout(renderWidget, 100)
+    const timeoutId = setTimeout(renderWidget, 100)
 
     return () => {
+      clearTimeout(timeoutId)
       // Cleanup widget on unmount
       if (widgetIdRef.current) {
         try {
@@ -73,9 +103,11 @@ export default function CaptchaWidget({
             (window as any).hcaptcha.remove(widgetIdRef.current)
           }
         } catch {}
+        widgetIdRef.current = null
       }
+      renderAttemptedRef.current = false
     }
-  }, [isLoaded, onVerify, onExpire, onError, theme, size])
+  }, [isLoaded, theme, size]) // Removed callback dependencies - use refs instead
 
   // Don't render if not enabled
   if (!isEnabled) {
