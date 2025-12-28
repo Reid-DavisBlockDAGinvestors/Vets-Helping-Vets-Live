@@ -484,9 +484,20 @@ export default function CommunityHubClient() {
     }
   }
 
-  const toggleLike = async (postId: string) => {
+  // Reaction types for charitable/heartfelt fundraising
+  const REACTION_EMOJIS: Record<string, string> = {
+    love: '❤️',
+    pray: '🙏',
+    encourage: '💪',
+    celebrate: '🎉',
+    care: '😢'
+  }
+
+  const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null)
+
+  const toggleLike = async (postId: string, reactionType: string = 'love') => {
     if (!token) {
-      alert('Please sign in to like posts')
+      alert('Please sign in to react to posts')
       return
     }
 
@@ -497,11 +508,13 @@ export default function CommunityHubClient() {
       likes_count: p.isLiked ? p.likes_count - 1 : p.likes_count + 1
     } : p))
 
+    setShowReactionPicker(null)
+
     try {
       await fetch('/api/community/like', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-        body: JSON.stringify({ post_id: postId })
+        body: JSON.stringify({ post_id: postId, reaction_type: reactionType })
       })
     } catch {
       // Revert on error
@@ -1345,15 +1358,37 @@ export default function CommunityHubClient() {
 
                   {/* Post Actions */}
                   <div className="p-4 flex items-center gap-6 border-t border-white/10 mt-4">
-                    <button
-                      onClick={() => toggleLike(post.id)}
-                      className={`flex items-center gap-2 transition-colors ${
-                        post.isLiked ? 'text-red-400' : 'text-white/60 hover:text-red-400'
-                      }`}
-                    >
-                      <span>{post.isLiked ? '❤️' : '🤍'}</span>
-                      <span>{post.likes_count}</span>
-                    </button>
+                    {/* Reaction Button with Picker */}
+                    <div className="relative">
+                      <button
+                        onClick={() => toggleLike(post.id, 'love')}
+                        onMouseEnter={() => setShowReactionPicker(post.id)}
+                        className={`flex items-center gap-2 transition-colors ${
+                          post.isLiked ? 'text-red-400' : 'text-white/60 hover:text-red-400'
+                        }`}
+                      >
+                        <span>{post.isLiked ? '❤️' : '🤍'}</span>
+                        <span>{post.likes_count}</span>
+                      </button>
+                      {/* Reaction Picker - shows on hover */}
+                      {showReactionPicker === post.id && (
+                        <div 
+                          className="absolute bottom-full left-0 mb-2 bg-gray-900 border border-white/10 rounded-xl shadow-xl p-2 flex gap-1 z-50"
+                          onMouseLeave={() => setShowReactionPicker(null)}
+                        >
+                          {Object.entries(REACTION_EMOJIS).map(([type, emoji]) => (
+                            <button
+                              key={type}
+                              onClick={() => toggleLike(post.id, type)}
+                              className="p-2 hover:bg-white/10 rounded-lg text-xl transition-transform hover:scale-125"
+                              title={type.charAt(0).toUpperCase() + type.slice(1)}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <button
                       onClick={() => toggleComments(post.id)}
                       className="flex items-center gap-2 text-white/60 hover:text-blue-400 transition-colors"
