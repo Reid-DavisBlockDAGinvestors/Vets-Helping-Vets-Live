@@ -509,6 +509,33 @@ export default function CommunityHubClient() {
     }
   }
 
+  const toggleCommentLike = async (postId: string, commentId: string) => {
+    if (!token) {
+      alert('Please sign in to like comments')
+      return
+    }
+
+    // Optimistic update
+    setPostComments(prev => ({
+      ...prev,
+      [postId]: (prev[postId] || []).map(c => c.id === commentId ? {
+        ...c,
+        likes_count: (c.likes_count || 0) + 1 // Simplified - just increment for now
+      } : c)
+    }))
+
+    try {
+      await fetch('/api/community/like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ comment_id: commentId })
+      })
+    } catch {
+      // Revert on error
+      loadComments(postId)
+    }
+  }
+
   const loadComments = async (postId: string) => {
     try {
       const res = await fetch(`/api/community/comments?post_id=${postId}`)
@@ -1433,7 +1460,13 @@ export default function CommunityHubClient() {
                               </div>
                               <div className="flex items-center gap-4 mt-1 ml-4 text-xs text-white/50">
                                 <span>{formatDate(comment.created_at)}</span>
-                                <button className="hover:text-white">Like</button>
+                                <button 
+                                  onClick={() => toggleCommentLike(post.id, comment.id)}
+                                  className="hover:text-red-400 transition-colors flex items-center gap-1"
+                                >
+                                  <span>❤️</span>
+                                  <span>{comment.likes_count || 0}</span>
+                                </button>
                                 <button className="hover:text-white">Reply</button>
                               </div>
                             </div>
