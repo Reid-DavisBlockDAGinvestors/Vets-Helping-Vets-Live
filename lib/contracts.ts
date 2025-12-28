@@ -157,11 +157,11 @@ export const CONTRACT_REGISTRY: Record<ContractVersion, ContractInfo> = {
   },
   v6: {
     version: 'v6',
-    address: process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0xaE54e4E8A75a81780361570c17b8660CEaD27053',
+    address: process.env.CONTRACT_ADDRESS_V6 || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V6 || '0xaE54e4E8A75a81780361570c17b8660CEaD27053',
     name: 'PatriotPledgeNFTV6',
     chainId: 1043,
-    isActive: true,     // New campaigns go here
-    isMintable: true,
+    isActive: false,    // FUTURE - not yet deployed with NFTs
+    isMintable: false,
     features: {
       batchMint: true,
       royalties: true,
