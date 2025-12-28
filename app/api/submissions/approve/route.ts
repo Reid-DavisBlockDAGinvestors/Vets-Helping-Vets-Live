@@ -112,6 +112,56 @@ export async function POST(req: NextRequest) {
     
     logger.debug(`[approve] Using contract ${contractVersion} at ${contractAddress}`)
     
+    // IDEMPOTENCY CHECK: Search on-chain for existing campaign with same metadata URI
+    // This prevents duplicate campaigns from RPC retries
+    try {
+      const checkContract = getContractByVersion(contractVersion, signer)
+      const totalOnChain = Number(await checkContract.totalCampaigns())
+      logger.debug(`[approve] Idempotency check: searching ${totalOnChain} campaigns for URI match`)
+      
+      for (let i = 0; i < totalOnChain; i++) {
+        try {
+          const existingCamp = await checkContract.getCampaign(BigInt(i))
+          const existingUri = existingCamp.baseURI ?? existingCamp[1]
+          
+          if (existingUri === uri) {
+            // Campaign already exists on-chain! Update DB and return success
+            logger.debug(`[approve] IDEMPOTENCY: Found existing campaign ${i} with matching URI`)
+            
+            await supabaseAdmin.from('submissions').update({
+              status: 'minted',
+              campaign_id: i,
+              contract_address: contractAddress
+            }).eq('id', id)
+            
+            // Send approval email
+            if (merged.creator_email) {
+              try {
+                await sendCampaignApproved({
+                  email: merged.creator_email,
+                  title: merged.title,
+                  campaignId: i,
+                  imageUrl: toHttpUrl(merged.image_uri) || undefined
+                })
+              } catch {}
+            }
+            
+            return NextResponse.json({
+              ok: true,
+              alreadyCreated: true,
+              campaignId: i,
+              contractAddress,
+              message: 'Campaign already exists on-chain (idempotency check)'
+            })
+          }
+        } catch { continue }
+      }
+      
+      logger.debug(`[approve] No existing campaign found with URI, proceeding to create`)
+    } catch (idempotencyErr: any) {
+      logger.debug(`[approve] Idempotency check failed (proceeding anyway):`, idempotencyErr?.message)
+    }
+    
     // V5: Create campaign on-chain
     // Convert goal/copies to numbers first (handles string values from Supabase)
     const goalUSD = Number(merged.goal) || 100  // Default $100 goal if not set
