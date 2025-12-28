@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 import { sendProposalSubmitted, sendProposalVotingOpen } from '@/lib/mailer'
 
 // GET: list proposals (optionally filter by admin param to see pending ones)
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
     
     const { data, error } = await query
     if (error) {
-      console.error('[Proposals] Error:', error)
+      logger.error('[Proposals] Error:', error)
       throw error
     }
     
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
     }))
     return NextResponse.json({ items })
   } catch (e) {
-    console.error('[Proposals] GET error:', e)
+    logger.error('[Proposals] GET error:', e)
     return NextResponse.json({ items: [] })
   }
 }
@@ -92,11 +93,11 @@ export async function POST(req: NextRequest) {
       .single()
     
     if (error) {
-      console.error('[Proposals] Insert error:', error)
+      logger.error('[Proposals] Insert error:', error)
       throw error
     }
     
-    console.log('[Proposals] Created proposal:', data?.id, 'by wallet:', submitter_wallet)
+    logger.debug('[Proposals] Created proposal:', data?.id, 'by wallet:', submitter_wallet)
     
     // Send confirmation email to submitter
     if (submitter_email) {
@@ -107,15 +108,15 @@ export async function POST(req: NextRequest) {
           proposalTitle: title,
           submitterName: submitter_name
         })
-        console.log(`[Proposals] Sent submission confirmation to ${submitter_email}`)
+        logger.debug(`[Proposals] Sent submission confirmation to ${submitter_email}`)
       } catch (emailErr) {
-        console.error('[Proposals] Failed to send submission email:', emailErr)
+        logger.error('[Proposals] Failed to send submission email:', emailErr)
       }
     }
     
     return NextResponse.json({ id: data?.id, success: true })
   } catch (e: any) {
-    console.error('[Proposals] POST error:', e)
+    logger.error('[Proposals] POST error:', e)
     return NextResponse.json({ error: e?.message || 'CREATE_FAILED' }, { status: 500 })
   }
 }
@@ -146,7 +147,7 @@ export async function PUT(req: NextRequest) {
     
     if (error) throw error
     
-    console.log('[Proposals] Updated proposal:', id, updates)
+    logger.debug('[Proposals] Updated proposal:', id, updates)
     
     // If proposal was just opened for voting (open changed from false to true)
     const justOpened = open === true && currentProposal && !currentProposal.open
@@ -161,9 +162,9 @@ export async function PUT(req: NextRequest) {
             proposalDescription: currentProposal.description || '',
             recipientName: currentProposal.submitter_name
           })
-          console.log(`[Proposals] Notified submitter ${currentProposal.submitter_email} that voting is open`)
+          logger.debug(`[Proposals] Notified submitter ${currentProposal.submitter_email} that voting is open`)
         } catch (emailErr) {
-          console.error('[Proposals] Failed to notify submitter:', emailErr)
+          logger.error('[Proposals] Failed to notify submitter:', emailErr)
         }
       }
       
@@ -201,15 +202,15 @@ export async function PUT(req: NextRequest) {
             })
           } catch {}
         }
-        console.log(`[Proposals] Notified ${emailList.length} community members about new vote`)
+        logger.debug(`[Proposals] Notified ${emailList.length} community members about new vote`)
       } catch (notifyErr) {
-        console.error('[Proposals] Failed to notify community:', notifyErr)
+        logger.error('[Proposals] Failed to notify community:', notifyErr)
       }
     }
     
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    console.error('[Proposals] PUT error:', e)
+    logger.error('[Proposals] PUT error:', e)
     return NextResponse.json({ error: e?.message || 'UPDATE_FAILED' }, { status: 500 })
   }
 }

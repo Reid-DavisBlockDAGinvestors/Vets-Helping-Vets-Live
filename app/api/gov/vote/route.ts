@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 import { sendVoteConfirmation } from '@/lib/mailer'
 
 export async function POST(req: NextRequest) {
@@ -49,7 +51,7 @@ export async function POST(req: NextRequest) {
       })
     
     if (voteError) {
-      console.error('[Vote] Insert error:', voteError)
+      logger.error('[Vote] Insert error:', voteError)
       // If unique constraint violation, user already voted
       if (voteError.code === '23505') {
         return NextResponse.json({ error: 'You have already voted on this proposal' }, { status: 400 })
@@ -71,7 +73,7 @@ export async function POST(req: NextRequest) {
       if (e2) throw e2
     }
 
-    console.log(`[Vote] ${voter_wallet} voted ${support ? 'YES' : 'NO'} on proposal ${id}`)
+    logger.debug(`[Vote] ${voter_wallet} voted ${support ? 'YES' : 'NO'} on proposal ${id}`)
     
     // Send vote confirmation email if voter provided email
     if (voter_email) {
@@ -89,15 +91,15 @@ export async function POST(req: NextRequest) {
           votedYes: support,
           voterName: voter_name
         })
-        console.log(`[Vote] Sent confirmation email to ${voter_email}`)
+        logger.debug(`[Vote] Sent confirmation email to ${voter_email}`)
       } catch (emailErr) {
-        console.error('[Vote] Failed to send confirmation email:', emailErr)
+        logger.error('[Vote] Failed to send confirmation email:', emailErr)
       }
     }
     
     return NextResponse.json({ ok: true })
   } catch (e: any) {
-    console.error('[Vote] Error:', e)
+    logger.error('[Vote] Error:', e)
     return NextResponse.json({ error: e?.message || 'Vote failed' }, { status: 500 })
   }
 }
