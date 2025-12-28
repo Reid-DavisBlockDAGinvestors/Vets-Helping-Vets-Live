@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getRelayerSigner, getContract } from '@/lib/onchain'
+import { logger } from '@/lib/logger'
 
 /**
  * Admin endpoint to reactivate a campaign on-chain
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'campaignId required' }, { status: 400 })
     }
 
-    console.log(`[reactivate-campaign] Reactivating campaign #${campaignId}`)
+    logger.debug(`[reactivate-campaign] Reactivating campaign #${campaignId}`)
 
     const signer = getRelayerSigner()
     const contract = getContract(signer)
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
     let currentState: any
     try {
       currentState = await (contract as any).getCampaign(BigInt(campaignId))
-      console.log(`[reactivate-campaign] Current state: active=${currentState.active}, closed=${currentState.closed}`)
+      logger.debug(`[reactivate-campaign] Current state: active=${currentState.active}, closed=${currentState.closed}`)
       
       if (currentState.active === true) {
         return NextResponse.json({ 
@@ -56,10 +57,10 @@ export async function POST(req: NextRequest) {
     // Reactivate the campaign
     try {
       const tx = await (contract as any).reactivateCampaign(BigInt(campaignId))
-      console.log(`[reactivate-campaign] Tx submitted: ${tx.hash}`)
+      logger.debug(`[reactivate-campaign] Tx submitted: ${tx.hash}`)
       
       const receipt = await tx.wait(1)
-      console.log(`[reactivate-campaign] Tx confirmed in block ${receipt?.blockNumber}`)
+      logger.debug(`[reactivate-campaign] Tx confirmed in block ${receipt?.blockNumber}`)
 
       return NextResponse.json({ 
         success: true, 

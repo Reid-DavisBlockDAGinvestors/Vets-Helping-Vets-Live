@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to get totalCampaigns', details: e?.message }, { status: 500 })
     }
 
-    console.log(`[fix-campaign] Searching ${totalCampaigns} campaigns for metadata_uri: ${metadataUri.slice(0, 50)}...`)
+    logger.debug(`[fix-campaign] Searching ${totalCampaigns} campaigns for metadata_uri: ${metadataUri.slice(0, 50)}...`)
 
     // Search for matching campaign by metadata_uri (baseURI)
     let matchedCampaignId: number | null = null
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
             editionsMinted: Number(camp.editionsMinted ?? camp[5]),
             maxEditions: Number(camp.maxEditions ?? camp[6])
           }
-          console.log(`[fix-campaign] Found matching campaign: ${i}`)
+          logger.debug(`[fix-campaign] Found matching campaign: ${i}`)
           break
         }
       } catch (e) {
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
 
     if (matchedCampaignId === null) {
       // Campaign doesn't exist on-chain - reset status so it can be re-approved
-      console.log(`[fix-campaign] No matching campaign found. Resetting submission to 'approved' status for re-creation.`)
+      logger.debug(`[fix-campaign] No matching campaign found. Resetting submission to 'approved' status for re-creation.`)
       
       const { error: resetErr } = await supabaseAdmin
         .from('submissions')
@@ -153,7 +154,7 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log(`[fix-campaign] Updated submission ${submissionId}: campaign_id ${oldCampaignId} -> ${matchedCampaignId}`)
+    logger.debug(`[fix-campaign] Updated submission ${submissionId}: campaign_id ${oldCampaignId} -> ${matchedCampaignId}`)
 
     return NextResponse.json({
       ok: true,

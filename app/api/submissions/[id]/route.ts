@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 
 // GET /api/submissions/[id] - Fetch a submission by ID
 // Creators can fetch their own submissions (by email match), admins can fetch any
@@ -120,23 +121,23 @@ export async function DELETE(req: NextRequest, context: { params: { id: string }
     if (!isSecretOk && !isAdmin) return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
 
     const { data: existing } = await supabaseAdmin.from('submissions').select('image_uri, metadata_uri').eq('id', id).single()
-    console.log(`[delete] Attempting to delete submission ${id}, existing:`, existing ? 'found' : 'not found')
+    logger.debug(`[delete] Attempting to delete submission ${id}, existing:`, existing ? 'found' : 'not found')
     
     const { error, count } = await supabaseAdmin.from('submissions').delete({ count: 'exact' }).eq('id', id)
-    console.log(`[delete] Delete result: error=${error?.message || 'none'}, count=${count}`)
+    logger.debug(`[delete] Delete result: error=${error?.message || 'none'}, count=${count}`)
     
     if (error) return NextResponse.json({ error: 'SUBMISSION_DELETE_FAILED', code: error.code, details: error.message }, { status: 500 })
     
     // Verify deletion actually occurred
     if (count === 0) {
-      console.log(`[delete] WARNING: No rows deleted for id ${id}`)
+      logger.warn(`[delete] WARNING: No rows deleted for id ${id}`)
       return NextResponse.json({ error: 'SUBMISSION_NOT_DELETED', details: 'Row may be protected by RLS or does not exist' }, { status: 400 })
     }
     
     // Double-check the row is gone
     const { data: stillExists } = await supabaseAdmin.from('submissions').select('id').eq('id', id).single()
     if (stillExists) {
-      console.log(`[delete] ERROR: Row still exists after delete!`)
+      logger.error(`[delete] ERROR: Row still exists after delete!`)
       return NextResponse.json({ error: 'SUBMISSION_DELETE_FAILED', details: 'Row persisted after delete - check RLS policies' }, { status: 500 })
     }
 

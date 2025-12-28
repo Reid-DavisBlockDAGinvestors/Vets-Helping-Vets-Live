@@ -3,6 +3,7 @@ import { ethers } from 'ethers'
 import NFTCard, { NFTItem } from '@/components/NFTCard'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic'
@@ -21,10 +22,10 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
       .order('created_at', { ascending: false })
       .limit(limit)
 
-    console.log(`[loadOnchain] Found ${submissions?.length || 0} submissions from DB`, dbError ? `Error: ${dbError.message}` : '', submissions?.[0] ? `First: ${submissions[0].title}` : '')
+    logger.debug(`[loadOnchain] Found ${submissions?.length || 0} submissions from DB`)
 
     if (!submissions || submissions.length === 0) {
-      console.log('[loadOnchain] No submissions found, returning empty')
+      logger.debug('[loadOnchain] No submissions found, returning empty')
       return []
     }
 
@@ -99,7 +100,7 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
       }
     }))
 
-    console.log(`[loadOnchain] Mapped ${mapped.length} items, first: ${mapped[0]?.title}, image: ${mapped[0]?.image?.slice(0, 50)}...`)
+    logger.debug(`[loadOnchain] Mapped ${mapped.length} items`)
 
     return mapped
   } catch (e) {
@@ -116,7 +117,7 @@ async function loadStats(): Promise<{ raised: number; campaigns: number; nfts: n
     
     const stats = await calculatePlatformStats()
     
-    console.log(`[HomePage Stats] Unified stats: $${stats.totalRaisedUSD}, ${stats.totalNFTsMinted} NFTs, ${stats.totalCampaigns} campaigns`)
+    logger.debug(`[HomePage Stats] Unified stats: $${stats.totalRaisedUSD}, ${stats.totalNFTsMinted} NFTs, ${stats.totalCampaigns} campaigns`)
 
     return {
       raised: stats.totalRaisedUSD,

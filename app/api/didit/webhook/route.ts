@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { verifyWebhookSignature, parseVerificationStatus } from '@/lib/didit'
+import { logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get('x-signature') || ''
     const rawBody = await req.text()
     
-    console.log('[Didit Webhook] Received webhook')
+    logger.debug('[Didit Webhook] Received webhook')
     
     // Verify signature (optional in dev, required in prod)
     const isProduction = process.env.NODE_ENV === 'production'
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = JSON.parse(rawBody)
-    console.log('[Didit Webhook] Payload:', JSON.stringify(payload, null, 2))
+    logger.debug('[Didit Webhook] Payload received')
 
     const {
       session_id,
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
       updateData.didit_features = features
     }
 
-    console.log('[Didit Webhook] Updating submission:', vendor_data, 'Status:', verificationStatus)
+    logger.debug('[Didit Webhook] Updating submission:', vendor_data, 'Status:', verificationStatus)
 
     // Update submission in Supabase
     const { error: updateError } = await supabaseAdmin
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     // If verification passed, update verification_status to verified
     if (passed) {
-      console.log('[Didit Webhook] Verification passed for:', vendor_data)
+      logger.debug('[Didit Webhook] Verification passed for:', vendor_data)
     }
 
     return NextResponse.json({ success: true })

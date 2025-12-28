@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { CATEGORIES, getCategoryById } from '@/lib/categories'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { logger } from '@/lib/logger'
 
 interface Post {
   id: string
@@ -158,7 +159,7 @@ export default function CommunityHubClient() {
           const data = await res.json()
           // API returns 'items' array, not 'fundraisers'
           const fundraisers = data?.items || data?.fundraisers || []
-          console.log('[Community] Loaded campaigns:', fundraisers.length, fundraisers.map((f: any) => ({ title: f.title, category: f.category })))
+          logger.debug('[Community] Loaded campaigns:', fundraisers.length)
           const campaigns = fundraisers.map((f: any) => ({
             id: f.id,
             title: f.title,
@@ -243,17 +244,17 @@ export default function CommunityHubClient() {
 
   // Fetch campaign previews for mentions
   const fetchCampaignPreviews = async (ids: string[]) => {
-    console.log('[Community] Fetching campaign previews for:', ids)
+    logger.debug('[Community] Fetching campaign previews for:', ids)
     const newPreviews: Record<string, CampaignPreview> = {}
     for (const id of ids) {
       // Skip if already fetching or fetched
       if (campaignPreviews[id]) continue
       try {
         const res = await fetch(`/api/community/campaigns/${id}`)
-        console.log(`[Community] Fetch campaign ${id}: status=${res.status}`)
+        logger.debug(`[Community] Fetch campaign ${id}: status=${res.status}`)
         if (res.ok) {
           const data = await res.json()
-          console.log(`[Community] Campaign ${id} data:`, data?.campaign?.title, data?.campaign?.image_uri)
+          logger.debug(`[Community] Campaign ${id} data:`, data?.campaign?.title)
           if (data?.campaign) {
             newPreviews[id] = {
               id: data.campaign.id,
@@ -272,7 +273,7 @@ export default function CommunityHubClient() {
       }
     }
     if (Object.keys(newPreviews).length > 0) {
-      console.log('[Community] Setting campaign previews:', Object.keys(newPreviews))
+      logger.debug('[Community] Setting campaign previews:', Object.keys(newPreviews))
       setCampaignPreviews(prev => ({ ...prev, ...newPreviews }))
     }
   }
