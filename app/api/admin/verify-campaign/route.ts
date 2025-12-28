@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     // Get total campaigns
     const totalCampaigns = Number(await contract.totalCampaigns())
-    console.log(`[verify-campaign] Total campaigns on-chain: ${totalCampaigns}`)
+    logger.debug(`[verify-campaign] Total campaigns on-chain: ${totalCampaigns}`)
 
     // Check if stored campaign ID is valid
     let storedIdValid = false
@@ -70,12 +71,12 @@ export async function POST(req: NextRequest) {
         const baseURI = camp.baseURI ?? camp[1]
         if (baseURI === metadataUri) {
           storedIdValid = true
-          console.log(`[verify-campaign] Stored ID ${storedCampaignId} is valid and matches metadata URI`)
+          logger.debug(`[verify-campaign] Stored ID ${storedCampaignId} is valid and matches metadata URI`)
         } else {
-          console.log(`[verify-campaign] Stored ID ${storedCampaignId} exists but has different URI`)
+          logger.debug(`[verify-campaign] Stored ID ${storedCampaignId} exists but has different URI`)
         }
       } catch (e) {
-        console.log(`[verify-campaign] Stored ID ${storedCampaignId} does not exist on-chain`)
+        logger.debug(`[verify-campaign] Stored ID ${storedCampaignId} does not exist on-chain`)
       }
     }
 
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Search for campaign by metadata URI
-    console.log(`[verify-campaign] Searching for campaign with URI: ${metadataUri?.slice(0, 50)}...`)
+    logger.debug(`[verify-campaign] Searching for campaign with URI: ${metadataUri?.slice(0, 50)}...`)
     let foundCampaignId: number | null = null
     let foundCampaign: any = null
 
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
         if (baseURI === metadataUri) {
           foundCampaignId = i
           foundCampaign = camp
-          console.log(`[verify-campaign] Found matching campaign at ID ${i}`)
+          logger.debug(`[verify-campaign] Found matching campaign at ID ${i}`)
           break
         }
       } catch {
@@ -148,7 +149,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Campaign not found on-chain - reset status
-    console.log(`[verify-campaign] Campaign not found on-chain, resetting status`)
+    logger.debug(`[verify-campaign] Campaign not found on-chain, resetting status`)
     const { error: resetErr } = await supabaseAdmin
       .from('submissions')
       .update({ 

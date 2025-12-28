@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,12 +80,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Check transaction receipt
-    console.log(`[verify-tx] Checking tx: ${txHash}`)
+    logger.debug(`[verify-tx] Checking tx: ${txHash}`)
     let receipt
     try {
       receipt = await provider.getTransactionReceipt(txHash)
     } catch (e: any) {
-      console.log(`[verify-tx] Error getting receipt: ${e?.message}`)
+      logger.debug(`[verify-tx] Error getting receipt: ${e?.message}`)
       return NextResponse.json({ 
         verified: false,
         status: 'pending',
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     if (receipt.status === 0) {
       // Transaction failed
-      console.log(`[verify-tx] Transaction failed (reverted)`)
+      logger.debug(`[verify-tx] Transaction failed (reverted)`)
       await supabaseAdmin
         .from('submissions')
         .update({ 
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Transaction succeeded - parse CampaignCreated event
-    console.log(`[verify-tx] Transaction confirmed in block ${receipt.blockNumber}`)
+    logger.debug(`[verify-tx] Transaction confirmed in block ${receipt.blockNumber}`)
     
     const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
     let confirmedCampaignId: number | null = null
@@ -137,7 +138,7 @@ export async function POST(req: NextRequest) {
         })
         if (parsed && parsed.name === 'CampaignCreated') {
           confirmedCampaignId = Number(parsed.args[0])
-          console.log(`[verify-tx] Found CampaignCreated event, campaignId: ${confirmedCampaignId}`)
+          logger.debug(`[verify-tx] Found CampaignCreated event, campaignId: ${confirmedCampaignId}`)
           break
         }
       } catch {
@@ -147,7 +148,7 @@ export async function POST(req: NextRequest) {
 
     if (confirmedCampaignId === null) {
       // Fallback: search by metadata URI
-      console.log(`[verify-tx] CampaignCreated event not found, searching by metadata URI`)
+      logger.debug(`[verify-tx] CampaignCreated event not found, searching by metadata URI`)
       const metadataUri = sub.metadata_uri
       const totalCampaigns = Number(await contract.totalCampaigns())
       
@@ -157,7 +158,7 @@ export async function POST(req: NextRequest) {
           const baseURI = camp.baseURI ?? camp[1]
           if (baseURI === metadataUri) {
             confirmedCampaignId = i
-            console.log(`[verify-tx] Found campaign by URI match at ID ${i}`)
+            logger.debug(`[verify-tx] Found campaign by URI match at ID ${i}`)
             break
           }
         } catch {
@@ -211,7 +212,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (e: any) {
-    console.error('[verify-tx] Error:', e)
+    logger.error('[verify-tx] Error:', e)
     return NextResponse.json({ 
       error: 'Verification failed', 
       details: e?.message || String(e) 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ethers } from 'ethers'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
+import { logger } from '@/lib/logger'
 
 // GET - Get purchases for a specific user
 export async function GET(req: NextRequest, { params }: { params: { userId: string } }) {
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
 
     // Check if userId is a wallet address (starts with 0x) or a UUID
     const isWalletId = userId.startsWith('0x')
-    console.log('[admin/users/purchases] userId:', userId, 'isWalletId:', isWalletId)
+    logger.debug('[admin/users/purchases] userId:', userId, 'isWalletId:', isWalletId)
 
     let purchases: any[] = []
     let purchasesErr: any = null
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
     if (isWalletId) {
       // For wallet-only users, query directly by wallet_address
       targetWallet = userId
-      console.log('[admin/users/purchases] Querying by wallet_address:', targetWallet)
+      logger.debug('[admin/users/purchases] Querying by wallet_address:', targetWallet)
       
       const result = await supabaseAdmin
         .from('purchases')
@@ -86,7 +87,7 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
         queryConditions.push(`wallet_address.ilike.${targetWallet}`)
       }
 
-      console.log('[admin/users/purchases] Query conditions:', queryConditions)
+      logger.debug('[admin/users/purchases] Query conditions:', queryConditions)
 
       const result = await supabaseAdmin
         .from('purchases')
@@ -112,11 +113,11 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
       }
     }
 
-    console.log('[admin/users/purchases] Found purchases:', purchases?.length || 0)
-    console.log('[admin/users/purchases] Campaign IDs:', [...new Set(purchases.map(p => p.campaign_id).filter(Boolean))])
+    logger.debug('[admin/users/purchases] Found purchases:', purchases?.length || 0)
+    logger.debug('[admin/users/purchases] Campaign IDs:', [...new Set(purchases.map(p => p.campaign_id).filter(Boolean))])
 
     if (purchasesErr) {
-      console.error('[admin/users/purchases] error:', purchasesErr)
+      logger.error('[admin/users/purchases] error:', purchasesErr)
       return NextResponse.json({ error: 'QUERY_FAILED' }, { status: 500 })
     }
 
@@ -188,7 +189,7 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
     let onchainNfts: { tokenId: number, campaignId: number }[] = []
     if (isWalletId && formattedPurchases.length === 0) {
       try {
-        console.log('[admin/users/purchases] No DB purchases, querying blockchain for wallet:', targetWallet)
+        logger.debug('[admin/users/purchases] No DB purchases, querying blockchain for wallet:', targetWallet)
         const contractAddr = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS
         if (contractAddr && targetWallet) {
           const provider = getProvider()
@@ -197,7 +198,7 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
           // Get balance and enumerate owned tokens
           const balance = await contract.balanceOf(targetWallet)
           const balanceNum = Number(balance)
-          console.log('[admin/users/purchases] Wallet owns', balanceNum, 'NFTs on-chain')
+          logger.debug('[admin/users/purchases] Wallet owns', balanceNum, 'NFTs on-chain')
           
           for (let i = 0; i < balanceNum; i++) {
             try {
@@ -205,17 +206,17 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
               const campaignId = await contract.tokenToCampaign(tokenId)
               onchainNfts.push({ tokenId: Number(tokenId), campaignId: Number(campaignId) })
             } catch (e) {
-              console.error('[admin/users/purchases] Error fetching token', i, e)
+              logger.error('[admin/users/purchases] Error fetching token', i, e)
             }
           }
           
           // Add on-chain campaign IDs to the list
           const onchainCampaignIds = [...new Set(onchainNfts.map(n => n.campaignId).filter(Boolean))]
           purchasedCampaignIds = [...new Set([...purchasedCampaignIds, ...onchainCampaignIds])]
-          console.log('[admin/users/purchases] Found on-chain campaign IDs:', onchainCampaignIds)
+          logger.debug('[admin/users/purchases] Found on-chain campaign IDs:', onchainCampaignIds)
         }
       } catch (e: any) {
-        console.error('[admin/users/purchases] Blockchain query error:', e?.message)
+        logger.error('[admin/users/purchases] Blockchain query error:', e?.message)
       }
     }
     
@@ -248,7 +249,7 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
       })
     }
 
-    console.log('[admin/users/purchases] Final response:', {
+    logger.debug('[admin/users/purchases] Final response:', {
       purchases: formattedPurchases.length,
       purchasedCampaigns: purchasedCampaigns.length,
       createdCampaigns: createdCampaigns.length,
@@ -269,7 +270,7 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
       }
     })
   } catch (e: any) {
-    console.error('[admin/users/purchases] Error:', e)
+    logger.error('[admin/users/purchases] Error:', e)
     return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
   }
 }
