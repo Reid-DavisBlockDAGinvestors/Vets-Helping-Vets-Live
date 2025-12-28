@@ -13,6 +13,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { ethers } from 'ethers'
 import { getProvider } from '@/lib/onchain'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
@@ -67,7 +68,7 @@ export async function GET() {
     const provider = getProvider()
     const deployedContracts = getAllDeployedContracts()
     
-    console.log(`[PlatformStats] Querying ${deployedContracts.length} deployed contracts...`)
+    logger.debug(`[PlatformStats] Querying ${deployedContracts.length} deployed contracts...`)
     
     // Get campaign IDs from database (submissions are source of truth)
     const { data: submissions } = await supabaseAdmin
@@ -90,7 +91,7 @@ export async function GET() {
       }
     }
     
-    console.log('[PlatformStats] Campaigns by contract:', 
+    logger.debug('[PlatformStats] Campaigns by contract:', 
       Object.entries(campaignsByContract).map(([addr, ids]) => `${addr.slice(0, 10)}...: ${ids.length} campaigns`)
     )
     
@@ -115,7 +116,7 @@ export async function GET() {
         const supply = await contract.totalSupply()
         contractNFTsMinted = Number(supply)
       } catch (e: any) {
-        console.error(`[PlatformStats] Error getting totalSupply for ${contractInfo.version}:`, e?.message)
+        logger.error(`[PlatformStats] Error getting totalSupply for ${contractInfo.version}:`, e?.message)
       }
       
       // Query each campaign's grossRaised
@@ -135,9 +136,9 @@ export async function GET() {
           
           contractGrossRaisedBDAG += grossRaisedBDAG
           
-          console.log(`[PlatformStats] ${contractInfo.version} Campaign ${campaignId}: ${grossRaisedBDAG.toFixed(2)} BDAG ($${(grossRaisedBDAG * BDAG_USD_RATE).toFixed(2)})`)
+          logger.debug(`[PlatformStats] ${contractInfo.version} Campaign ${campaignId}: ${grossRaisedBDAG.toFixed(2)} BDAG ($${(grossRaisedBDAG * BDAG_USD_RATE).toFixed(2)})`)
         } catch (e: any) {
-          console.log(`[PlatformStats] ${contractInfo.version} Campaign ${campaignId}: error - ${e?.message}`)
+          logger.debug(`[PlatformStats] ${contractInfo.version} Campaign ${campaignId}: error - ${e?.message}`)
         }
       }
       
@@ -176,7 +177,7 @@ export async function GET() {
       }
     } catch (e) {
       // Table may not exist yet - that's fine
-      console.log('[PlatformStats] No contributions table or no off-chain records')
+      logger.debug('[PlatformStats] No contributions table or no off-chain records')
     }
     
     // Build breakdown by source
@@ -200,8 +201,8 @@ export async function GET() {
     
     const totalRaisedUSD = (totalRaisedBDAG * BDAG_USD_RATE) + offchainTotalUSD
     
-    console.log(`[PlatformStats] TOTAL: ${totalRaisedBDAG.toFixed(2)} BDAG = $${totalRaisedUSD.toFixed(2)} USD`)
-    console.log(`[PlatformStats] Campaigns: ${totalCampaigns}, NFTs: ${totalNFTsMinted}`)
+    logger.debug(`[PlatformStats] TOTAL: ${totalRaisedBDAG.toFixed(2)} BDAG = $${totalRaisedUSD.toFixed(2)} USD`)
+    logger.debug(`[PlatformStats] Campaigns: ${totalCampaigns}, NFTs: ${totalNFTsMinted}`)
     
     const response: PlatformStatsResponse = {
       total_raised_usd: totalRaisedUSD,
@@ -221,7 +222,7 @@ export async function GET() {
       }
     })
   } catch (e: any) {
-    console.error('[PlatformStats] Error:', e?.message || e)
+    logger.error('[PlatformStats] Error:', e?.message || e)
     return NextResponse.json(
       { error: 'Failed to fetch platform stats', details: e?.message },
       { status: 500 }

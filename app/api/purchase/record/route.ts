@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { sendPurchaseReceipt, sendCreatorPurchaseNotification } from '@/lib/mailer'
+import { logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'MISSING_REQUIRED_FIELDS', details: 'tokenId/campaignId and txHash required' }, { status: 400 })
     }
     
-    console.log(`[purchase/record] Recording purchase: campaignId=${effectiveId}, txHash=${txHash}, amountBDAG=${amountBDAG}`)
+    logger.debug(`[purchase/record] Recording purchase: campaignId=${effectiveId}, txHash=${txHash}, amountBDAG=${amountBDAG}`)
 
     // Record the purchase event
     const { error: eventError } = await supabaseAdmin
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
       })
 
     if (eventError) {
-      console.error('Failed to record purchase event:', eventError)
+      logger.error('Failed to record purchase event:', eventError)
     }
 
     // Also record to purchases table for my-campaigns tracking
@@ -98,9 +99,9 @@ export async function POST(req: NextRequest) {
         })
       
       if (purchaseError) {
-        console.error('[purchase/record] Failed to record to purchases table:', purchaseError)
+        logger.error('[purchase/record] Failed to record to purchases table:', purchaseError)
       } else {
-        console.log(`[purchase/record] Recorded purchase for wallet ${walletAddress}, campaign ${effectiveId}`)
+        logger.debug(`[purchase/record] Recorded purchase for wallet ${walletAddress}, campaign ${effectiveId}`)
       }
     }
 
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
         .from('submissions')
         .update({ sold_count: (sub.sold_count || 0) + qty })
         .eq('id', sub.id)
-      console.log(`[purchase/record] Updated sold_count for submission ${sub.id}`)
+      logger.debug(`[purchase/record] Updated sold_count for submission ${sub.id}`)
     }
 
     // Determine the token ID to include in emails
@@ -154,9 +155,9 @@ export async function POST(req: NextRequest) {
           walletAddress: walletAddress || '',
           imageUrl: toHttpUrl(sub.image_uri) || undefined
         })
-        console.log(`[purchase/record] Sent receipt email to ${buyerEmail} with tokenId=${emailTokenId}`)
+        logger.debug(`[purchase/record] Sent receipt email to ${buyerEmail} with tokenId=${emailTokenId}`)
       } catch (emailErr) {
-        console.error('[purchase/record] Failed to send receipt email:', emailErr)
+        logger.error('[purchase/record] Failed to send receipt email:', emailErr)
       }
     }
 
@@ -182,9 +183,9 @@ export async function POST(req: NextRequest) {
           goalAmount: sub.goal || undefined,
           txHash
         })
-        console.log(`[purchase/record] Sent creator notification to ${sub.creator_email}`)
+        logger.debug(`[purchase/record] Sent creator notification to ${sub.creator_email}`)
       } catch (creatorEmailErr) {
-        console.error('[purchase/record] Failed to send creator notification:', creatorEmailErr)
+        logger.error('[purchase/record] Failed to send creator notification:', creatorEmailErr)
       }
     }
 
@@ -194,7 +195,7 @@ export async function POST(req: NextRequest) {
       emailSent: !!buyerEmail
     })
   } catch (e: any) {
-    console.error('Record purchase error:', e)
+    logger.error('Record purchase error:', e)
     return NextResponse.json({ 
       error: 'RECORD_FAILED', 
       details: e?.message 

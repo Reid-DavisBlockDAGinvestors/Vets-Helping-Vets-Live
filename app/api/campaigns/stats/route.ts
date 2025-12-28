@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { ethers } from 'ethers'
 import { getProvider } from '@/lib/onchain'
 import { V5_ABI, V6_ABI } from '@/lib/contracts'
@@ -42,7 +43,7 @@ export async function GET(req: NextRequest) {
       .eq('status', 'minted')
       .in('campaign_id', campaignIds)
     
-    console.log(`[CampaignStats] Supabase query: campaignIds=${JSON.stringify(campaignIds)}, found=${submissions?.length || 0}, error=${subError?.message || 'none'}`)
+    logger.debug(`[CampaignStats] Supabase query: campaignIds=${JSON.stringify(campaignIds)}, found=${submissions?.length || 0}, error=${subError?.message || 'none'}`)
 
     // Build lookup map
     const submissionMap: Record<number, any> = {}
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
         submissionMap[sub.campaign_id] = sub
       }
     }
-    console.log(`[CampaignStats] Found ${submissions?.length || 0} submissions for ${campaignIds.length} campaigns`)
+    logger.debug(`[CampaignStats] Found ${submissions?.length || 0} submissions for ${campaignIds.length} campaigns`)
 
     const provider = getProvider()
     
@@ -77,11 +78,11 @@ export async function GET(req: NextRequest) {
         const contractAddr = submission?.contract_address || V5_CONTRACT
         const contract = getContractForAddress(contractAddr)
         
-        console.log(`[CampaignStats] Campaign ${campaignId}: using contract ${contractAddr.slice(0, 10)}..., submission found=${!!submission}`)
+        logger.debug(`[CampaignStats] Campaign ${campaignId}: using contract ${contractAddr.slice(0, 10)}..., submission found=${!!submission}`)
         
         const camp = await contract.getCampaign(BigInt(campaignId))
         
-        console.log(`[CampaignStats] Campaign ${campaignId}: goal=${submission?.goal}, num_copies=${submission?.num_copies}`)
+        logger.debug(`[CampaignStats] Campaign ${campaignId}: goal=${submission?.goal}, num_copies=${submission?.num_copies}`)
         
         const grossRaisedWei = BigInt(camp.grossRaised ?? 0n)
         const editionsMinted = Number(camp.editionsMinted ?? 0)
@@ -118,12 +119,12 @@ export async function GET(req: NextRequest) {
           priceSource = `goal(${goalUSD})/maxEditions(${maxEditions})`
         }
         
-        console.log(`[CampaignStats] Campaign ${campaignId}: priceSource=${priceSource}, price=$${pricePerEditionUSD.toFixed(4)}`)
+        logger.debug(`[CampaignStats] Campaign ${campaignId}: priceSource=${priceSource}, price=$${pricePerEditionUSD.toFixed(4)}`)
         
         // Calculate NFT sales revenue = editions sold × price per edition
         const nftSalesUSD = editionsMinted * pricePerEditionUSD
         
-        console.log(`[CampaignStats] Campaign #${campaignId}: goal=$${goalUSD}, editions=${numEditions}, minted=${editionsMinted}, price=$${pricePerEditionUSD.toFixed(2)}, nftSales=$${nftSalesUSD.toFixed(2)}, grossRaised=$${grossRaisedUSD.toFixed(2)}`)
+        logger.debug(`[CampaignStats] Campaign #${campaignId}: goal=$${goalUSD}, editions=${numEditions}, minted=${editionsMinted}, price=$${pricePerEditionUSD.toFixed(2)}, nftSales=$${nftSalesUSD.toFixed(2)}, grossRaised=$${grossRaisedUSD.toFixed(2)}`)
         
         // Tips = gross raised - NFT sales (anything paid above NFT price)
         const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
@@ -150,14 +151,14 @@ export async function GET(req: NextRequest) {
           progressPercent: maxEditions > 0 ? Math.round((editionsMinted / maxEditions) * 100) : 0,
         }
       } catch (e: any) {
-        console.error(`Error fetching campaign ${campaignId}:`, e?.message)
+        logger.error(`Error fetching campaign ${campaignId}:`, e?.message)
         stats[campaignId] = { error: 'Campaign not found', campaignId }
       }
     }))
 
     return NextResponse.json({ stats })
   } catch (e: any) {
-    console.error('Campaign stats error:', e)
+    logger.error('Campaign stats error:', e)
     return NextResponse.json({ error: 'FETCH_FAILED', details: e?.message }, { status: 500 })
   }
 }

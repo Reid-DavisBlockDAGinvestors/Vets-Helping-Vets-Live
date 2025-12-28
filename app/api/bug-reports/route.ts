@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { createClient } from '@supabase/supabase-js'
 import { sendBugReportStatusEmail } from '@/lib/mailer'
 
@@ -89,14 +90,14 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error) {
-      console.error('[bug-reports] Insert error:', error)
+      logger.error('[bug-reports] Insert error:', error)
       return NextResponse.json(
         { error: 'Failed to submit bug report', details: error.message },
         { status: 500 }
       )
     }
 
-    console.log('[bug-reports] New report submitted:', data.id, 'by:', userEmail || 'anonymous')
+    logger.debug('[bug-reports] New report submitted:', data.id, 'by:', userEmail || 'anonymous')
 
     return NextResponse.json({
       success: true,
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
       message: 'Bug report submitted successfully. Thank you for helping us improve!'
     })
   } catch (e: any) {
-    console.error('[bug-reports] Error:', e)
+    logger.error('[bug-reports] Error:', e)
     return NextResponse.json(
       { error: 'Failed to submit bug report', details: e?.message },
       { status: 500 }
@@ -162,7 +163,7 @@ export async function GET(req: NextRequest) {
     const { data, error, count } = await query
 
     if (error) {
-      console.error('[bug-reports] List error:', error)
+      logger.error('[bug-reports] List error:', error)
       return NextResponse.json(
         { error: 'Failed to fetch bug reports' },
         { status: 500 }
@@ -176,7 +177,7 @@ export async function GET(req: NextRequest) {
       offset
     })
   } catch (e: any) {
-    console.error('[bug-reports] Error:', e)
+    logger.error('[bug-reports] Error:', e)
     return NextResponse.json(
       { error: 'Failed to fetch bug reports' },
       { status: 500 }
@@ -256,11 +257,11 @@ export async function PATCH(req: NextRequest) {
       .single()
 
     if (error) {
-      console.error('[bug-reports] Update error:', error)
+      logger.error('[bug-reports] Update error:', error)
       return NextResponse.json({ error: 'Failed to update bug report', details: error.message }, { status: 500 })
     }
 
-    console.log(`[bug-reports] Report ${id} updated by ${user.email}: status=${status || 'unchanged'}`)
+    logger.debug(`[bug-reports] Report ${id} updated by ${user.email}: status=${status || 'unchanged'}`)
 
     // Send email notification if status changed and user has email
     const shouldSendEmail = send_email !== false && currentReport.user_email && status && status !== oldStatus
@@ -278,15 +279,15 @@ export async function PATCH(req: NextRequest) {
       })
       emailSent = !!emailResult.id
       if (emailResult.id) {
-        console.log(`[bug-reports] Status email sent to ${currentReport.user_email}`)
+        logger.debug(`[bug-reports] Status email sent to ${currentReport.user_email}`)
       } else {
-        console.log(`[bug-reports] Email failed: ${emailResult.error || 'skipped'}`)
+        logger.debug(`[bug-reports] Email failed: ${emailResult.error || 'skipped'}`)
       }
     }
 
     return NextResponse.json({ success: true, report: data, emailSent })
   } catch (e: any) {
-    console.error('[bug-reports] PATCH error:', e)
+    logger.error('[bug-reports] PATCH error:', e)
     return NextResponse.json({ error: 'Failed to update bug report', details: e?.message }, { status: 500 })
   }
 }
@@ -330,15 +331,15 @@ export async function DELETE(req: NextRequest) {
       .eq('id', id)
 
     if (error) {
-      console.error('[bug-reports] Delete error:', error)
+      logger.error('[bug-reports] Delete error:', error)
       return NextResponse.json({ error: 'Failed to delete bug report', details: error.message }, { status: 500 })
     }
 
-    console.log(`[bug-reports] Report ${id} deleted by ${user.email}`)
+    logger.debug(`[bug-reports] Report ${id} deleted by ${user.email}`)
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    console.error('[bug-reports] DELETE error:', e)
+    logger.error('[bug-reports] DELETE error:', e)
     return NextResponse.json({ error: 'Failed to delete bug report', details: e?.message }, { status: 500 })
   }
 }
