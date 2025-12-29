@@ -174,7 +174,7 @@ This document consolidates all TODOs, planned features, and improvements into a 
 ## 🧪 Priority 4: Test Coverage → 10/10
 
 ### Current Coverage
-- E2E Tests: 71 tests (Playwright)
+- E2E Tests: 116 tests (Playwright) ✅ Updated Dec 27, 2025
 - Unit Tests: 0 (need to add)
 - Integration Tests: 0 (need to add)
 
@@ -411,7 +411,7 @@ const CONTRACT_REGISTRY: Record<string, ContractConfig> = {
 
 ## ✅ Completed Items
 
-- [x] Playwright E2E testing (71 tests)
+- [x] Playwright E2E testing (116 tests)
 - [x] Debug endpoint protection
 - [x] CAPTCHA integration
 - [x] Audit logging
@@ -425,4 +425,4 @@ const CONTRACT_REGISTRY: Record<string, ContractConfig> = {
 ---
 
 *This roadmap is the single source of truth for all planned work.*
-*Last Updated: December 27, 2025*
+*Last Updated: December 28, 2025*

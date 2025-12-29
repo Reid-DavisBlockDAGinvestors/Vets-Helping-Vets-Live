@@ -3,6 +3,7 @@ import PurchasePanelV2 from '@/components/PurchasePanelV2'
 import ShareButtons from '@/components/ShareButtons'
 import { ipfsToHttp } from '@/lib/ipfs'
 import { getCategoryById } from '@/lib/categories'
+import { logger } from '@/lib/logger'
 
 type OnchainItem = {
   tokenId: number
@@ -133,12 +134,12 @@ export default async function StoryViewer({ params }: { params: { id: string } }
   // Try to verify and fix the campaign_id on the blockchain
   let verificationAttempted = false
   if (!onchain && submission?.id && (submission?.status === 'pending_onchain' || submission?.status === 'approved')) {
-    console.log(`[StoryPage] On-chain data missing for campaign ${id}, attempting verification...`)
+    logger.debug(`[StoryPage] On-chain data missing for campaign ${id}, attempting verification...`)
     const verification = await tryVerifyCampaign(submission.id)
     verificationAttempted = true
     
     if (verification.verified && verification.campaignId !== null) {
-      console.log(`[StoryPage] Campaign verified! ID: ${verification.campaignId}`)
+      logger.debug(`[StoryPage] Campaign verified! ID: ${verification.campaignId}`)
       // Reload on-chain data with the correct campaign ID
       onchain = await loadOnchainToken(String(verification.campaignId))
       // Reload submission to get updated status
@@ -151,11 +152,11 @@ export default async function StoryViewer({ params }: { params: { id: string } }
   if (onchain && !submission && onchain.uri) {
     const campaignId = Number(id)
     if (Number.isFinite(campaignId)) {
-      console.log(`[StoryPage] On-chain campaign ${campaignId} has no linked submission, attempting to link...`)
+      logger.debug(`[StoryPage] On-chain campaign ${campaignId} has no linked submission, attempting to link...`)
       const linkResult = await tryLinkCampaign(campaignId)
       
       if (linkResult.linked) {
-        console.log(`[StoryPage] Campaign ${campaignId} linked to submission ${linkResult.submissionId}`)
+        logger.debug(`[StoryPage] Campaign ${campaignId} linked to submission ${linkResult.submissionId}`)
         // Reload submission data
         submission = await loadSubmissionByToken(id)
       }
@@ -246,7 +247,7 @@ export default async function StoryViewer({ params }: { params: { id: string } }
     ? Math.min(100, Math.round((editionsMinted / maxEditions) * 100))
     : (goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0)
   
-  console.log('[StoryPage] NFT Pricing Debug:', {
+  logger.debug('[StoryPage] NFT Pricing Debug:', {
     submissionNftPrice: submission?.nft_price,
     submissionPricePerCopy: submission?.price_per_copy,
     submissionNftEditions: submission?.nft_editions,

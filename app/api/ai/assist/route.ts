@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 // Support multiple AI providers with fallback
 const GROK_API_KEY = process.env.GROK_API_KEY || process.env.XAI_API_KEY || ''
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
       ? modePrompt
       : `${modePrompt}\n\nText to ${mode}:\n"${content}"`
 
-    console.log('[AI Assist] Provider:', provider.name, 'Mode:', mode, 'Field:', field)
+    logger.api('[AI Assist] Provider: ' + provider.name, { mode, field })
     
     // Call AI API (OpenAI-compatible format)
     // Note: gpt-4o-mini-search-preview doesn't support temperature parameter
@@ -145,7 +146,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No response from AI' }, { status: 500 })
     }
 
-    console.log('[AI Assist] Success via', provider.name, '- generated', result.length, 'chars')
+    logger.api('[AI Assist] Success via ' + provider.name, { chars: result.length })
 
     return NextResponse.json({ 
       success: true, 

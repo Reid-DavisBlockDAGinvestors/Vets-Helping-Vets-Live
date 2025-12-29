@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { uploadJson, uploadFileBase64 } from '@/lib/storacha'
+import { logger } from '@/lib/logger'
 
 // Max image size: 10MB for mobile compatibility
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
     const hasImage = typeof meta.image === 'string'
     const isDataUrl = hasImage && /^data:[^;]+;base64,/i.test(meta.image)
     const imageLength = meta.image?.length || 0
-    console.log('[ipfs-json] Received:', { hasImage, isDataUrl, imageLength })
+    logger.api('[ipfs-json] Received:', { hasImage, isDataUrl, imageLength })
     
     // Check image size (base64 is ~33% larger than binary)
     if (isDataUrl && imageLength > MAX_IMAGE_SIZE * 1.33) {
@@ -29,11 +30,11 @@ export async function POST(req: NextRequest) {
     let uploadedImageUri: string | null = null
     if (isDataUrl) {
       try {
-        console.log('[ipfs-json] Uploading image to IPFS...')
+        logger.api('[ipfs-json] Uploading image to IPFS...')
         const up = await uploadFileBase64(meta.image)
         meta.image = up.uri
         uploadedImageUri = up.uri
-        console.log('[ipfs-json] Image uploaded:', uploadedImageUri)
+        logger.api('[ipfs-json] Image uploaded:', uploadedImageUri)
       } catch (imgErr: any) {
         console.error('[ipfs-json] Image upload failed:', imgErr?.message || imgErr)
         return NextResponse.json({ 
