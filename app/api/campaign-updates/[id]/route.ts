@@ -4,6 +4,7 @@ import { getRelayerSigner, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
 import { ipfsToHttp } from '@/lib/ipfs'
 import { uploadJson } from '@/lib/storacha'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -203,13 +204,13 @@ export async function PATCH(req: NextRequest, context: { params: { id: string } 
           }
         })
 
-        console.log('[campaign-update] Generating new metadata for campaign', campaignId)
+        logger.blockchain('[campaign-update] Generating new metadata for campaign', campaignId)
 
         // Upload new metadata to IPFS
         const uploadResult = await uploadJson(newMetadata)
         metadataUri = uploadResult.uri
 
-        console.log('[campaign-update] New metadata uploaded:', metadataUri)
+        logger.blockchain('[campaign-update] New metadata uploaded:', metadataUri)
 
         // Update on-chain
         const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
@@ -220,7 +221,7 @@ export async function PATCH(req: NextRequest, context: { params: { id: string } 
         const receipt = await tx.wait()
         txHash = receipt?.hash || tx.hash
 
-        console.log(`[campaign-update] Updated campaign ${campaignId} metadata on-chain, tx: ${txHash}`)
+        logger.blockchain(`[campaign-update] Updated campaign ${campaignId} metadata on-chain, tx: ${txHash}`)
 
         // Also update the submission's metadata_uri in Supabase
         await supabaseAdmin

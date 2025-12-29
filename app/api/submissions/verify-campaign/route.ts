@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log(`[verify-campaign] Searching ${totalCampaigns} campaigns for URI: ${metadataUri.slice(0, 50)}...`)
+    logger.blockchain(`[verify-campaign] Searching ${totalCampaigns} campaigns for URI: ${metadataUri.slice(0, 50)}...`)
 
     // Search from most recent backwards (more likely to find recently created campaigns)
     let foundCampaignId: number | null = null
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
         
         if (onChainUri === metadataUri) {
           foundCampaignId = i
-          console.log(`[verify-campaign] Found campaign ${i} matching metadata URI`)
+          logger.blockchain(`[verify-campaign] Found campaign ${i} matching metadata URI`)
           break
         }
       } catch {
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log(`[verify-campaign] Updated submission ${submissionId}: campaign_id=${foundCampaignId}, status=minted`)
+    logger.blockchain(`[verify-campaign] Updated submission ${submissionId}: campaign_id=${foundCampaignId}, status=minted`)
 
     return NextResponse.json({
       ok: true,
