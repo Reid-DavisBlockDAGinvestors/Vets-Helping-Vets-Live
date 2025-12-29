@@ -8,7 +8,7 @@
  * - types.ts - All TypeScript interfaces
  * - hooks/ - Data fetching and actions
  * - modals/ - Modal components
- * - UI components - Stats, Filters, StatusBadge
+ * - UI components - Stats, Filters, StatusBadge, Card, List
  */
 
 // Types
@@ -21,6 +21,8 @@ export { useCampaigns, useCampaignActions } from './hooks'
 export { CampaignStatsGrid } from './CampaignStatsGrid'
 export { CampaignFilters } from './CampaignFilters'
 export { StatusBadge, UpdateStatusBadge } from './StatusBadge'
+export { CampaignCard } from './CampaignCard'
+export { CampaignList } from './CampaignList'
 
 // Modals
 export { ApprovalModal, RejectModal, DeleteModal } from './modals'
