@@ -3,6 +3,8 @@
  * https://docs.didit.me/reference/api-full-flow
  */
 
+import { logger } from './logger'
+
 const DIDIT_API_BASE = 'https://verification.didit.me'
 const DIDIT_API_KEY = process.env.DIDIT_API_KEY || ''
 const DIDIT_WEBHOOK_SECRET = process.env.DIDIT_WEBHOOK_SECRET || ''
@@ -61,7 +63,7 @@ export async function createVerificationSession(options: CreateSessionOptions): 
       || (process.env.URL ? process.env.URL : null) // Netlify sets URL
       || 'https://patriotpledgenfts.netlify.app'
     
-    console.log('[Didit] Using base URL for callback:', baseUrl)
+    logger.debug('[Didit] Using base URL for callback:', baseUrl)
     
     const body: Record<string, any> = {
       workflow_id: DIDIT_WORKFLOW_ID,
@@ -81,7 +83,7 @@ export async function createVerificationSession(options: CreateSessionOptions): 
       body.metadata = options.metadata
     }
 
-    console.log('[Didit] Creating session:', { vendorData: options.vendorData, email: options.email })
+    logger.debug('[Didit] Creating session:', { vendorData: options.vendorData, email: options.email })
 
     const response = await fetch(`${DIDIT_API_BASE}/v2/session/`, {
       method: 'POST',
@@ -99,7 +101,7 @@ export async function createVerificationSession(options: CreateSessionOptions): 
       return { success: false, error: data?.message || data?.error || 'Failed to create session' }
     }
 
-    console.log('[Didit] Session created:', data.session_id)
+    logger.debug('[Didit] Session created:', data.session_id)
     return { success: true, session: data }
   } catch (error: any) {
     console.error('[Didit] Create session error:', error)
@@ -155,7 +157,7 @@ export async function getSession(sessionId: string): Promise<{
 
   // Use the /decision/ endpoint to get session status
   const url = `${DIDIT_API_BASE}/v2/session/${sessionId}/decision/`
-  console.log('[Didit] Getting session decision from:', url)
+  logger.debug('[Didit] Getting session decision from:', url)
   
   try {
     const response = await fetch(url, {
@@ -166,14 +168,14 @@ export async function getSession(sessionId: string): Promise<{
       },
     })
 
-    console.log('[Didit] Response status:', response.status, response.statusText)
+    logger.debug('[Didit] Response status:', response.status, response.statusText)
     
     // Check if response is JSON
     const contentType = response.headers.get('content-type')
-    console.log('[Didit] Response content-type:', contentType)
+    logger.debug('[Didit] Response content-type:', contentType)
     
     const rawText = await response.text()
-    console.log('[Didit] Raw response (first 500 chars):', rawText.slice(0, 500))
+    logger.debug('[Didit] Raw response (first 500 chars):', rawText.slice(0, 500))
     
     // Try to parse as JSON
     let data: any
@@ -184,7 +186,7 @@ export async function getSession(sessionId: string): Promise<{
       return { success: false, error: `Invalid response from Didit API: ${rawText.slice(0, 100)}` }
     }
     
-    console.log('[Didit] Get session parsed response:', JSON.stringify(data, null, 2))
+    logger.debug('[Didit] Get session parsed response:', JSON.stringify(data, null, 2))
 
     if (!response.ok) {
       console.error('[Didit] Get session failed:', data)
@@ -198,7 +200,7 @@ export async function getSession(sessionId: string): Promise<{
       url: data.url || data.verification_url,
     }
     
-    console.log('[Didit] Normalized session:', session)
+    logger.debug('[Didit] Normalized session:', session)
 
     return { success: true, session }
   } catch (error: any) {

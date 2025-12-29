@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { logger } from '@/lib/logger'
-
-// Reaction types for charitable/heartfelt fundraising
-export const REACTION_TYPES = ['love', 'pray', 'encourage', 'celebrate', 'care'] as const
-export type ReactionType = typeof REACTION_TYPES[number]
-
-// Reaction emoji mapping
-export const REACTION_EMOJIS: Record<ReactionType, string> = {
-  love: '❤️',
-  pray: '🙏',
-  encourage: '💪',
-  celebrate: '🎉',
-  care: '😢'
-}
+import { REACTION_TYPES } from '@/lib/community/reactions'
 
 // POST - Toggle reaction on a post or comment
 export async function POST(req: NextRequest) {

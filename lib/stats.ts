@@ -13,6 +13,7 @@ import { ethers } from 'ethers'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { getProvider } from './onchain'
 import { getAllDeployedContracts, V5_ABI, V6_ABI } from './contracts'
+import { logger } from './logger'
 
 // Constants
 const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
@@ -64,7 +65,7 @@ export async function calculatePlatformStats(supabase?: SupabaseClient): Promise
   const provider = getProvider()
   const deployedContracts = getAllDeployedContracts()
   
-  console.log(`[Stats] Calculating platform stats from ${deployedContracts.length} contracts...`)
+  logger.debug(`[Stats] Calculating platform stats from ${deployedContracts.length} contracts...`)
 
   // 1. Get minted submissions from database
   const { data: submissions, error: subError } = await client
@@ -96,7 +97,7 @@ export async function calculatePlatformStats(supabase?: SupabaseClient): Promise
   }
 
   if (orphanedSubmissions > 0) {
-    console.log(`[Stats] ${orphanedSubmissions} orphaned submissions assigned to V5`)
+    logger.debug(`[Stats] ${orphanedSubmissions} orphaned submissions assigned to V5`)
   }
 
   // 3. Query each contract
@@ -127,7 +128,7 @@ export async function calculatePlatformStats(supabase?: SupabaseClient): Promise
         v6NFTsMinted = supplyNum
       }
       
-      console.log(`[Stats] ${contractInfo.version} totalSupply: ${supplyNum}`)
+      logger.debug(`[Stats] ${contractInfo.version} totalSupply: ${supplyNum}`)
     } catch (e: any) {
       console.error(`[Stats] Error getting totalSupply for ${contractInfo.version}:`, e?.message)
     }
@@ -149,7 +150,7 @@ export async function calculatePlatformStats(supabase?: SupabaseClient): Promise
           v6RaisedUSD += raisedUSD
         }
         
-        console.log(`[Stats] ${contractInfo.version} Campaign #${campaignId}: $${raisedUSD.toFixed(2)}`)
+        logger.debug(`[Stats] ${contractInfo.version} Campaign #${campaignId}: $${raisedUSD.toFixed(2)}`)
       } catch (e: any) {
         console.error(`[Stats] Error fetching ${contractInfo.version} campaign ${campaignId}:`, e?.message)
       }
@@ -168,16 +169,16 @@ export async function calculatePlatformStats(supabase?: SupabaseClient): Promise
     
     if (offchainPayments && offchainPayments.length > 0) {
       offchainRaisedUSD = offchainPayments.reduce((sum, p) => sum + (Number(p.amount_usd) || 0), 0)
-      console.log(`[Stats] Off-chain payments: $${offchainRaisedUSD.toFixed(2)} from ${offchainPayments.length} payments`)
+      logger.debug(`[Stats] Off-chain payments: $${offchainRaisedUSD.toFixed(2)} from ${offchainPayments.length} payments`)
     }
   } catch (e: any) {
     // Events table might not exist yet - that's OK
-    console.log('[Stats] No off-chain payments found (events table may not exist)')
+    logger.debug('[Stats] No off-chain payments found (events table may not exist)')
   }
 
   const totalRaisedUSD = onchainRaisedUSD + offchainRaisedUSD
 
-  console.log(`[Stats] TOTALS: $${totalRaisedUSD.toFixed(2)} raised, ${totalNFTsMinted} NFTs, ${totalCampaigns} campaigns`)
+  logger.debug(`[Stats] TOTALS: $${totalRaisedUSD.toFixed(2)} raised, ${totalNFTsMinted} NFTs, ${totalCampaigns} campaigns`)
 
   return {
     totalRaisedUSD: Math.round(totalRaisedUSD * 100) / 100,

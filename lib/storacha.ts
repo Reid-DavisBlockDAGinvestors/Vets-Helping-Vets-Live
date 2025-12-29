@@ -3,6 +3,7 @@
 import { PinataSDK } from 'pinata'
 import { supabase } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 
 const PINATA_JWT = process.env.PINATA_JWT || ''
 const PINATA_GATEWAY = process.env.PINATA_GATEWAY || 'gateway.pinata.cloud'
@@ -17,7 +18,7 @@ function getPinataClient() {
 async function uploadToPinata(bytes: Uint8Array, contentType: string, filename?: string): Promise<{ cid: string; uri: string } | null> {
   const pinata = getPinataClient()
   if (!pinata) {
-    console.log('[Pinata] No JWT configured, skipping IPFS upload')
+    logger.debug('[Pinata] No JWT configured, skipping IPFS upload')
     return null
   }
   
@@ -26,11 +27,11 @@ async function uploadToPinata(bytes: Uint8Array, contentType: string, filename?:
     const name = filename || `upload-${Date.now()}.${ext}`
     const file = new File([Buffer.from(bytes)], name, { type: contentType })
     
-    console.log(`[Pinata] Uploading ${bytes.length} bytes as ${contentType}...`)
+    logger.debug(`[Pinata] Uploading ${bytes.length} bytes as ${contentType}...`)
     const result = await pinata.upload.public.file(file)
     const cid = result.cid
     const uri = `ipfs://${cid}`
-    console.log(`[Pinata] Uploaded: ${uri}`)
+    logger.debug(`[Pinata] Uploaded: ${uri}`)
     return { cid, uri }
   } catch (e: any) {
     console.error('[Pinata] Upload failed:', e?.message || e)
@@ -46,7 +47,7 @@ async function uploadToSupabase(bytes: Uint8Array, filename: string, contentType
     if (error) throw error
     const { data: pub } = client.storage.from(bucket).getPublicUrl(filename)
     const uri = pub?.publicUrl
-    console.log(`[Supabase] Uploaded: ${uri}`)
+    logger.debug(`[Supabase] Uploaded: ${uri}`)
     return uri ? { cid: undefined as any, uri } : null
   } catch (e) {
     console.error('[Supabase] Upload failed:', e)

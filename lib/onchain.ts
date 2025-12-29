@@ -1,4 +1,5 @@
 import { ethers } from 'ethers'
+import { logger } from './logger'
 
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
 
@@ -109,13 +110,13 @@ export async function getProviderWithFallback(): Promise<ethers.JsonRpcProvider>
     
     // If we get a valid response, primary RPC is working
     if (supply !== undefined && supply !== null) {
-      console.log(`[onchain] Primary RPC working (V5 supply: ${supply})`)
+      logger.blockchain(`Primary RPC working (V5 supply: ${supply})`)
       return primaryProvider
     }
     
     throw new Error('Contract returned empty data')
   } catch (e: any) {
-    console.log(`[onchain] Primary RPC failed: ${e?.message?.slice(0, 50)}... Falling back to NowNodes.`)
+    logger.blockchain(`Primary RPC failed: ${e?.message?.slice(0, 50)}... Falling back to NowNodes.`)
     return getNowNodesProvider()
   }
 }

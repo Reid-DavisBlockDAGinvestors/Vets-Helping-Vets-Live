@@ -55,6 +55,7 @@
     "contracts",
     "typechain-types",
     "artifacts",
-    "cache"
+    "cache",
+    "tests/*.test.ts"
   ]
 }
