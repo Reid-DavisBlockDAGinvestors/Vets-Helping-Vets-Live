@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import AdminCampaignHub from '@/components/AdminCampaignHub'
+import AdminCampaignHub from '@/components/AdminCampaignHubV2'
 import AdminGovernance from '@/components/AdminGovernance'
 import AdminUsers from '@/components/AdminUsers'
 import AdminSubmitters from '@/components/AdminSubmitters'
