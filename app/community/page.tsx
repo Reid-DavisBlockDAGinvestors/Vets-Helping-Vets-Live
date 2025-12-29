@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import CommunityHubClient from './CommunityHubClient'
+import CommunityHubClient from './CommunityHubClientV2'
 
 export default function CommunityPage() {
   return (
