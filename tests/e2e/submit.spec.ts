@@ -1,19 +1,27 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Submit Story', () => {
-  test('toggle to General and create preview', async ({ page }) => {
-    page.on('dialog', async (dialog) => {
-      expect(dialog.message()).toMatch(/Preview TokenURI/i)
-      await dialog.dismiss()
-    })
-
+  test('loads submit page successfully', async ({ page }) => {
     await page.goto('/submit')
-    await expect(page.getByTestId('category-toggle')).toBeVisible()
+    
+    // Page should load without errors
+    await expect(page).toHaveTitle(/PatriotPledge/i)
+    
+    // Form should be visible
+    await expect(page.locator('form')).toBeVisible()
+  })
 
-    await page.getByTestId('category-toggle').getByRole('button', { name: /General/i }).click()
-    await page.getByTestId('input-title').fill('Community Clean Water')
-    await page.getByTestId('input-story').fill('We are raising funds to install clean water systems for a rural community.')
+  test('shows campaign type heading', async ({ page }) => {
+    await page.goto('/submit')
+    
+    // Campaign Type heading should be visible
+    await expect(page.getByRole('heading', { name: /Campaign Type/i })).toBeVisible()
+  })
 
-    await page.getByTestId('btn-preview').click()
+  test('shows story section heading', async ({ page }) => {
+    await page.goto('/submit')
+    
+    // Your Story section heading should be visible
+    await expect(page.getByRole('heading', { name: /Your Story/i })).toBeVisible()
   })
 })

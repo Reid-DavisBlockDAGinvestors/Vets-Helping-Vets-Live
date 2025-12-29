@@ -88,6 +88,9 @@ describe('usePagination', () => {
     
     act(() => {
       result.current.setTotalItems(100)
+    })
+    
+    act(() => {
       result.current.setPage(2)
     })
     
@@ -142,6 +145,9 @@ describe('usePagination', () => {
     
     act(() => {
       result.current.setTotalItems(100)
+    })
+    
+    act(() => {
       result.current.setPage(5)
     })
     
