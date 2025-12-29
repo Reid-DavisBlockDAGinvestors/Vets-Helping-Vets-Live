@@ -6,13 +6,13 @@ test.describe('SocialLinks Component', () => {
     await page.goto('/')
   })
 
-  test('should display all 7 social media icons', async ({ page }) => {
+  test('should display all 8 social media icons', async ({ page }) => {
     const socialLinks = page.getByTestId('social-links')
     await expect(socialLinks).toBeVisible()
     
-    // Check all 7 social links are present
+    // Check all 8 social links are present (including Discord)
     const links = socialLinks.locator('a')
-    await expect(links).toHaveCount(7)
+    await expect(links).toHaveCount(8)
   })
 
   test('should have correct X (Twitter) link', async ({ page }) => {
@@ -56,6 +56,12 @@ test.describe('SocialLinks Component', () => {
     const youtubeLink = page.getByTestId('social-link-youtube')
     await expect(youtubeLink).toBeVisible()
     await expect(youtubeLink).toHaveAttribute('href', 'https://youtube.com/@blockdaginvestorschannel')
+  })
+
+  test('should have correct Discord link', async ({ page }) => {
+    const discordLink = page.getByTestId('social-link-discord')
+    await expect(discordLink).toBeVisible()
+    await expect(discordLink).toHaveAttribute('href', 'https://discord.gg/9UkhuBz8GR')
   })
 
   test('all links should have aria-labels for accessibility', async ({ page }) => {

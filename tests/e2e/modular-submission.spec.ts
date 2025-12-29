@@ -10,23 +10,27 @@ test.describe('Submission Form - Modular Components', () => {
   })
 
   test('displays all form sections', async ({ page }) => {
+    // Wait for page to load (use domcontentloaded to avoid timeout on ongoing requests)
+    await page.waitForLoadState('domcontentloaded')
+    await page.waitForTimeout(1000)
+    
     // Section 1: Campaign Type
-    await expect(page.getByText('Campaign Type')).toBeVisible()
+    await expect(page.getByText('Campaign Type').first()).toBeVisible({ timeout: 5000 })
     
     // Section 2: Campaign Title
-    await expect(page.getByText('Campaign Title')).toBeVisible()
+    await expect(page.getByText('Campaign Title').first()).toBeVisible({ timeout: 3000 })
     
     // Section 3: Your Story
-    await expect(page.getByText('Your Story')).toBeVisible()
+    await expect(page.getByText('Your Story').first()).toBeVisible({ timeout: 3000 })
     
     // Section 6: Fundraising Goal
-    await expect(page.getByText('Fundraising Goal')).toBeVisible()
+    await expect(page.getByText('Fundraising Goal').first()).toBeVisible({ timeout: 3000 })
     
     // Section 7: Campaign Image
-    await expect(page.getByText('Campaign Image')).toBeVisible()
+    await expect(page.getByText('Campaign Image').first()).toBeVisible({ timeout: 3000 })
     
     // Section 8: Contact Information
-    await expect(page.getByText('Your Contact Information')).toBeVisible()
+    await expect(page.getByText('Your Contact Information').first()).toBeVisible({ timeout: 3000 })
   })
 
   test('category selection works', async ({ page }) => {
@@ -65,17 +69,21 @@ test.describe('Submission Form - Modular Components', () => {
   })
 
   test('contact section has required fields', async ({ page }) => {
-    // First Name
-    await expect(page.getByPlaceholder('John')).toBeVisible()
+    // First Name - use exact match to avoid matching title placeholder
+    const firstNameInput = page.getByPlaceholder('John', { exact: true })
+    await expect(firstNameInput).toBeVisible({ timeout: 3000 })
     
-    // Last Name
-    await expect(page.getByPlaceholder('Doe')).toBeVisible()
+    // Last Name - exact placeholder match
+    const lastNameInput = page.getByPlaceholder('Doe', { exact: true })
+    await expect(lastNameInput).toBeVisible({ timeout: 2000 })
     
-    // Phone
-    await expect(page.getByPlaceholder(/555/)).toBeVisible()
+    // Phone - pattern with area code
+    const phoneInput = page.getByPlaceholder(/\(555\)|phone/i)
+    await expect(phoneInput).toBeVisible({ timeout: 2000 })
     
-    // Email
-    await expect(page.getByPlaceholder(/email/i)).toBeVisible()
+    // Email - look for email placeholder in contact section
+    const emailInput = page.locator('input[type="email"]').first()
+    await expect(emailInput).toBeVisible({ timeout: 2000 })
   })
 })
 

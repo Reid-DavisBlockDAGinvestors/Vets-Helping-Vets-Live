@@ -142,24 +142,24 @@ test.describe('Category Colors', () => {
 test.describe('Category UI - Submission Portal', () => {
   test('submission form should display all category options', async ({ page }) => {
     await page.goto('/submit')
-    await page.waitForLoadState('networkidle')
-    
-    // Check for category buttons with emojis
-    for (const cat of CATEGORIES) {
-      const categoryButton = page.locator(`button:has-text("${cat.label}")`)
-      // Should find the category label somewhere on the page
-      const labelVisible = await page.locator(`text=${cat.label}`).isVisible().catch(() => false)
-      const emojiVisible = await page.locator(`text=${cat.emoji}`).isVisible().catch(() => false)
-      
-      // At least the label or emoji should be visible
-      if (!labelVisible && !emojiVisible) {
-        console.log(`Category ${cat.id} (${cat.label}) not visible on submission form`)
-      }
-    }
+    await page.waitForLoadState('domcontentloaded')
+    await page.waitForTimeout(1000)
     
     // Verify "Campaign Type" section exists
-    const campaignTypeSection = page.locator('text=Campaign Type')
-    expect(await campaignTypeSection.isVisible()).toBe(true)
+    const campaignTypeSection = page.getByText('Campaign Type').first()
+    await expect(campaignTypeSection).toBeVisible({ timeout: 5000 })
+    
+    // Check that category buttons exist (StoryFormV2 shows emoji + truncated label)
+    let categoriesFound = 0
+    for (const cat of CATEGORIES) {
+      // Look for emoji which is always visible
+      const emojiVisible = await page.locator(`text=${cat.emoji}`).first().isVisible({ timeout: 500 }).catch(() => false)
+      if (emojiVisible) categoriesFound++
+    }
+    
+    // Should find most categories (at least 6 of 8+)
+    console.log(`Found ${categoriesFound}/${CATEGORIES.length} category emojis on submission form`)
+    expect(categoriesFound).toBeGreaterThanOrEqual(6)
   })
 })
 
