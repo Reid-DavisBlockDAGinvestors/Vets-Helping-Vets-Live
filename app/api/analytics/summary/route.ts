@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { calculatePlatformStats } from '@/lib/stats'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +16,7 @@ export async function GET(_req: NextRequest) {
     // Use unified stats calculation
     const platformStats = await calculatePlatformStats(supabase)
     
-    console.log(`[Analytics] Using unified stats: $${platformStats.totalRaisedUSD}, ${platformStats.totalNFTsMinted} NFTs, ${platformStats.totalCampaigns} campaigns`)
+    logger.api(`[Analytics] Using unified stats: $${platformStats.totalRaisedUSD}, ${platformStats.totalNFTsMinted} NFTs, ${platformStats.totalCampaigns} campaigns`)
 
     // Calculate donor retention from purchases table
     // (% of wallets that purchased from 2+ different campaigns)
@@ -51,7 +52,7 @@ export async function GET(_req: NextRequest) {
           donorRetention = Math.round((repeatDonors / totalUniqueWallets) * 100)
         }
         
-        console.log(`[Analytics] Donor Retention: ${repeatDonors}/${totalUniqueWallets} wallets (${donorRetention}%) from purchases table`)
+        logger.api(`[Analytics] Donor Retention: ${repeatDonors}/${totalUniqueWallets} wallets (${donorRetention}%) from purchases table`)
       }
     } catch (e: any) {
       console.error('[Analytics] Donor retention calc error:', e?.message)

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 // GET - Get campaigns the user has interacted with
 export async function GET(req: NextRequest) {
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
       createdCampaigns = byEmail || []
     }
     
-    console.log('[my-campaigns] createdCampaigns:', createdCampaigns?.length, 'for user:', userId, userEmail)
+    logger.api('[my-campaigns] createdCampaigns:', { count: createdCampaigns?.length, userId, userEmail })
 
     // 2. Campaigns user purchased NFTs for (from purchases table)
     // Query by email and wallet_address (purchases table stores wallet_address, not user_id)
@@ -89,7 +90,7 @@ export async function GET(req: NextRequest) {
       }
     }
     
-    console.log('[my-campaigns] purchases:', purchases?.length, 'email:', userEmail, 'wallet:', walletAddress)
+    logger.api('[my-campaigns] purchases:', { count: purchases?.length, userEmail, walletAddress })
 
     // Get unique campaign IDs from purchases
     const purchasedCampaignIds = [...new Set(purchases?.map(p => p.campaign_id).filter(Boolean) || [])]

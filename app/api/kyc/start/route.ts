@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 // Persona KYC start placeholder
 // Body: { userId?: string, name?: string, email?: string }
@@ -9,7 +10,7 @@ export async function POST(req: NextRequest) {
     const environment = process.env.PERSONA_ENVIRONMENT || 'sandbox'
 
     if (!apiKey) {
-      console.log('[kyc/start] missing PERSONA_API_KEY; returning mock link')
+      logger.debug('[kyc/start] missing PERSONA_API_KEY; returning mock link')
       return NextResponse.json({ link: 'https://withpersona.com/verify?mock=true', environment })
     }
 

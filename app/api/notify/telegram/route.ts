@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 // Placeholder Telegram notifier. Requires TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID to send real messages.
 export async function POST(req: NextRequest) {
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
     const chatId = process.env.TELEGRAM_CHAT_ID
 
     if (!token || !chatId) {
-      console.log('[telegram] missing envs, message:', message)
+      logger.debug('[telegram] missing envs, message:', message)
       return NextResponse.json({ ok: true, mode: 'logged' })
     }
 

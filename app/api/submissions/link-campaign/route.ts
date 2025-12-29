@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'UPDATE_ERROR', details: updateErr.message }, { status: 500 })
     }
 
-    console.log(`[link-campaign] Linked campaign ${targetCampaignId} to submission ${submission.id} (${submission.title})`)
+    logger.blockchain(`[link-campaign] Linked campaign ${targetCampaignId} to submission ${submission.id} (${submission.title})`)
 
     return NextResponse.json({
       ok: true,

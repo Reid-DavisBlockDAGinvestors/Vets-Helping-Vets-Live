@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 // PayPal webhook placeholder: capture events and issue receipts/milestones
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}))
-    console.log('[webhook:paypal] event', body?.event_type || 'unknown')
+    logger.purchase('[webhook:paypal] event', body?.event_type || 'unknown')
     const amount = Number(body?.resource?.amount?.value || 0)
     const donor = body?.resource?.payer?.email_address || 'PayPal User'
     if (amount > 0) {

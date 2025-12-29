@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 60 // Cache for 60 seconds
@@ -65,7 +66,7 @@ export async function GET() {
     const totalRaisedBDAG = Number(totalGrossRaisedWei) / 1e18
     const totalRaisedUSD = totalRaisedBDAG * BDAG_USD_RATE
 
-    console.log(`[Stats] Campaigns: ${campaignIds.length}, NFTs: ${totalNFTs}, Raised: $${totalRaisedUSD.toFixed(2)}`)
+    logger.api(`[Stats] Campaigns: ${campaignIds.length}, NFTs: ${totalNFTs}, Raised: $${totalRaisedUSD.toFixed(2)}`)
 
     return NextResponse.json({
       totalRaisedUSD: Math.round(totalRaisedUSD * 100) / 100,

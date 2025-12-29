@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { ethers } from 'ethers'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
       console.error('[Participation] Purchase query error:', e?.message)
     }
 
-    console.log(`[Participation] ${wallet}: ${nftsOwned} NFTs, ${campaignsCreated} campaigns, $${totalDonated} donated`)
+    logger.api(`[Participation] ${wallet}: ${nftsOwned} NFTs, ${campaignsCreated} campaigns, $${totalDonated} donated`)
 
     return NextResponse.json({
       wallet,
