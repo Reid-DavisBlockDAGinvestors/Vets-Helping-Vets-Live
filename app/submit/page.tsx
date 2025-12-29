@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import StoryForm from '@/components/StoryForm'
+import StoryFormV2 from '@/components/StoryFormV2'
 
 function SubmitContent() {
   const searchParams = useSearchParams()
@@ -41,7 +41,7 @@ function SubmitContent() {
       
       {/* Form */}
       <div className="container py-10">
-        <StoryForm editSubmissionId={editId || undefined} />
+        <StoryFormV2 editSubmissionId={editId || undefined} />
       </div>
     </div>
   )

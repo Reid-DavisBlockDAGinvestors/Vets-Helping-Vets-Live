@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import PurchasePanel from '@/components/PurchasePanel'
+import PurchasePanelV2 from '@/components/PurchasePanelV2'
 import ShareButtons from '@/components/ShareButtons'
 import { ipfsToHttp } from '@/lib/ipfs'
 import { getCategoryById } from '@/lib/categories'
@@ -346,7 +346,7 @@ export default async function StoryViewer({ params }: { params: { id: string } }
               <h2 className="text-lg font-semibold text-white mb-3">
                 {pricePerCopy ? 'Purchase NFT' : 'Make a Donation'}
               </h2>
-              <PurchasePanel 
+              <PurchasePanelV2 
                 campaignId={id} 
                 tokenId={id} 
                 pricePerNft={pricePerCopy} 
