@@ -4,6 +4,8 @@ test.describe('SocialLinks Component', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to home page where footer with social links will be
     await page.goto('/')
+    // Wait for social links container to be visible before running tests
+    await page.getByTestId('social-links').waitFor({ state: 'visible', timeout: 15000 })
   })
 
   test('should display all 8 social media icons', async ({ page }) => {
