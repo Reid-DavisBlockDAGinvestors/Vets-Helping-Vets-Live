@@ -5,6 +5,7 @@ import Footer from '@/components/Footer'
 import BugReportButton from '@/components/BugReportButton'
 import { Toaster } from '@/components/Toaster'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 export const metadata = {
   title: 'PatriotPledge NFTs',
@@ -18,7 +19,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ThemeProvider>
           <NavBar />
           <main className="flex-1">
-            {children}
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
           </main>
           <Footer />
           <BugReportButton />

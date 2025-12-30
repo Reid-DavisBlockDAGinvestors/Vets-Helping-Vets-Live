@@ -46,7 +46,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       }
 
       return (
-        <div className="min-h-[200px] flex items-center justify-center p-8">
+        <div className="min-h-[200px] flex items-center justify-center p-8" data-testid="error-boundary-container">
           <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 max-w-lg w-full">
             <div className="flex items-center gap-3 mb-4">
               <span className="text-2xl">⚠️</span>
@@ -77,12 +77,14 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             <div className="flex gap-3">
               <button
                 onClick={this.handleRetry}
+                data-testid="error-boundary-retry-btn"
                 className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg transition-colors"
               >
                 Try Again
               </button>
               <button
                 onClick={() => window.location.reload()}
+                data-testid="error-boundary-reload-btn"
                 className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-medium rounded-lg transition-colors"
               >
                 Reload Page
