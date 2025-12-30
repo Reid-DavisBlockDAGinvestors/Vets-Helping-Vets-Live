@@ -7,6 +7,7 @@ import { test, expect } from '@playwright/test'
 test.describe('User Account Portal - Auth Modal', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
   })
 
   test('sign in button is visible when not logged in', async ({ page }) => {
@@ -16,17 +17,18 @@ test.describe('User Account Portal - Auth Modal', () => {
   })
 
   test('clicking sign in opens auth modal', async ({ page }) => {
-    const signInButton = page.getByRole('button', { name: /sign in/i })
+    const signInButton = page.getByTestId('sign-in-btn').or(page.getByRole('button', { name: /sign in/i }))
     await signInButton.click()
     
-    // Modal should appear with welcome text
-    await expect(page.getByText(/welcome back/i)).toBeVisible()
+    // Wait for modal to appear
+    const authModal = page.getByTestId('auth-modal')
+    await authModal.waitFor({ state: 'visible', timeout: 10000 })
     
     // Email input should be visible
-    await expect(page.getByPlaceholder(/email/i)).toBeVisible()
+    await expect(page.getByTestId('auth-email-input').or(page.getByPlaceholder(/email/i))).toBeVisible()
     
     // Password input should be visible
-    await expect(page.getByPlaceholder(/password/i)).toBeVisible()
+    await expect(page.getByTestId('auth-password-input').or(page.getByPlaceholder(/password/i))).toBeVisible()
   })
 
   test('can switch between login and signup modes', async ({ page }) => {
@@ -49,15 +51,19 @@ test.describe('User Account Portal - Auth Modal', () => {
   })
 
   test('can access forgot password', async ({ page }) => {
-    const signInButton = page.getByRole('button', { name: /sign in/i })
+    const signInButton = page.getByTestId('sign-in-btn').or(page.getByRole('button', { name: /sign in/i }))
     await signInButton.click()
+    
+    // Wait for modal
+    await page.getByTestId('auth-modal').waitFor({ state: 'visible', timeout: 10000 })
     
     // Click forgot password link
     const forgotLink = page.getByText(/forgot password/i)
+    await forgotLink.waitFor({ state: 'visible', timeout: 5000 })
     await forgotLink.click()
     
     // Should show reset password text
-    await expect(page.getByText(/reset password/i)).toBeVisible()
+    await expect(page.getByText(/reset password/i)).toBeVisible({ timeout: 5000 })
     
     // Should show send reset link button
     await expect(page.getByRole('button', { name: /send reset link/i })).toBeVisible()
@@ -91,16 +97,17 @@ test.describe('User Account Portal - Auth Modal', () => {
 test.describe('User Account Portal - Form Validation', () => {
   test('login button is disabled without credentials', async ({ page }) => {
     await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
     
-    const signInButton = page.getByRole('button', { name: /sign in/i })
+    const signInButton = page.getByTestId('sign-in-btn').or(page.getByRole('button', { name: /sign in/i }))
     await signInButton.click()
     
     // Wait for modal
-    await page.waitForTimeout(500)
+    await page.getByTestId('auth-modal').waitFor({ state: 'visible', timeout: 10000 })
     
     // Sign in submit button should be disabled initially (various possible names)
     const submitButton = page.getByRole('button', { name: /^sign in$/i }).or(page.getByRole('button', { name: /^log in$/i }))
-    if (await submitButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await submitButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       // Button should be disabled without email/password
       const isDisabled = await submitButton.isDisabled().catch(() => true)
       expect(isDisabled).toBe(true)
@@ -109,19 +116,29 @@ test.describe('User Account Portal - Form Validation', () => {
 
   test('signup requires first and last name', async ({ page }) => {
     await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
     
-    const signInButton = page.getByRole('button', { name: /sign in/i })
+    const signInButton = page.getByTestId('sign-in-btn').or(page.getByRole('button', { name: /sign in/i }))
     await signInButton.click()
     
+    // Wait for modal
+    await page.getByTestId('auth-modal').waitFor({ state: 'visible', timeout: 10000 })
+    
     // Switch to signup
-    await page.getByText(/don't have an account/i).click()
+    const signupLink = page.getByText(/don't have an account/i)
+    await signupLink.waitFor({ state: 'visible', timeout: 5000 })
+    await signupLink.click()
+    
+    // Wait for signup form fields
+    const firstNameInput = page.getByTestId('signup-firstname-input').or(page.getByPlaceholder(/first name/i))
+    await firstNameInput.waitFor({ state: 'visible', timeout: 5000 })
     
     // Fill only email and password
-    await page.getByPlaceholder(/email/i).fill('test@example.com')
-    await page.getByPlaceholder(/password/i).fill('password123')
+    await page.getByTestId('auth-email-input').or(page.getByPlaceholder(/email/i)).fill('test@example.com')
+    await page.getByTestId('auth-password-input').or(page.getByPlaceholder(/password/i)).fill('password123')
     
     // Create account button should still be disabled without name
     const createButton = page.getByRole('button', { name: /create account/i })
-    await expect(createButton).toBeDisabled()
+    await expect(createButton).toBeDisabled({ timeout: 3000 })
   })
 })
