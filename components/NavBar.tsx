@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useWallet } from '@/hooks/useWallet'
-import UserAccountPortal from './UserAccountPortal'
+import UserAccountPortal from './UserAccountPortalV2'
 import ThemeToggle from './ThemeToggle'
 
 const NAV_LINKS = [
