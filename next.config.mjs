@@ -47,7 +47,7 @@ const nextConfig = {
               "img-src 'self' data: blob: https: ipfs:",
               "font-src 'self' https://fonts.gstatic.com",
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.nownodes.io https://bdag.nownodes.io https://rpc.awakening.bdagscan.com https://api.pinata.cloud https://gateway.pinata.cloud https://api.stripe.com https://challenges.cloudflare.com",
-              "frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com",
+              "frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",

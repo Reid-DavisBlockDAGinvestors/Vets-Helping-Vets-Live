@@ -277,13 +277,18 @@ export function CampaignCard({
               </button>
             )}
 
-            {campaign.status === 'approved' && !campaign.campaign_id && onFix && (
+            {/* Show Fix button when: approved without campaign_id, OR minted but missing/invalid campaign_id */}
+            {(
+              (campaign.status === 'approved' && !campaign.campaign_id) ||
+              (campaign.status === 'minted' && !campaign.campaign_id) ||
+              (campaign.status === 'pending_onchain')
+            ) && onFix && (
               <button
                 onClick={onFix}
                 disabled={isFixing}
                 className="px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
               >
-                {isFixing ? 'Fixing...' : '🔧 Fix (Create On-Chain)'}
+                {isFixing ? 'Fixing...' : '🔧 Fix Campaign'}
               </button>
             )}
 

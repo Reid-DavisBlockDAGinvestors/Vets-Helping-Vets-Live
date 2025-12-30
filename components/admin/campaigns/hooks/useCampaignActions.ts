@@ -14,7 +14,7 @@ interface UseCampaignActionsReturn {
   savingId: string | null
   
   // Actions
-  approveCampaign: (campaign: Campaign, formData: ApprovalFormData) => Promise<{ success: boolean; campaignId?: number; error?: string }>
+  approveCampaign: (campaign: Campaign, formData: ApprovalFormData) => Promise<{ success: boolean; campaignId?: number; status?: string; error?: string }>
   rejectCampaign: (campaign: Campaign, reason: string) => Promise<{ success: boolean; error?: string }>
   deleteCampaign: (campaignId: string) => Promise<{ success: boolean; error?: string }>
   updateCampaign: (campaignId: string, data: EditFormData) => Promise<{ success: boolean; error?: string }>
@@ -43,7 +43,7 @@ export function useCampaignActions(): UseCampaignActionsReturn {
   const approveCampaign = useCallback(async (
     campaign: Campaign, 
     formData: ApprovalFormData
-  ): Promise<{ success: boolean; campaignId?: number; error?: string }> => {
+  ): Promise<{ success: boolean; campaignId?: number; status?: string; error?: string }> => {
     setApprovingId(campaign.id)
     
     try {
@@ -73,7 +73,8 @@ export function useCampaignActions(): UseCampaignActionsReturn {
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || data?.details || 'Approval failed')
 
-      return { success: true, campaignId: data.campaignId }
+      // Return the actual status from API (minted or pending_onchain)
+      return { success: true, campaignId: data.campaignId, status: data.status || 'minted' }
     } catch (e: any) {
       return { success: false, error: e?.message || 'Approval failed' }
     } finally {

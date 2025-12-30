@@ -107,11 +107,18 @@ export default function AdminCampaignHubV2() {
     if (!approvalTarget) return
     const result = await approveCampaign(approvalTarget, formData)
     if (result.success) {
+      // Use the status from API response (minted or pending_onchain)
+      const newStatus = (result.status || 'minted') as 'minted' | 'pending_onchain'
       updateCampaignLocally(approvalTarget.id, { 
-        status: 'minted',
+        status: newStatus,
         campaign_id: result.campaignId ?? null
       })
       setApprovalTarget(null)
+      
+      // If pending_onchain, show helpful message
+      if (newStatus === 'pending_onchain') {
+        alert('Campaign transaction submitted! The blockchain may take a moment to confirm. Use "Verify" or "Fix Campaign" to update the status.')
+      }
     } else {
       alert(result.error || 'Approval failed')
     }
