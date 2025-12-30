@@ -6,11 +6,26 @@
  * 
  * Structure:
  * - types.ts - All TypeScript interfaces
- * - hooks/ - Price calculations and config
+ * - hooks/ - Price calculations, auth, and purchase logic
+ * - CardPaymentForm.tsx - Stripe card payment UI
+ * - CryptoPaymentSection.tsx - BDAG crypto payment UI
+ * - SuccessMessage.tsx - Purchase success display
  */
 
 // Types
 export * from './types'
 
 // Hooks
-export { usePurchaseConfig, usdToBdag, bdagToUsd, BDAG_USD_PRICE } from './hooks'
+export { 
+  usePurchaseConfig, 
+  usdToBdag, 
+  bdagToUsd, 
+  BDAG_USD_PRICE,
+  usePurchaseAuth,
+  useBdagPurchase
+} from './hooks'
+
+// Components
+export { CardPaymentForm } from './CardPaymentForm'
+export { CryptoPaymentSection } from './CryptoPaymentSection'
+export { SuccessMessage } from './SuccessMessage'

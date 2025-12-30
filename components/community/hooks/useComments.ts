@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { logger } from '@/lib/logger'
 import type { Comment } from '../types'
 
 interface UseCommentsReturn {
@@ -30,7 +31,7 @@ export function useComments(token?: string | null): UseCommentsReturn {
         setComments(prev => ({ ...prev, [postId]: data?.comments || [] }))
       }
     } catch (e) {
-      console.error('Failed to fetch comments:', e)
+      logger.error('Failed to fetch comments:', e)
     } finally {
       setLoadingPostId(null)
     }

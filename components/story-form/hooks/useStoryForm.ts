@@ -231,7 +231,7 @@ export function useStoryForm(editSubmissionId?: string) {
         setEditingSubmissionId(editSubmissionId)
         setDraftLoaded(true)
       } catch (err: any) {
-        console.error('[useStoryForm] Error loading submission:', err)
+        logger.error('[useStoryForm] Error loading submission:', err)
         setEditLoadError(err.message || 'Failed to load submission')
       } finally {
         setLoadingEdit(false)
