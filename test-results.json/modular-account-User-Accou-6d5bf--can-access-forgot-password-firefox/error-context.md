@@ -1,0 +1,99 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - img "PYRAX" [ref=e6]
+    - heading "TriStream Pool" [level=1] [ref=e7]
+    - paragraph [ref=e8]: PYRAX Chain's Native Multi-Algorithm Mining Pool
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]: 🎮
+      - generic [ref=e12]: GPU
+      - generic [ref=e13]: (2,456 active)
+    - generic [ref=e14]:
+      - generic [ref=e15]: 💻
+      - generic [ref=e16]: CPU
+      - generic [ref=e17]: (1,436 active)
+  - generic [ref=e18]:
+    - button "⚡ Stream A ASIC Mining High-throughput ASIC mining with the PYRAX-A algorithm. Optimized for specialized hardware delivering maximum hashrate and 60% of block rewards. 8.50 TH/s Pool Hashrate 89 Active Miners 12 Blocks (24h)" [ref=e19] [cursor=pointer]:
+      - generic [ref=e20]: ⚡
+      - heading "Stream A" [level=2] [ref=e21]
+      - paragraph [ref=e22]: ASIC Mining
+      - paragraph [ref=e23]: High-throughput ASIC mining with the PYRAX-A algorithm. Optimized for specialized hardware delivering maximum hashrate and 60% of block rewards.
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e26]: 8.50 TH/s
+          - generic [ref=e27]: Pool Hashrate
+        - generic [ref=e28]:
+          - generic [ref=e29]: "89"
+          - generic [ref=e30]: Active Miners
+        - generic [ref=e31]:
+          - generic [ref=e32]: "12"
+          - generic [ref=e33]: Blocks (24h)
+    - button "🖥️ Stream B GPU/CPU Mining ASIC-resistant GPU and CPU mining with the PYRAX-B algorithm. Supports Crucible AI compute jobs for additional earnings. 40% of block rewards. 3.20 GH/s Pool Hashrate 1,245 Active Miners 156 Blocks (24h)" [ref=e34] [cursor=pointer]:
+      - generic [ref=e35]: 🖥️
+      - heading "Stream B" [level=2] [ref=e36]
+      - paragraph [ref=e37]: GPU/CPU Mining
+      - paragraph [ref=e38]: ASIC-resistant GPU and CPU mining with the PYRAX-B algorithm. Supports Crucible AI compute jobs for additional earnings. 40% of block rewards.
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - generic [ref=e41]: 3.20 GH/s
+          - generic [ref=e42]: Pool Hashrate
+        - generic [ref=e43]:
+          - generic [ref=e44]: 1,245
+          - generic [ref=e45]: Active Miners
+        - generic [ref=e46]:
+          - generic [ref=e47]: "156"
+          - generic [ref=e48]: Blocks (24h)
+    - generic [ref=e49]:
+      - generic [ref=e50]: 🔐
+      - heading "Stream C" [level=2] [ref=e51]
+      - paragraph [ref=e52]: ZK Verification
+      - paragraph [ref=e53]: ZK-STARK proof verification for cryptographic finality. Participate in securing the network with zero-knowledge proofs.
+      - generic [ref=e54]: 🚀 Coming in Crownflame Testnet
+    - button "🔥 Unified Dashboard All Streams Combined View your complete mining portfolio across all streams. Monitor combined earnings, compare stream performance, and manage your entire operation from one dashboard. 1,334 Total Miners 8.50 TH/s Total Hashrate 125.00 Pending PYRX" [ref=e55] [cursor=pointer]:
+      - generic [ref=e56]: 🔥
+      - heading "Unified Dashboard" [level=2] [ref=e57]
+      - paragraph [ref=e58]: All Streams Combined
+      - paragraph [ref=e59]: View your complete mining portfolio across all streams. Monitor combined earnings, compare stream performance, and manage your entire operation from one dashboard.
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - generic [ref=e62]: 1,334
+          - generic [ref=e63]: Total Miners
+        - generic [ref=e64]:
+          - generic [ref=e65]: 8.50 TH/s
+          - generic [ref=e66]: Total Hashrate
+        - generic [ref=e67]:
+          - generic [ref=e68]: "125.00"
+          - generic [ref=e69]: Pending PYRX
+  - generic [ref=e70]:
+    - generic [ref=e71]:
+      - generic [ref=e72]: 4,521
+      - generic [ref=e73]: Stream A Blocks
+    - generic [ref=e74]:
+      - generic [ref=e75]: 52,341
+      - generic [ref=e76]: Stream B Blocks
+    - generic [ref=e77]:
+      - generic [ref=e78]: 125.00 TH/s
+      - generic [ref=e79]: Network A Hashrate
+    - generic [ref=e80]:
+      - generic [ref=e81]: 45.00 GH/s
+      - generic [ref=e82]: Network B Hashrate
+    - generic [ref=e83]:
+      - generic [ref=e84]: 4,625.00
+      - generic [ref=e85]: PYRX Mined (Pool)
+  - contentinfo [ref=e86]:
+    - paragraph [ref=e87]:
+      - strong [ref=e88]: Stream A
+      - text: (ASIC) → 60% rewards • 10s blocks • PYRAX-A algorithm
+    - paragraph [ref=e89]:
+      - strong [ref=e90]: Stream B
+      - text: (GPU/CPU) → 40% rewards • 1s blocks • PYRAX-B algorithm
+    - paragraph [ref=e91]:
+      - text: "Stratum Ports:"
+      - code [ref=e92]: "4333"
+      - text: (Stream A) •
+      - code [ref=e93]: "4334"
+      - text: (Stream B)
+```

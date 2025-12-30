@@ -1,0 +1,61 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - img "PYRAX" [ref=e6]
+    - heading "TriStream Pool" [level=1] [ref=e7]
+    - paragraph [ref=e8]: PYRAX Chain's Native Multi-Algorithm Mining Pool
+  - generic [ref=e9]: Loading stream data...
+  - generic [ref=e11]:
+    - button "⚡ Stream A ASIC Mining High-throughput ASIC mining with the PYRAX-A algorithm. Optimized for specialized hardware delivering maximum hashrate and 60% of block rewards." [ref=e12] [cursor=pointer]:
+      - generic [ref=e13]: ⚡
+      - heading "Stream A" [level=2] [ref=e14]
+      - paragraph [ref=e15]: ASIC Mining
+      - paragraph [ref=e16]: High-throughput ASIC mining with the PYRAX-A algorithm. Optimized for specialized hardware delivering maximum hashrate and 60% of block rewards.
+    - button "🖥️ Stream B GPU/CPU Mining ASIC-resistant GPU and CPU mining with the PYRAX-B algorithm. Supports Crucible AI compute jobs for additional earnings. 40% of block rewards." [ref=e17] [cursor=pointer]:
+      - generic [ref=e18]: 🖥️
+      - heading "Stream B" [level=2] [ref=e19]
+      - paragraph [ref=e20]: GPU/CPU Mining
+      - paragraph [ref=e21]: ASIC-resistant GPU and CPU mining with the PYRAX-B algorithm. Supports Crucible AI compute jobs for additional earnings. 40% of block rewards.
+    - generic [ref=e22]:
+      - generic [ref=e23]: 🔐
+      - heading "Stream C" [level=2] [ref=e24]
+      - paragraph [ref=e25]: ZK Verification
+      - paragraph [ref=e26]: ZK-STARK proof verification for cryptographic finality. Participate in securing the network with zero-knowledge proofs.
+      - generic [ref=e27]: 🚀 Coming in Crownflame Testnet
+    - button "🔥 Unified Dashboard All Streams Combined View your complete mining portfolio across all streams. Monitor combined earnings, compare stream performance, and manage your entire operation from one dashboard." [ref=e28] [cursor=pointer]:
+      - generic [ref=e29]: 🔥
+      - heading "Unified Dashboard" [level=2] [ref=e30]
+      - paragraph [ref=e31]: All Streams Combined
+      - paragraph [ref=e32]: View your complete mining portfolio across all streams. Monitor combined earnings, compare stream performance, and manage your entire operation from one dashboard.
+  - generic [ref=e33]:
+    - generic [ref=e34]:
+      - generic [ref=e35]: —
+      - generic [ref=e36]: Stream A Blocks
+    - generic [ref=e37]:
+      - generic [ref=e38]: —
+      - generic [ref=e39]: Stream B Blocks
+    - generic [ref=e40]:
+      - generic [ref=e41]: —
+      - generic [ref=e42]: Network A Hashrate
+    - generic [ref=e43]:
+      - generic [ref=e44]: —
+      - generic [ref=e45]: Network B Hashrate
+    - generic [ref=e46]:
+      - generic [ref=e47]: 4,625.00
+      - generic [ref=e48]: PYRX Mined (Pool)
+  - contentinfo [ref=e49]:
+    - paragraph [ref=e50]:
+      - strong [ref=e51]: Stream A
+      - text: (ASIC) → 60% rewards • 10s blocks • PYRAX-A algorithm
+    - paragraph [ref=e52]:
+      - strong [ref=e53]: Stream B
+      - text: (GPU/CPU) → 40% rewards • 1s blocks • PYRAX-B algorithm
+    - paragraph [ref=e54]:
+      - text: "Stratum Ports:"
+      - code [ref=e55]: "4333"
+      - text: (Stream A) •
+      - code [ref=e56]: "4334"
+      - text: (Stream B)
+```

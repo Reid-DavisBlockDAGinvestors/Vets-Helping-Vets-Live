@@ -5,6 +5,13 @@ const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC
 
 // V5 ABI - Edition-based fundraiser NFTs
 export const PatriotPledgeV5ABI = [
+  // Events (for log parsing)
+  'event CampaignCreated(uint256 indexed campaignId, address indexed nonprofit, string category, uint256 goal, uint256 maxEditions, uint256 pricePerEdition)',
+  'event EditionMinted(uint256 indexed campaignId, uint256 indexed tokenId, address indexed donor, uint256 editionNumber, uint256 amountPaid)',
+  'event CampaignMetadataUpdated(uint256 indexed campaignId, string newBaseURI)',
+  'event ContributionRecorded(uint256 indexed campaignId, uint256 gross, uint256 net, uint256 tip, bool isOnchain)',
+  'event CampaignClosed(uint256 indexed campaignId)',
+  
   // Campaign management
   'function createCampaign(string category, string baseURI, uint256 goal, uint256 maxEditions, uint256 pricePerEdition, uint256 feeRate, address submitter) external returns (uint256)',
   'function totalCampaigns() view returns (uint256)',

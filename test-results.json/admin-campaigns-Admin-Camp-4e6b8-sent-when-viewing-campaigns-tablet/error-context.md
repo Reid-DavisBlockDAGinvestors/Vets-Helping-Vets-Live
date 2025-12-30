@@ -1,0 +1,76 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link "🎖️ PatriotPledge NFTs" [ref=e5]:
+        - /url: /
+        - generic [ref=e6]: 🎖️
+        - generic [ref=e7]: PatriotPledge
+        - generic [ref=e8]: NFTs
+      - generic [ref=e9]:
+        - button "Switch to light mode" [ref=e10] [cursor=pointer]:
+          - img [ref=e11]
+        - button "Sign In" [ref=e14] [cursor=pointer]:
+          - img [ref=e15]
+          - generic [ref=e17]: Sign In
+        - button "Connect Wallet" [ref=e19] [cursor=pointer]:
+          - img [ref=e20]
+          - generic [ref=e22]: Connect Wallet
+        - button "Toggle menu" [ref=e23] [cursor=pointer]:
+          - img
+  - main [ref=e24]:
+    - generic [ref=e26]:
+      - img [ref=e27]
+      - paragraph [ref=e30]: Checking session...
+  - contentinfo [ref=e31]:
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - paragraph [ref=e35]: © 2025 PatriotPledge NFTs · vetshelpingvets.life
+          - paragraph [ref=e36]: 1% nonprofit fee for operations · Transparent and auditable
+        - generic [ref=e37]:
+          - generic [ref=e38]: "Follow us:"
+          - link "Follow us on X (Twitter)" [ref=e39]:
+            - /url: https://x.com/blockdag2049
+            - img [ref=e40]
+          - link "Join our Telegram group" [ref=e42]:
+            - /url: https://t.me/+zuuA1U91bLBhOWMx
+            - img [ref=e43]
+          - link "Join our Facebook group" [ref=e45]:
+            - /url: https://www.facebook.com/share/g/17oU6dqmzW/
+            - img [ref=e46]
+          - link "Join our Reddit community" [ref=e48]:
+            - /url: https://www.reddit.com/r/BlockDAGInvestors/
+            - img [ref=e49]
+          - link "Follow us on TikTok" [ref=e51]:
+            - /url: https://www.tiktok.com/@blockdaginvestors
+            - img [ref=e52]
+          - link "Connect on LinkedIn" [ref=e54]:
+            - /url: https://www.linkedin.com/in/reid-davis-875446370
+            - img [ref=e55]
+          - link "Subscribe to our YouTube channel" [ref=e59]:
+            - /url: https://youtube.com/@blockdaginvestorschannel
+            - img [ref=e60]
+          - link "Join our Discord server" [ref=e63]:
+            - /url: https://discord.gg/9UkhuBz8GR
+            - img [ref=e64]
+      - generic [ref=e66]:
+        - link "My Bug Reports" [ref=e67]:
+          - /url: /my-bug-reports
+        - generic [ref=e68]: ·
+        - link "BlockDAG Explorer" [ref=e69]:
+          - /url: https://awakening.bdagscan.com
+        - link "Faucet" [ref=e70]:
+          - /url: https://awakening.bdagscan.com/faucet
+        - link "RPC" [ref=e71]:
+          - /url: https://rpc.awakening.bdagscan.com
+        - link "Alt RPC" [ref=e72]:
+          - /url: https://nownodes.io/nodes/bdag-blockdag
+  - button "Report a Bug" [ref=e73] [cursor=pointer]:
+    - img [ref=e74]
+    - generic [ref=e76]: Report a Bug
+  - region "Notifications alt+T"
+  - alert [ref=e77]
+```

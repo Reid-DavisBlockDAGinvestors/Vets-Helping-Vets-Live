@@ -5,6 +5,15 @@ import { sendCampaignApproved } from '@/lib/mailer'
 import { getActiveContractVersion, getContractByVersion, getContractAddress } from '@/lib/contracts'
 import { logger } from '@/lib/logger'
 
+// Force dynamic rendering (no caching)
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Extended timeout for blockchain confirmation
+// Netlify Pro: 26s, Vercel Pro: 60s, self-hosted: unlimited
+// We set 120s (2 min) - falls back to platform max if exceeded
+export const maxDuration = 120
+
 // Convert IPFS URI to HTTP gateway URL
 function toHttpUrl(uri: string | null): string | null {
   if (!uri) return null
@@ -198,23 +207,13 @@ export async function POST(req: NextRequest) {
     let campaignId: number | null = null
     let txHash: string | null = null
 
-    // Create campaign - optimized for Netlify's 10-second timeout
-    // We predict the campaignId and don't wait for confirmation
-    // The fix-campaign endpoint can correct the ID if needed
-    async function createCampaignFast(maxRetries = 3): Promise<{ hash: string; campaignId: number }> {
+    // Create campaign and WAIT for blockchain confirmation
+    // Parse CampaignCreated event to get the ACTUAL campaignId - no guessing!
+    const CONFIRMATION_TIMEOUT_MS = 120000 // 2 minutes max wait for confirmation
+    
+    async function createCampaignWithConfirmation(maxRetries = 3): Promise<{ hash: string; campaignId: number; confirmed: boolean }> {
       let lastError: any = null
       const provider = signer.provider!
-      
-      // Get predicted campaign ID first (before tx)
-      let predictedCampaignId: number
-      try {
-        const total: bigint = await (contract as any).totalCampaigns()
-        predictedCampaignId = Number(total) // Next ID will be current total
-        logger.debug(`[createCampaign] Predicted campaignId: ${predictedCampaignId}`)
-      } catch (e) {
-        logger.error(`[createCampaign] Failed to get totalCampaigns:`, e)
-        throw new Error('Could not predict campaignId')
-      }
       
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
@@ -234,23 +233,111 @@ export async function POST(req: NextRequest) {
             maxEditions,
             priceWei,
             feeRateBps,
-            creatorWallet, // submitter address
+            creatorWallet,
             { nonce, gasPrice }
           )
           
           logger.debug(`[createCampaign] Tx submitted: ${tx.hash}`)
           
-          // Don't wait for confirmation - Netlify has a 10-second timeout
-          // Return immediately with predicted campaignId
-          return { hash: tx.hash, campaignId: predictedCampaignId }
+          // IMPORTANT: Save tx hash immediately in case of platform timeout
+          // This allows recovery via verify-campaign endpoint
+          await supabaseAdmin.from('submissions').update({
+            tx_hash: tx.hash,
+            status: 'pending_onchain'
+          }).eq('id', id)
+          logger.debug(`[createCampaign] Saved tx_hash to DB, waiting for blockchain confirmation...`)
+          
+          // WAIT for confirmation with timeout
+          const receipt = await Promise.race([
+            tx.wait(1), // Wait for 1 confirmation
+            new Promise<null>((_, reject) => 
+              setTimeout(() => reject(new Error('CONFIRMATION_TIMEOUT')), CONFIRMATION_TIMEOUT_MS)
+            )
+          ])
+          
+          if (!receipt) {
+            throw new Error('No receipt received')
+          }
+          
+          logger.debug(`[createCampaign] Tx confirmed in block ${receipt.blockNumber}`)
+          
+          // Parse CampaignCreated event from receipt logs
+          const iface = new (await import('ethers')).Interface([
+            'event CampaignCreated(uint256 indexed campaignId, address indexed nonprofit, string category, uint256 goal, uint256 maxEditions, uint256 pricePerEdition)'
+          ])
+          
+          let actualCampaignId: number | null = null
+          
+          for (const log of receipt.logs) {
+            try {
+              const parsed = iface.parseLog({ topics: log.topics as string[], data: log.data })
+              if (parsed && parsed.name === 'CampaignCreated') {
+                actualCampaignId = Number(parsed.args.campaignId)
+                logger.debug(`[createCampaign] Parsed CampaignCreated event: campaignId=${actualCampaignId}`)
+                break
+              }
+            } catch {
+              // Not our event, skip
+            }
+          }
+          
+          if (actualCampaignId === null) {
+            // Fallback: try to find by metadata URI if event parsing failed
+            logger.debug(`[createCampaign] Event parsing failed, searching by metadata URI...`)
+            const verifyContract = getContractByVersion(contractVersion, signer)
+            const total = Number(await verifyContract.totalCampaigns())
+            
+            for (let i = total - 1; i >= 0; i--) {
+              try {
+                const camp = await verifyContract.getCampaign(BigInt(i))
+                const onChainUri = camp.baseURI ?? camp[1]
+                if (onChainUri === uri) {
+                  actualCampaignId = i
+                  logger.debug(`[createCampaign] Found campaign ${i} by URI match`)
+                  break
+                }
+              } catch { continue }
+            }
+          }
+          
+          if (actualCampaignId === null) {
+            throw new Error('Could not determine campaign ID from blockchain')
+          }
+          
+          return { hash: tx.hash, campaignId: actualCampaignId, confirmed: true }
+          
         } catch (err: any) {
           lastError = err
           const msg = err?.message || ''
           const code = err?.code || ''
           
+          // Handle timeout - tx may still be pending
+          if (msg === 'CONFIRMATION_TIMEOUT') {
+            logger.debug(`[createCampaign] Confirmation timeout after ${CONFIRMATION_TIMEOUT_MS}ms`)
+            // Return with pending status - verify endpoint can be used later
+            throw new Error('CONFIRMATION_TIMEOUT: Transaction submitted but confirmation timed out. Use verify endpoint.')
+          }
+          
           if (msg.includes('already known')) {
-            logger.debug(`[createCampaign] Tx already in mempool`)
-            return { hash: '(pending in mempool)', campaignId: predictedCampaignId }
+            logger.debug(`[createCampaign] Tx already in mempool, waiting for confirmation...`)
+            // Wait and then search for the campaign
+            await new Promise(r => setTimeout(r, 10000))
+            
+            const verifyContract = getContractByVersion(contractVersion, signer)
+            const total = Number(await verifyContract.totalCampaigns())
+            
+            for (let i = total - 1; i >= 0; i--) {
+              try {
+                const camp = await verifyContract.getCampaign(BigInt(i))
+                const onChainUri = camp.baseURI ?? camp[1]
+                if (onChainUri === uri) {
+                  logger.debug(`[createCampaign] Found existing campaign ${i} by URI`)
+                  return { hash: '(existing tx)', campaignId: i, confirmed: true }
+                }
+              } catch { continue }
+            }
+            
+            throw new Error('Transaction in mempool but campaign not found on-chain yet')
           }
           
           if (msg.includes('nonce') || msg.includes('NONCE') || 
@@ -266,68 +353,29 @@ export async function POST(req: NextRequest) {
       throw lastError
     }
 
-    const result = await createCampaignFast()
-    campaignId = result.campaignId // This is just a prediction, will be verified
+    const result = await createCampaignWithConfirmation()
+    campaignId = result.campaignId // ACTUAL campaign ID from blockchain
     txHash = result.hash
-
-    // Try to verify the campaign was created correctly (quick check)
-    // This helps avoid the "Fix Campaign" step in most cases
-    let verifiedCampaignId = campaignId
-    let finalStatus = 'pending_onchain'
     
-    try {
-      // Wait a moment for the tx to propagate (BlockDAG can be slow)
-      await new Promise(r => setTimeout(r, 3000))
-      
-      // Check if the predicted campaign ID has our metadata URI
-      const verifyContract = getContractByVersion(contractVersion, signer)
-      const total = Number(await verifyContract.totalCampaigns())
-      logger.debug(`[approve] Total campaigns on-chain: ${total}, predicted ID: ${campaignId}`)
-      
-      // First try the predicted ID
-      let foundCorrectId = false
-      if (campaignId < total) {
-        try {
-          const camp = await verifyContract.getCampaign(BigInt(campaignId))
-          const onChainUri = camp.baseURI ?? camp[1]
-          
-          if (onChainUri === uri) {
-            // Predicted ID is correct!
-            logger.debug(`[approve] Verified campaign ${campaignId} matches metadata URI`)
-            finalStatus = 'minted'
-            verifiedCampaignId = campaignId
-            foundCorrectId = true
-          }
-        } catch (e) {
-          logger.debug(`[approve] Predicted ID ${campaignId} check failed:`, e)
-        }
-      }
-      
-      // If predicted ID didn't match, search ALL campaigns from 0
-      // This matches what Fix Campaign does and ensures we find the correct ID
-      if (!foundCorrectId) {
-        logger.debug(`[approve] Predicted ID ${campaignId} didn't match, searching ALL ${total} campaigns...`)
+    // Campaign was confirmed on-chain - no guessing!
+    let verifiedCampaignId = campaignId
+    let finalStatus = result.confirmed ? 'minted' : 'pending_onchain'
+    
+    // Double-verify the campaign data matches (belt and suspenders)
+    if (result.confirmed) {
+      try {
+        const verifyContract = getContractByVersion(contractVersion, signer)
+        const camp = await verifyContract.getCampaign(BigInt(campaignId))
+        const onChainUri = camp.baseURI ?? camp[1]
         
-        for (let i = 0; i < total; i++) {
-          try {
-            const c = await verifyContract.getCampaign(BigInt(i))
-            if ((c.baseURI ?? c[1]) === uri) {
-              verifiedCampaignId = i
-              finalStatus = 'minted'
-              logger.debug(`[approve] Found correct campaign ID: ${i}`)
-              foundCorrectId = true
-              break
-            }
-          } catch { continue }
+        if (onChainUri === uri) {
+          logger.debug(`[approve] Verified campaign ${campaignId} metadata matches`)
+        } else {
+          logger.error(`[approve] WARNING: Campaign ${campaignId} URI mismatch! Expected: ${uri.slice(0,50)}... Got: ${onChainUri?.slice(0,50)}...`)
         }
-        
-        if (!foundCorrectId) {
-          logger.debug(`[approve] Campaign not found on-chain yet (tx may still be pending)`)
-        }
+      } catch (verifyErr: any) {
+        logger.debug(`[approve] Post-confirm verification failed: ${verifyErr?.message}`)
       }
-    } catch (verifyErr: any) {
-      logger.debug(`[approve] Quick verification failed (tx may still be pending): ${verifyErr?.message}`)
-      // Keep pending_onchain status - user can verify later
     }
 
     // Update submission with verified or pending status

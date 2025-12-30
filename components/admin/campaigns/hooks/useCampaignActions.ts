@@ -236,8 +236,10 @@ export function useCampaignActions(): UseCampaignActionsReturn {
         return { success: true, newCampaignId: data.campaignId }
       } else if (data.status === 'fixed') {
         return { success: true, newCampaignId: data.newCampaignId }
+      } else if (data.status === 'created') {
+        return { success: true, newCampaignId: data.campaignId }
       } else {
-        return { success: false, error: data.message }
+        return { success: false, error: data.message || data.error }
       }
     } catch (e: any) {
       return { success: false, error: e?.message || 'Verification failed' }

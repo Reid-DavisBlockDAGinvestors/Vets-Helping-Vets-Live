@@ -1,0 +1,241 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link "🎖️ PatriotPledge NFTs" [ref=e5]:
+        - /url: /
+        - generic [ref=e6]: 🎖️
+        - generic [ref=e7]: PatriotPledge
+        - generic [ref=e8]: NFTs
+      - navigation [ref=e9]:
+        - link "Marketplace" [ref=e10]:
+          - /url: /marketplace
+        - link "Community" [ref=e11]:
+          - /url: /community
+        - link "Submit Story" [ref=e12]:
+          - /url: /submit
+        - link "Dashboard" [ref=e13]:
+          - /url: /dashboard
+        - link "Governance" [ref=e14]:
+          - /url: /governance
+        - link "Admin" [ref=e15]:
+          - /url: /admin
+      - generic [ref=e16]:
+        - button "Switch to light mode" [ref=e17] [cursor=pointer]:
+          - img [ref=e18]
+        - button "Sign In" [ref=e21] [cursor=pointer]:
+          - img [ref=e22]
+          - generic [ref=e24]: Sign In
+        - button "Connect Wallet" [ref=e26] [cursor=pointer]:
+          - img [ref=e27]
+          - generic [ref=e29]: Connect Wallet
+  - main [ref=e30]:
+    - generic [ref=e31]:
+      - generic [ref=e34]:
+        - heading "Start Your Fundraiser" [level=1] [ref=e35]
+        - paragraph [ref=e36]: Create a Living NFT that tells your story and evolves with your journey. Veterans, families, and community members welcome.
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - generic [ref=e39]: ✓
+            - text: Free to submit
+          - generic [ref=e40]:
+            - generic [ref=e41]: ✓
+            - text: Reviewed within 24-48 hours
+          - generic [ref=e42]:
+            - generic [ref=e43]: ✓
+            - text: 100% transparent on-chain
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - generic [ref=e47]:
+            - generic [ref=e48]: "1"
+            - generic [ref=e49]:
+              - heading "Campaign Type" [level=3] [ref=e50]
+              - paragraph [ref=e51]: Select the category that best describes your fundraiser
+          - generic [ref=e52]:
+            - button "🎖️ Veteran / Military" [ref=e53] [cursor=pointer]:
+              - generic [ref=e54]: 🎖️
+              - generic [ref=e55]: Veteran / Military
+            - button "🏥 Medical Expenses" [ref=e56] [cursor=pointer]:
+              - generic [ref=e57]: 🏥
+              - generic [ref=e58]: Medical Expenses
+            - button "👶 Children & Youth" [ref=e59] [cursor=pointer]:
+              - generic [ref=e60]: 👶
+              - generic [ref=e61]: Children & Youth
+            - button "🐾 Pets & Animals" [ref=e62] [cursor=pointer]:
+              - generic [ref=e63]: 🐾
+              - generic [ref=e64]: Pets & Animals
+            - button "🌪️ Natural Disaster" [ref=e65] [cursor=pointer]:
+              - generic [ref=e66]: 🌪️
+              - generic [ref=e67]: Natural Disaster
+            - button "📚 Education" [ref=e68] [cursor=pointer]:
+              - generic [ref=e69]: 📚
+              - generic [ref=e70]: Education
+            - button "🤝 Community" [ref=e71] [cursor=pointer]:
+              - generic [ref=e72]: 🤝
+              - generic [ref=e73]: Community
+            - button "💙 Other" [ref=e74] [cursor=pointer]:
+              - generic [ref=e75]: 💙
+              - generic [ref=e76]: Other
+          - paragraph [ref=e77]: Support for veterans, active military, and their families
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - generic [ref=e80]: "2"
+            - generic [ref=e81]:
+              - heading "Campaign Title" [level=3] [ref=e82]
+              - paragraph [ref=e83]: Create a compelling title that captures attention
+          - textbox "e.g., Help John recover from surgery and get back on his feet" [active] [ref=e84]
+        - generic [ref=e85]:
+          - generic [ref=e86]:
+            - generic [ref=e87]: "3"
+            - generic [ref=e88]:
+              - heading "Your Story" [level=3] [ref=e89]
+              - paragraph [ref=e90]: Tell us about yourself and your situation
+          - textbox "Share your background, who you are, and what led to your current situation..." [ref=e91]
+          - button "🤖 AI Generate Draft" [disabled] [ref=e93]
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - generic [ref=e96]: "4"
+            - generic [ref=e97]:
+              - heading "What You Need" [level=3] [ref=e98]
+              - paragraph [ref=e99]: Explain specifically what you need help with
+          - textbox "What specific help do you need? Be clear about your immediate needs..." [ref=e100]
+          - button "🤖 AI Generate Draft" [disabled] [ref=e102]
+        - generic [ref=e103]:
+          - generic [ref=e104]:
+            - generic [ref=e105]: "5"
+            - generic [ref=e106]:
+              - heading "How Funds Will Be Used" [level=3] [ref=e107]
+              - paragraph [ref=e108]: Be transparent about how donations will help
+          - textbox "Break down how the funds will be allocated..." [ref=e109]
+          - button "🤖 AI Generate Draft" [disabled] [ref=e111]
+        - generic [ref=e112]:
+          - generic [ref=e113]:
+            - generic [ref=e114]: "6"
+            - generic [ref=e115]:
+              - heading "Fundraising Goal" [level=3] [ref=e116]
+              - paragraph [ref=e117]: Set a realistic goal based on your needs
+          - generic [ref=e118]:
+            - generic [ref=e119]:
+              - generic [ref=e120]: $
+              - spinbutton [ref=e121]: "1000"
+            - generic [ref=e122]: USD
+        - generic [ref=e123]:
+          - generic [ref=e124]:
+            - generic [ref=e125]: "7"
+            - generic [ref=e126]:
+              - heading "Campaign Image" [level=3] [ref=e127]
+              - paragraph [ref=e128]: Upload a photo that represents your campaign
+          - generic [ref=e130] [cursor=pointer]:
+            - generic [ref=e131]: 📷
+            - paragraph [ref=e132]: Click to upload a photo
+            - paragraph [ref=e133]: Supports JPEG, PNG, GIF, WebP, and iPhone photos (HEIC)
+        - generic [ref=e134]:
+          - generic [ref=e135]:
+            - generic [ref=e136]: "8"
+            - generic [ref=e137]:
+              - heading "Your Contact Information" [level=3] [ref=e138]
+              - paragraph [ref=e139]: We need this to verify your identity and reach you
+          - generic [ref=e140]:
+            - generic [ref=e141]:
+              - generic [ref=e142]:
+                - generic [ref=e143]: First Name *
+                - textbox "John" [ref=e144]
+              - generic [ref=e145]:
+                - generic [ref=e146]: Last Name *
+                - textbox "Doe" [ref=e147]
+              - generic [ref=e148]:
+                - generic [ref=e149]: Phone Number *
+                - textbox "(555) 123-4567" [ref=e150]
+            - generic [ref=e151]:
+              - generic [ref=e152]: Company / Organization (optional)
+              - textbox "For corporate tax receipts" [ref=e153]
+            - generic [ref=e154]:
+              - generic [ref=e155]: Email Address *
+              - textbox "your@email.com" [ref=e156]
+            - generic [ref=e157]:
+              - generic [ref=e158]: Mailing Address
+              - generic [ref=e159]:
+                - textbox "Street Address" [ref=e160]
+                - generic [ref=e161]:
+                  - textbox "City" [ref=e162]
+                  - textbox "State" [ref=e163]
+                  - textbox "ZIP Code" [ref=e164]
+                  - combobox [ref=e165] [cursor=pointer]:
+                    - option "United States" [selected]
+                    - option "Canada"
+                    - option "Other"
+            - generic [ref=e166]:
+              - generic [ref=e167]: Wallet Address (optional)
+              - textbox "0x..." [ref=e168]
+              - paragraph [ref=e169]: Don't have a wallet? No problem! You can add it later.
+        - generic [ref=e170]:
+          - generic [ref=e171]:
+            - generic [ref=e172]: "9"
+            - generic [ref=e173]:
+              - heading "Identity Verification" [level=3] [ref=e174]
+              - paragraph [ref=e175]: Help us verify your identity
+          - generic [ref=e176]: ⚠️ Please enter your email address above first.
+          - generic [ref=e178]:
+            - generic [ref=e179]: 🎖️
+            - generic [ref=e180]:
+              - strong [ref=e181]: "Veterans:"
+              - text: Please upload your DD-214 or VA ID card.
+        - generic [ref=e183]:
+          - generic [ref=e184]:
+            - heading "Ready to Submit?" [level=3] [ref=e185]
+            - paragraph [ref=e186]: Identity verification is optional but speeds up approval.
+          - generic [ref=e190]:
+            - button "Preview NFT" [ref=e191] [cursor=pointer]
+            - button "Submit for Approval" [disabled] [ref=e192]
+  - contentinfo [ref=e193]:
+    - generic [ref=e194]:
+      - generic [ref=e195]:
+        - generic [ref=e196]:
+          - paragraph [ref=e197]: © 2025 PatriotPledge NFTs · vetshelpingvets.life
+          - paragraph [ref=e198]: 1% nonprofit fee for operations · Transparent and auditable
+        - generic [ref=e199]:
+          - generic [ref=e200]: "Follow us:"
+          - link "Follow us on X (Twitter)" [ref=e201]:
+            - /url: https://x.com/blockdag2049
+            - img [ref=e202]
+          - link "Join our Telegram group" [ref=e204]:
+            - /url: https://t.me/+zuuA1U91bLBhOWMx
+            - img [ref=e205]
+          - link "Join our Facebook group" [ref=e207]:
+            - /url: https://www.facebook.com/share/g/17oU6dqmzW/
+            - img [ref=e208]
+          - link "Join our Reddit community" [ref=e210]:
+            - /url: https://www.reddit.com/r/BlockDAGInvestors/
+            - img [ref=e211]
+          - link "Follow us on TikTok" [ref=e213]:
+            - /url: https://www.tiktok.com/@blockdaginvestors
+            - img [ref=e214]
+          - link "Connect on LinkedIn" [ref=e216]:
+            - /url: https://www.linkedin.com/in/reid-davis-875446370
+            - img [ref=e217]
+          - link "Subscribe to our YouTube channel" [ref=e221]:
+            - /url: https://youtube.com/@blockdaginvestorschannel
+            - img [ref=e222]
+          - link "Join our Discord server" [ref=e225]:
+            - /url: https://discord.gg/9UkhuBz8GR
+            - img [ref=e226]
+      - generic [ref=e228]:
+        - link "My Bug Reports" [ref=e229]:
+          - /url: /my-bug-reports
+        - generic [ref=e230]: ·
+        - link "BlockDAG Explorer" [ref=e231]:
+          - /url: https://awakening.bdagscan.com
+        - link "Faucet" [ref=e232]:
+          - /url: https://awakening.bdagscan.com/faucet
+        - link "RPC" [ref=e233]:
+          - /url: https://rpc.awakening.bdagscan.com
+        - link "Alt RPC" [ref=e234]:
+          - /url: https://nownodes.io/nodes/bdag-blockdag
+  - button "Report a Bug" [ref=e235] [cursor=pointer]:
+    - img [ref=e236]
+    - generic [ref=e238]: Report a Bug
+  - region "Notifications alt+T"
+  - alert [ref=e239]
+```

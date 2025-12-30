@@ -7,3 +7,15 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Extended function timeout for blockchain operations
+# Requires Netlify Pro plan (26s max) or Enterprise (900s max)
+[functions]
+  # Timeout in seconds (default 10s, Pro max 26s)
+  # Note: If on free tier, this will be capped at 10s
+  external_node_modules = ["ethers"]
+  
+[functions."api/submissions/approve"]
+  # This function needs extended timeout for blockchain confirmation
+  # On free tier: 10s, on Pro: up to 26s
+  node_bundler = "esbuild"

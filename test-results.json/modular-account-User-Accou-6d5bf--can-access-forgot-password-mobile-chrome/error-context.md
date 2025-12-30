@@ -1,0 +1,270 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link "🎖️ PP" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]: 🎖️
+        - generic [ref=e7]: PP
+      - generic [ref=e8]:
+        - button "Switch to light mode" [ref=e9] [cursor=pointer]:
+          - img [ref=e10]
+        - button [ref=e13] [cursor=pointer]:
+          - img [ref=e14]
+        - button "Connect" [ref=e17] [cursor=pointer]:
+          - img [ref=e18]
+          - generic [ref=e20]: Connect
+        - button "Toggle menu" [ref=e21] [cursor=pointer]:
+          - img
+  - main [ref=e22]:
+    - generic [ref=e23]:
+      - generic [ref=e29]:
+        - generic [ref=e32]: Powered by BlockDAG Blockchain
+        - heading "Empowering Veterans Through Transparent Giving" [level=1] [ref=e33]
+        - paragraph [ref=e34]: The most advanced fundraising platform ever built. Direct support, full transparency, and dynamic NFTs that evolve as campaigns progress.
+        - generic [ref=e35]:
+          - link "Submit Your Story" [ref=e36] [cursor=pointer]:
+            - /url: /submit
+          - link "Browse Campaigns" [ref=e37] [cursor=pointer]:
+            - /url: /marketplace
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e42]: $9.3K
+          - generic [ref=e43]: Raised
+        - generic [ref=e44]:
+          - generic [ref=e45]: "34"
+          - generic [ref=e46]: Campaigns
+        - generic [ref=e47]:
+          - generic [ref=e48]: "377"
+          - generic [ref=e49]: NFTs Minted
+        - generic [ref=e50]:
+          - generic [ref=e51]: 100%
+          - generic [ref=e52]: Transparent
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - heading "Why PatriotPledge?" [level=2] [ref=e55]
+          - paragraph [ref=e56]: Built on blockchain technology for unmatched transparency and direct impact
+        - generic [ref=e57]:
+          - generic [ref=e58]:
+            - generic [ref=e59]: 🔒
+            - heading "Transparent" [level=3] [ref=e60]
+            - paragraph [ref=e61]: Every dollar tracked on blockchain. See exactly where funds go.
+          - generic [ref=e62]:
+            - generic [ref=e63]: ⚡
+            - heading "Direct Support" [level=3] [ref=e64]
+            - paragraph [ref=e65]: Funds go directly to recipients. No middlemen, no delays.
+          - generic [ref=e66]:
+            - generic [ref=e67]: 🎨
+            - heading "Dynamic NFTs" [level=3] [ref=e68]
+            - paragraph [ref=e69]: Your contribution becomes a living digital collectible.
+          - generic [ref=e70]:
+            - generic [ref=e71]: ✅
+            - heading "Verified Stories" [level=3] [ref=e72]
+            - paragraph [ref=e73]: KYC verification ensures authentic campaigns.
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - heading "See How It Works" [level=2] [ref=e76]
+          - paragraph [ref=e77]: Learn how to set up your wallet and support campaigns using BDAG tokens
+        - generic [ref=e79]:
+          - generic [ref=e80]: ⚠️
+          - generic [ref=e81]:
+            - heading "Testnet Phase - BDAG Only" [level=3] [ref=e82]
+            - paragraph [ref=e83]:
+              - text: PatriotPledge NFTs is currently in
+              - strong [ref=e84]: testnet phase
+              - text: . We are
+              - strong [ref=e85]: not accepting credit cards, PayPal, Cash App, or Venmo
+              - text: at this time. All transactions are conducted using
+              - strong [ref=e86]: BDAG tokens
+              - text: native on the BlockDAG Awakening Testnet.
+        - generic [ref=e87]:
+          - generic [ref=e88]:
+            - generic [ref=e89]:
+              - generic [ref=e90]:
+                - generic [ref=e91]: "1"
+                - heading "Set Up MetaMask with Awakening Testnet" [level=3] [ref=e92]
+              - generic [ref=e93]:
+                - paragraph [ref=e94]:
+                  - text: First, install
+                  - link "MetaMask" [ref=e95] [cursor=pointer]:
+                    - /url: https://metamask.io/download/
+                  - text: browser extension if you haven't already.
+                - generic [ref=e96]:
+                  - paragraph [ref=e97]: "Add the Awakening Testnet with these settings:"
+                  - generic [ref=e98]:
+                    - generic [ref=e99]:
+                      - generic [ref=e100]: "Network Name:"
+                      - generic [ref=e101]: BlockDAG Awakening
+                    - generic [ref=e102]:
+                      - generic [ref=e103]: "RPC URL:"
+                      - generic [ref=e104]: https://rpc.awakening.bdagscan.com
+                    - generic [ref=e105]:
+                      - generic [ref=e106]: "Chain ID:"
+                      - generic [ref=e107]: "1043"
+                    - generic [ref=e108]:
+                      - generic [ref=e109]: "Currency Symbol:"
+                      - generic [ref=e110]: BDAG
+                    - generic [ref=e111]:
+                      - generic [ref=e112]: "Block Explorer:"
+                      - generic [ref=e113]: https://awakening.bdagscan.com
+                - paragraph [ref=e114]:
+                  - strong [ref=e115]: "How to add:"
+                  - text: Open MetaMask → Click network dropdown → "Add Network" → "Add a network manually" → Enter the details above → Save
+            - generic [ref=e116]:
+              - generic [ref=e117]:
+                - generic [ref=e118]: "2"
+                - heading "Get BDAG Tokens" [level=3] [ref=e119]
+              - generic [ref=e120]:
+                - paragraph [ref=e121]: "You'll need BDAG tokens to purchase NFTs. During testnet:"
+                - list [ref=e122]:
+                  - listitem [ref=e123]:
+                    - text: Get free testnet BDAG from the
+                    - link "BlockDAG Explorer Faucet" [ref=e124] [cursor=pointer]:
+                      - /url: https://awakening.bdagscan.com/faucet
+            - generic [ref=e125]:
+              - generic [ref=e126]:
+                - generic [ref=e127]: "3"
+                - heading "Purchase an NFT" [level=3] [ref=e128]
+              - generic [ref=e129]:
+                - list [ref=e130]:
+                  - listitem [ref=e131]:
+                    - strong [ref=e132]: Browse campaigns
+                    - text: on the
+                    - link "Marketplace" [ref=e133] [cursor=pointer]:
+                      - /url: /marketplace
+                  - listitem [ref=e134]:
+                    - strong [ref=e135]: Click "View Story"
+                    - text: on a campaign you want to support
+                  - listitem [ref=e136]:
+                    - strong [ref=e137]: Connect your wallet
+                    - text: by clicking "Connect Wallet"
+                  - listitem [ref=e138]:
+                    - strong [ref=e139]: Select quantity
+                    - text: and optionally add a tip
+                  - listitem [ref=e140]:
+                    - strong [ref=e141]: Click "Purchase with BDAG"
+                    - text: and confirm in MetaMask
+                  - listitem [ref=e142]:
+                    - strong [ref=e143]: Your NFT will appear
+                    - text: in your MetaMask NFT tab!
+                - paragraph [ref=e144]:
+                  - text: ✓ Your NFT automatically appears in MetaMask after purchase. You can also view it on the
+                  - link "BlockDAG Explorer" [ref=e145] [cursor=pointer]:
+                    - /url: https://awakening.bdagscan.com
+                  - text: .
+          - generic [ref=e147]:
+            - heading "📺 Video Tutorial" [level=3] [ref=e148]
+            - iframe [ref=e150]:
+              - generic [active] [ref=f1e1]:
+                - generic "YouTube Video Player" [ref=f1e3]
+                - generic [ref=f1e5]:
+                  - generic:
+                    - generic:
+                      - button "Play video" [ref=f1e10] [cursor=pointer]
+                      - button "Hide player controls" [ref=f1e12] [cursor=pointer]
+                      - generic [ref=f1e19]:
+                        - generic [ref=f1e20]:
+                          - link "PatriotPledge NFTs Tutorial" [ref=f1e21] [cursor=pointer]:
+                            - /url: https://www.youtube.com/watch?v=xkYcSQdnMXs
+                          - link "BlockDAG Investors" [ref=f1e22] [cursor=pointer]:
+                            - /url: /channel/UCU70CRV3nPAQjf-qAx4S7xw
+                            - generic [ref=f1e23]: BlockDAG Investors
+                        - generic [ref=f1e24]:
+                          - button [ref=f1e25] [cursor=pointer]
+                          - generic [ref=f1e27]:
+                            - generic: BlockDAG Investors
+                            - generic: 1.86K subscribers
+                - generic:
+                  - dialog "Dialog"
+                  - dialog "Dialog"
+            - generic [ref=e151]:
+              - heading "Quick Links" [level=4] [ref=e152]
+              - generic [ref=e153]:
+                - link "🦊 Get MetaMask" [ref=e154] [cursor=pointer]:
+                  - /url: https://metamask.io/download/
+                  - generic [ref=e155]: 🦊
+                  - text: Get MetaMask
+                - link "🔍 Block Explorer" [ref=e156] [cursor=pointer]:
+                  - /url: https://awakening.bdagscan.com
+                  - generic [ref=e157]: 🔍
+                  - text: Block Explorer
+                - link "💬 Telegram" [ref=e158] [cursor=pointer]:
+                  - /url: https://t.me/BlockDAGBuildathon
+                  - generic [ref=e159]: 💬
+                  - text: Telegram
+                - link "🛒 Marketplace" [ref=e160] [cursor=pointer]:
+                  - /url: /marketplace
+                  - generic [ref=e161]: 🛒
+                  - text: Marketplace
+      - generic [ref=e166]:
+        - heading "Ready to Make a Difference?" [level=2] [ref=e167]
+        - paragraph [ref=e168]: Whether you need help or want to help others, PatriotPledge NFTs is the platform for transparent, impactful giving.
+        - generic [ref=e169]:
+          - link "Start Your Campaign" [ref=e170] [cursor=pointer]:
+            - /url: /submit
+          - link "Support a Veteran" [ref=e171] [cursor=pointer]:
+            - /url: /marketplace
+      - generic [ref=e173]:
+        - generic [ref=e174]:
+          - generic [ref=e175]: 🛡️
+          - heading "Verified Recipients" [level=3] [ref=e176]
+          - paragraph [ref=e177]: Every campaign creator undergoes KYC verification to ensure authenticity
+        - generic [ref=e178]:
+          - generic [ref=e179]: ⛓️
+          - heading "Blockchain Transparency" [level=3] [ref=e180]
+          - paragraph [ref=e181]: All transactions recorded on BlockDAG for complete auditability
+        - generic [ref=e182]:
+          - generic [ref=e183]: 💯
+          - heading "1% Platform Fee" [level=3] [ref=e184]
+          - paragraph [ref=e185]: 99% of your donation goes directly to the campaign recipient
+  - contentinfo [ref=e186]:
+    - generic [ref=e187]:
+      - generic [ref=e188]:
+        - generic [ref=e189]:
+          - paragraph [ref=e190]: © 2025 PatriotPledge NFTs · vetshelpingvets.life
+          - paragraph [ref=e191]: 1% nonprofit fee for operations · Transparent and auditable
+        - generic [ref=e192]:
+          - link "Follow us on X (Twitter)" [ref=e193] [cursor=pointer]:
+            - /url: https://x.com/blockdag2049
+            - img [ref=e194]
+          - link "Join our Telegram group" [ref=e196] [cursor=pointer]:
+            - /url: https://t.me/+zuuA1U91bLBhOWMx
+            - img [ref=e197]
+          - link "Join our Facebook group" [ref=e199] [cursor=pointer]:
+            - /url: https://www.facebook.com/share/g/17oU6dqmzW/
+            - img [ref=e200]
+          - link "Join our Reddit community" [ref=e202] [cursor=pointer]:
+            - /url: https://www.reddit.com/r/BlockDAGInvestors/
+            - img [ref=e203]
+          - link "Follow us on TikTok" [ref=e205] [cursor=pointer]:
+            - /url: https://www.tiktok.com/@blockdaginvestors
+            - img [ref=e206]
+          - link "Connect on LinkedIn" [ref=e208] [cursor=pointer]:
+            - /url: https://www.linkedin.com/in/reid-davis-875446370
+            - img [ref=e209]
+          - link "Subscribe to our YouTube channel" [ref=e213] [cursor=pointer]:
+            - /url: https://youtube.com/@blockdaginvestorschannel
+            - img [ref=e214]
+          - link "Join our Discord server" [ref=e217] [cursor=pointer]:
+            - /url: https://discord.gg/9UkhuBz8GR
+            - img [ref=e218]
+      - generic [ref=e220]:
+        - link "My Bug Reports" [ref=e221] [cursor=pointer]:
+          - /url: /my-bug-reports
+        - generic [ref=e222]: ·
+        - link "BlockDAG Explorer" [ref=e223] [cursor=pointer]:
+          - /url: https://awakening.bdagscan.com
+        - link "Faucet" [ref=e224] [cursor=pointer]:
+          - /url: https://awakening.bdagscan.com/faucet
+        - link "RPC" [ref=e225] [cursor=pointer]:
+          - /url: https://rpc.awakening.bdagscan.com
+        - link "Alt RPC" [ref=e226] [cursor=pointer]:
+          - /url: https://nownodes.io/nodes/bdag-blockdag
+  - button "Report a Bug" [ref=e227] [cursor=pointer]:
+    - img [ref=e228]
+    - generic [ref=e230]: Report a Bug
+  - region "Notifications alt+T"
+  - alert [ref=e231]
+```
