@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendBugReportStatusEmail } from '@/lib/mailer'
 import { debugGuard } from '@/lib/debugGuard'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
       }
     })
   } catch (e: any) {
-    console.error('[send-bug-response] Error:', e)
+    logger.error('[send-bug-response] Error:', e)
     return NextResponse.json({ error: 'Failed', details: e?.message }, { status: 500 })
   }
 }

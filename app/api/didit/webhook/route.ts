@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     // Verify signature (optional in dev, required in prod)
     const isProduction = process.env.NODE_ENV === 'production'
     if (isProduction && !verifyWebhookSignature(rawBody, signature)) {
-      console.error('[Didit Webhook] Invalid signature')
+      logger.error('[Didit Webhook] Invalid signature')
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
 
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     } = payload
 
     if (!session_id || !vendor_data) {
-      console.error('[Didit Webhook] Missing required fields')
+      logger.error('[Didit Webhook] Missing required fields')
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       .eq('id', vendor_data)
 
     if (updateError) {
-      console.error('[Didit Webhook] Update error:', updateError)
+      logger.error('[Didit Webhook] Update error:', updateError)
       // Don't fail the webhook - Didit will retry
     }
 
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('[Didit Webhook] Error:', error)
+    logger.error('[Didit Webhook] Error:', error)
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
   }
 }

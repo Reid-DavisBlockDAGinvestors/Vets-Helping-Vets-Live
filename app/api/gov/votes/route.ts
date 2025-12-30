@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('[Votes] Query error:', error)
+      logger.error('[Votes] Query error:', error)
       throw error
     }
 
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ votes })
   } catch (e: any) {
-    console.error('[Votes] Error:', e)
+    logger.error('[Votes] Error:', e)
     return NextResponse.json({ votes: [], error: e?.message }, { status: 500 })
   }
 }

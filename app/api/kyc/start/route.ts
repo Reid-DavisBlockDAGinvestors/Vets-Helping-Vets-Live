@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     // Placeholder: return a link to a hosted flow; in production call Persona API to create inquiry
     return NextResponse.json({ link: 'https://withpersona.com/verify', environment })
   } catch (e) {
-    console.error('kyc/start error', e)
+    logger.error('[kyc/start] Error:', e)
     return NextResponse.json({ error: 'KYC_START_FAILED' }, { status: 500 })
   }
 }

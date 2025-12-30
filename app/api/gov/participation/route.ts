@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
         nftsOwned = Number(balance)
       }
     } catch (e: any) {
-      console.error('[Participation] NFT balance error:', e?.message)
+      logger.error('[Participation] NFT balance error:', e?.message)
     }
 
     // Get campaigns created by this wallet from submissions table
@@ -44,10 +44,10 @@ export async function GET(req: NextRequest) {
         .select('id')
         .ilike('creator_wallet', walletLower)
       
-      if (campError) console.error('[Participation] Campaign query error:', campError)
+      if (campError) logger.error('[Participation] Campaign query error:', campError)
       campaignsCreated = campaigns?.length || 0
     } catch (e: any) {
-      console.error('[Participation] Campaign query error:', e?.message)
+      logger.error('[Participation] Campaign query error:', e?.message)
     }
 
     // Get total donated by this wallet (from purchases table if it exists)
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
       // For now, we'll skip this since the platform primarily tracks NFT purchases on-chain
       // You could add a purchases or donations table later if needed
     } catch (e: any) {
-      console.error('[Participation] Purchase query error:', e?.message)
+      logger.error('[Participation] Purchase query error:', e?.message)
     }
 
     logger.api(`[Participation] ${wallet}: ${nftsOwned} NFTs, ${campaignsCreated} campaigns, $${totalDonated} donated`)
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
       totalDonated
     })
   } catch (e: any) {
-    console.error('[Participation] Error:', e)
+    logger.error('[Participation] Error:', e)
     return NextResponse.json({ 
       nftsOwned: 0, 
       campaignsCreated: 0, 

@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true })
   } catch (e) {
-    console.error('telegram notify error', e)
+    logger.error('[telegram/notify] Error:', e)
     return NextResponse.json({ error: 'TELEGRAM_NOTIFY_FAILED' }, { status: 500 })
   }
 }

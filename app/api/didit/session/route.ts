@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createVerificationSession } from '@/lib/didit'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
 
       // Check if there's already an active session
       if (submission.didit_session_id) {
-        console.log('[Didit Session] Submission already has session, creating new one')
+        logger.debug('[Didit Session] Submission already has session, creating new one')
       }
 
       sessionEmail = email || submission.creator_email
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     })
 
     if (!result.success || !result.session) {
-      console.error('[Didit Session] Failed to create session:', result.error)
+      logger.error('[Didit Session] Failed to create session:', result.error)
       return NextResponse.json({ error: result.error || 'Failed to create session' }, { status: 500 })
     }
 
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
         .eq('id', submissionId)
 
       if (updateError) {
-        console.error('[Didit Session] Failed to update submission:', updateError)
+        logger.error('[Didit Session] Failed to update submission:', updateError)
       }
     }
 
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest) {
       status: result.session.status,
     })
   } catch (error: any) {
-    console.error('[Didit Session] Error:', error)
+    logger.error('[Didit Session] Error:', error)
     return NextResponse.json({ error: 'Session creation failed' }, { status: 500 })
   }
 }
@@ -119,7 +120,7 @@ export async function GET(req: NextRequest) {
       session: result.session,
     })
   } catch (error: any) {
-    console.error('[Didit Session] Get error:', error)
+    logger.error('[Didit Session] Get error:', error)
     return NextResponse.json({ error: 'Failed to get session' }, { status: 500 })
   }
 }

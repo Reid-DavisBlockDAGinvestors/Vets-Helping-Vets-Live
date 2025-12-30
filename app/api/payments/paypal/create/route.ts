@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 // PayPal create order placeholder
 // Body: { amount: number (USD cents), tokenId?: string, email?: string }
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
       notice: 'Placeholder. Implement PayPal REST SDK order creation + webhook capture in production.'
     })
   } catch (e: any) {
-    console.error('paypal create error', e)
+    logger.error('[paypal/create] Error:', e)
     return NextResponse.json({ error: 'PAYPAL_CREATE_FAILED' }, { status: 500 })
   }
 }

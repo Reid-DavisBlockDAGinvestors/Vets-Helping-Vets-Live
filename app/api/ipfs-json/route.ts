@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     
     // Check image size (base64 is ~33% larger than binary)
     if (isDataUrl && imageLength > MAX_IMAGE_SIZE * 1.33) {
-      console.error('[ipfs-json] Image too large:', imageLength)
+      logger.error('[ipfs-json] Image too large:', imageLength)
       return NextResponse.json({ 
         error: 'IMAGE_TOO_LARGE', 
         message: 'Image is too large. Please use an image under 10MB.',
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
         uploadedImageUri = up.uri
         logger.api('[ipfs-json] Image uploaded:', uploadedImageUri)
       } catch (imgErr: any) {
-        console.error('[ipfs-json] Image upload failed:', imgErr?.message || imgErr)
+        logger.error('[ipfs-json] Image upload failed:', imgErr?.message || imgErr)
         return NextResponse.json({ 
           error: 'IMAGE_UPLOAD_FAILED', 
           message: 'Failed to upload image. Please try again or use a smaller image.',
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       }
       return NextResponse.json({ uri, backend, imageUri: uploadedImageUri })
     } catch (metaErr: any) {
-      console.error('[ipfs-json] Metadata upload failed:', metaErr?.message || metaErr)
+      logger.error('[ipfs-json] Metadata upload failed:', metaErr?.message || metaErr)
       return NextResponse.json({ 
         error: 'METADATA_UPLOAD_FAILED', 
         message: 'Failed to save campaign data. Please try again.',
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
   } catch (e: any) {
-    console.error('[ipfs-json] Error:', e)
+    logger.error('[ipfs-json] Error:', e)
     return NextResponse.json({ 
       error: 'UPLOAD_FAILED', 
       message: 'Upload failed. Please check your internet connection and try again.',

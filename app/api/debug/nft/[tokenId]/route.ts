@@ -4,6 +4,7 @@ import { ethers } from 'ethers'
 import { ipfsToHttp } from '@/lib/ipfs'
 import { verifyAdminAuth } from '@/lib/adminAuth'
 import { debugGuard } from '@/lib/debugGuard'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest, context: { params: { tokenId: string
     try {
       tokenURI = await contract.tokenURI(BigInt(tokenId))
     } catch (e: any) {
-      console.error('tokenURI error:', e)
+      logger.error('[debug/nft] tokenURI error:', e)
     }
 
     // Get campaign mapping
@@ -60,7 +61,7 @@ export async function GET(req: NextRequest, context: { params: { tokenId: string
       campaignId = Number(await contract.tokenToCampaign(BigInt(tokenId)))
       editionNumber = Number(await contract.tokenEditionNumber(BigInt(tokenId)))
     } catch (e: any) {
-      console.error('Campaign mapping error:', e)
+      logger.error('[debug/nft] Campaign mapping error:', e)
     }
 
     // Fetch metadata if URI exists
@@ -69,7 +70,7 @@ export async function GET(req: NextRequest, context: { params: { tokenId: string
     if (tokenURI) {
       try {
         const httpUri = ipfsToHttp(tokenURI)
-        console.log(`[debug/nft] Fetching metadata from: ${httpUri}`)
+        logger.debug(`[debug/nft] Fetching metadata from: ${httpUri}`)
         const res = await fetch(httpUri, { 
           headers: { 'Accept': 'application/json' },
           next: { revalidate: 0 }

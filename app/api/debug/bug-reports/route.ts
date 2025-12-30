@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { debugGuard } from '@/lib/debugGuard'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('[debug/bug-reports] Query error:', error)
+      logger.error('[debug/bug-reports] Query error:', error)
       return NextResponse.json({ error: 'Query failed', details: error.message }, { status: 500 })
     }
 
