@@ -67,7 +67,11 @@ export async function POST(req: NextRequest) {
         }
       } catch {}
     }
+    // Determine if using creator's wallet or platform wallet
+    const hasCreatorWallet = !!merged.creator_wallet
     const creatorWallet: string = merged.creator_wallet || relayerAddress || ''
+    const usingPlatformWallet = !hasCreatorWallet && creatorWallet === relayerAddress
+    
     const uri: string = merged.metadata_uri
     const category: string = merged.category || 'general'
     
@@ -81,8 +85,13 @@ export async function POST(req: NextRequest) {
     if (!creatorWallet) {
       return NextResponse.json({
         error: 'SUBMISSION_INVALID_FIELDS',
-        details: 'creator_wallet is required. Either add a wallet address to the submission or set RELAYER_ADDRESS in env.'
+        details: 'No wallet available. Either add a wallet address or ensure RELAYER_ADDRESS is set in env.'
       }, { status: 400 })
+    }
+    
+    // Log platform wallet usage for admin awareness
+    if (usingPlatformWallet) {
+      logger.info(`[approve] Using PLATFORM WALLET for submission ${id} - creator "${merged.creator_name}" (${merged.creator_email}) has no wallet. Funds will be held for future migration.`)
     }
 
     // Check if already has campaign (prevents duplicate creates from retries)
@@ -96,6 +105,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Mark approved and save all edits including benchmarks
+    // Track wallet status for future migration if using platform wallet
     await supabaseAdmin.from('submissions').update({ 
       status: 'approved', 
       reviewer_notes: merged.reviewer_notes || sub.reviewer_notes, 
@@ -107,7 +117,10 @@ export async function POST(req: NextRequest) {
       metadata_uri: merged.metadata_uri,
       benchmarks: merged.benchmarks || null,
       num_copies: merged.num_copies || null,
-      price_per_copy: merged.price_per_copy || null
+      price_per_copy: merged.price_per_copy || null,
+      // Track the wallet used and whether it's the platform wallet
+      creator_wallet: creatorWallet,
+      uses_platform_wallet: usingPlatformWallet
     }).eq('id', id)
     
     // Email will be sent after campaign is created on-chain with campaignId

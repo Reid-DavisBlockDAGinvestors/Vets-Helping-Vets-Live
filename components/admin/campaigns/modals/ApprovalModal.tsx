@@ -112,15 +112,20 @@ export function ApprovalModal({
             </div>
 
             <div>
-              <label className="block text-sm text-white/70 mb-1">Creator Wallet</label>
+              <label className="block text-sm text-white/70 mb-1">Creator Wallet (optional)</label>
               <input
                 type="text"
                 value={form.creator_wallet}
                 onChange={(e) => setForm(f => ({ ...f, creator_wallet: e.target.value }))}
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white font-mono text-sm"
-                placeholder="0x..."
-                required
+                placeholder="0x... (leave empty to use platform wallet)"
+                data-testid="creator-wallet-input"
               />
+              <p className="text-xs text-white/40 mt-1">
+                {form.creator_wallet 
+                  ? '✓ Funds will go directly to this wallet'
+                  : '💼 No wallet? Funds held on platform until creator adds one'}
+              </p>
             </div>
 
             <div>
