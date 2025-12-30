@@ -40,10 +40,25 @@ This document consolidates all TODOs, planned features, and improvements into a 
   - `PurchasePanelV2.tsx`: Uses modular components with data-testid
   - `StoryFormV2.tsx`: Has data-testid on all key inputs
   - All modular components have data-testid per Global Rules
+  - **214 data-testid attributes** across 30 component files
+
+- [x] **AdminBugReports modularized**
+  - `AdminBugReportsV2.tsx`: 317 lines (orchestrator pattern)
+  - Uses `admin/bug-reports/` module with:
+    - `useBugReports` hook for data fetching
+    - `BugReportCard`, `BugReportStats` components
+    - Typed constants for status/priority/category
+
+- [x] **Community Hub integration**
+  - Story page: "💬 Discuss in Community" link with @mention prefill
+  - NFTCard: "💬 Discuss" button linking to community
+  - Uses campaign slug/short_code/id for community linking
+
+- [x] **Console.log audit complete**
+  - All active components clean (console.log only in DEPRECATED files)
+  - Logger utility used consistently across codebase
 
 ### Remaining Actions
-- [ ] **Replace console.log in remaining component files**
-  - Files to audit: NavBar, StoryFormV2, admin components
 
 - [ ] **Remove dead code**
   - ✅ Deleted `StoryForm-old.tsx`
