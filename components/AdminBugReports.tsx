@@ -234,7 +234,7 @@ export default function AdminBugReports() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="admin-bug-reports-panel">
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white/5 rounded-lg p-4">
@@ -260,6 +260,7 @@ export default function AdminBugReports() {
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
+          data-testid="bug-status-filter"
           className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white focus:outline-none"
         >
           <option value="all" className="bg-gray-900">All Statuses</option>
@@ -271,6 +272,7 @@ export default function AdminBugReports() {
         <select
           value={categoryFilter}
           onChange={e => setCategoryFilter(e.target.value)}
+          data-testid="bug-category-filter"
           className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white focus:outline-none"
         >
           {CATEGORY_OPTIONS.map(opt => (
@@ -280,6 +282,7 @@ export default function AdminBugReports() {
 
         <button
           onClick={fetchReports}
+          data-testid="refresh-bugs-btn"
           className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors"
         >
           Refresh
@@ -297,6 +300,7 @@ export default function AdminBugReports() {
             <div
               key={report.id}
               className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-colors cursor-pointer"
+              data-testid={`bug-report-${report.id}`}
               onClick={() => handleSelectReport(report)}
             >
               <div className="flex items-start justify-between gap-4">
@@ -332,11 +336,13 @@ export default function AdminBugReports() {
       {selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/80" onClick={() => setSelectedReport(null)} />
-          <div className="relative z-10 bg-gray-900 border border-white/10 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+          <div className="relative z-10 bg-gray-900 border border-white/10 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="bug-detail-modal">
             <div className="sticky top-0 bg-gray-900 border-b border-white/10 px-6 py-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-white">Bug Report Details</h2>
               <button
                 onClick={() => setSelectedReport(null)}
+                data-testid="close-bug-modal-btn"
+                aria-label="Close modal"
                 className="text-white/50 hover:text-white"
               >
                 ✕
@@ -352,6 +358,7 @@ export default function AdminBugReports() {
                     value={selectedReport.status}
                     onChange={(e) => updateReport(selectedReport.id, { status: e.target.value })}
                     disabled={updating}
+                    data-testid="bug-status-select"
                     className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500"
                   >
                     {STATUS_OPTIONS.map(opt => (
@@ -365,6 +372,7 @@ export default function AdminBugReports() {
                     value={selectedReport.priority}
                     onChange={(e) => updateReport(selectedReport.id, { priority: e.target.value })}
                     disabled={updating}
+                    data-testid="bug-priority-select"
                     className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500"
                   >
                     {PRIORITY_OPTIONS.map(opt => (
