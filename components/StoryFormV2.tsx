@@ -22,6 +22,7 @@ import {
   useStoryForm, 
   useSubmission,
   FormSection,
+  AIButtons,
   type StoryFormProps,
   type VerificationDocs
 } from './story-form'
@@ -229,30 +230,6 @@ export default function StoryFormV2({ editSubmissionId }: StoryFormProps) {
     }
   }
 
-  // AI button helper
-  const AIButtons = ({ field, value }: { field: 'background' | 'need' | 'fundsUsage', value: string }) => (
-    <div className="mt-2 flex flex-wrap gap-2">
-      {value?.trim() ? (
-        <>
-          <button type="button" disabled={aiBusy} onClick={() => callAI(field, 'improve')} 
-            className="px-3 py-1 text-xs rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 disabled:opacity-50">
-            ✨ Improve
-          </button>
-          <button type="button" disabled={aiBusy} onClick={() => callAI(field, 'expand')} 
-            className="px-3 py-1 text-xs rounded-lg bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 disabled:opacity-50">
-            📝 Expand
-          </button>
-        </>
-      ) : (
-        <button type="button" disabled={aiBusy || !form.storyContent.title?.trim()} onClick={() => callAI(field, 'generate')} 
-          className="px-3 py-1 text-xs rounded-lg bg-green-500/20 text-green-300 hover:bg-green-500/30 disabled:opacity-50">
-          🤖 AI Generate Draft
-        </button>
-      )}
-      {aiBusy && <span className="text-xs text-white/50 animate-pulse">Working...</span>}
-    </div>
-  )
-
   // Loading state
   if (form.editState.loadingEdit) {
     return (
@@ -327,7 +304,7 @@ export default function StoryFormV2({ editSubmissionId }: StoryFormProps) {
           aria-label="Your story background"
           value={form.storyContent.background} onChange={e => form.setBackground(e.target.value)}
           placeholder="Share your background, who you are, and what led to your current situation..." />
-        <AIButtons field="background" value={form.storyContent.background} />
+        <AIButtons field="background" value={form.storyContent.background} aiBusy={aiBusy} onAIAction={callAI} hasTitle={!!form.storyContent.title?.trim()} />
       </FormSection>
 
       {/* Section 4: What You Need */}
@@ -337,7 +314,7 @@ export default function StoryFormV2({ editSubmissionId }: StoryFormProps) {
           aria-label="What you need"
           value={form.storyContent.need} onChange={e => form.setNeed(e.target.value)}
           placeholder="What specific help do you need? Be clear about your immediate needs..." />
-        <AIButtons field="need" value={form.storyContent.need} />
+        <AIButtons field="need" value={form.storyContent.need} aiBusy={aiBusy} onAIAction={callAI} hasTitle={!!form.storyContent.title?.trim()} />
       </FormSection>
 
       {/* Section 5: How Funds Will Be Used */}
@@ -347,7 +324,7 @@ export default function StoryFormV2({ editSubmissionId }: StoryFormProps) {
           aria-label="How funds will be used"
           value={form.storyContent.fundsUsage} onChange={e => form.setFundsUsage(e.target.value)}
           placeholder="Break down how the funds will be allocated..." />
-        <AIButtons field="fundsUsage" value={form.storyContent.fundsUsage} />
+        <AIButtons field="fundsUsage" value={form.storyContent.fundsUsage} aiBusy={aiBusy} onAIAction={callAI} hasTitle={!!form.storyContent.title?.trim()} />
       </FormSection>
 
       {/* Section 6: Fundraising Goal */}
