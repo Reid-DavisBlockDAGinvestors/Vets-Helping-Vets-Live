@@ -402,7 +402,7 @@ export default function PurchasePanelV2({
   }
 
   return (
-    <div className="space-y-5">
+    <div data-testid="purchase-panel" className="space-y-5">
       {/* NFT Purchase Mode */}
       {config.hasNftPrice ? (
         <div className="space-y-4">
@@ -411,11 +411,17 @@ export default function PurchasePanelV2({
             <label className="block text-sm font-medium text-white/80 mb-2">Quantity</label>
             <div className="flex items-center gap-3">
               <button onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={config.isSoldOut || quantity <= 1}
+                data-testid="quantity-decrease-btn"
+                aria-label="Decrease quantity"
                 className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold disabled:opacity-50">−</button>
               <input type="number" min={1} max={config.maxQuantity} value={quantity} disabled={config.isSoldOut}
                 onChange={e => setQuantity(Math.min(config.maxQuantity, Math.max(1, Number(e.target.value))))}
+                data-testid="quantity-input"
+                aria-label="Quantity"
                 className="w-20 text-center rounded-lg bg-white/5 border border-white/10 py-2 text-lg text-white" />
               <button onClick={() => setQuantity(Math.min(config.maxQuantity, quantity + 1))} disabled={config.isSoldOut || quantity >= config.maxQuantity}
+                data-testid="quantity-increase-btn"
+                aria-label="Increase quantity"
                 className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold disabled:opacity-50">+</button>
               <span className="text-white/50 text-sm">× ${pricePerNft} = ${config.nftSubtotal}</span>
             </div>
@@ -462,13 +468,14 @@ export default function PurchasePanelV2({
 
       {/* Payment Method Tabs */}
       <div>
-        <div className="flex rounded-lg bg-white/5 p-1 mb-4">
+        <div data-testid="payment-tabs" className="flex rounded-lg bg-white/5 p-1 mb-4">
           {[
             { id: 'card' as const, label: 'Card', icon: '💳' },
             { id: 'crypto' as const, label: 'Crypto', icon: '⛓️' },
             { id: 'other' as const, label: 'Other', icon: '📱' },
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              data-testid={`payment-tab-${tab.id}`}
               className={`flex-1 rounded-md py-2.5 text-sm font-medium transition-all ${
                 activeTab === tab.id ? 'bg-white/10 text-white shadow-sm' : 'text-white/50 hover:text-white/70'
               }`}><span className="mr-1.5">{tab.icon}</span>{tab.label}</button>
@@ -489,6 +496,7 @@ export default function PurchasePanelV2({
               <div className="space-y-3">
                 <p className="text-sm text-white/70">Connect your wallet to pay with BDAG</p>
                 <button onClick={wallet.connectAuto} disabled={wallet.isConnecting}
+                  data-testid="crypto-connect-wallet-btn"
                   className="w-full rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 px-6 py-4 font-semibold text-white shadow-lg disabled:opacity-50">
                   {wallet.isConnecting ? 'Connecting...' : '🔗 Connect Wallet'}
                 </button>
