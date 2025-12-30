@@ -7,11 +7,35 @@ import { Toaster } from '@/components/Toaster'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import SkipLink from '@/components/SkipLink'
+import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
 import { SKIP_TARGETS } from '@/lib/accessibility'
 
 export const metadata = {
-  title: 'PatriotPledge NFTs',
-  description: 'The most advanced NFT-powered fundraising platform in history.'
+  title: 'PatriotPledge - Support Veterans & First Responders',
+  description: 'The world\'s greatest NFT-powered fundraising platform for veterans and first responders. Make a difference today.',
+  manifest: '/manifest.json',
+  themeColor: '#1e3a5f',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'PatriotPledge',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://patriotpledge.org',
+    siteName: 'PatriotPledge',
+    title: 'PatriotPledge - Support Veterans & First Responders',
+    description: 'The world\'s greatest NFT-powered fundraising platform for veterans and first responders.',
+    images: [{ url: '/api/og', width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PatriotPledge - Support Veterans',
+    description: 'NFT-powered fundraising for those who served.',
+    images: ['/api/og'],
+  },
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -29,6 +53,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <Footer />
           <BugReportButton />
           <Toaster />
+          <ServiceWorkerRegistration />
         </ThemeProvider>
       </body>
     </html>
