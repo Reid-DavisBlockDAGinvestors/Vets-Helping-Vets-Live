@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import AdminCampaignHub from '@/components/AdminCampaignHubV2'
 import AdminGovernance from '@/components/AdminGovernance'
-import AdminUsers from '@/components/AdminUsers'
+import AdminUsers from '@/components/AdminUsersV2'
 import AdminSubmitters from '@/components/AdminSubmitters'
 import AdminBugReports from '@/components/AdminBugReports'
 import AdminSettings from '@/components/AdminSettings'
