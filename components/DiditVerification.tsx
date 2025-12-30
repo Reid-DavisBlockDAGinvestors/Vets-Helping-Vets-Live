@@ -141,12 +141,12 @@ export default function DiditVerification({
             onStatusChange?.('expired')
           } else {
             // Unknown status - log it
-            console.warn('[DiditVerification] Unknown status:', diditStatus)
+            logger.warn('[DiditVerification] Unknown status:', diditStatus)
           }
         }
       }
     } catch (err) {
-      console.error('[DiditVerification] Check status error:', err)
+      logger.error('[DiditVerification] Check status error:', err)
     }
   }
 
@@ -191,7 +191,7 @@ export default function DiditVerification({
         setStatus('in_progress')
       }
     } catch (err: any) {
-      console.error('[DiditVerification] Start error:', err)
+      logger.error('[DiditVerification] Start error:', err)
       setError(err?.message || 'Failed to start verification')
       setStatus('error')
     }

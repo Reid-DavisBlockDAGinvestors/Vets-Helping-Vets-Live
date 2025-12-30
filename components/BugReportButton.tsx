@@ -165,7 +165,7 @@ export default function BugReportButton() {
 
         setScreenshots(prev => [...prev, { url: data.url, filename: data.filename }])
       } catch (err) {
-        console.error('Upload error:', err)
+        logger.error('Upload error:', err)
         setMessage('Failed to upload screenshot')
         setMessageType('error')
       }
@@ -240,7 +240,7 @@ export default function BugReportButton() {
         resetForm()
       }, 3000)
     } catch (err) {
-      console.error('Submit error:', err)
+      logger.error('Submit error:', err)
       setMessage('Failed to submit bug report')
       setMessageType('error')
     } finally {

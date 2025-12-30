@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 import type { UserProfile, CommunityProfile, AuthFormState, AuthMode } from '../types'
 
 /**
@@ -49,7 +50,7 @@ export function useAccountAuth() {
         setCommunityProfile(commData?.profile || null)
       }
     } catch (e) {
-      console.error('Failed to fetch profile:', e)
+      logger.error('Failed to fetch profile:', e)
     }
   }, [])
 

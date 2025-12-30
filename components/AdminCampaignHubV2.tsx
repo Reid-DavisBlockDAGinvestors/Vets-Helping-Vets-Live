@@ -17,6 +17,7 @@
 
 import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 import ErrorWithBugReport from './ErrorWithBugReport'
 import {
   useCampaigns,
@@ -96,7 +97,7 @@ export default function AdminCampaignHubV2() {
       const { url } = await res.json()
       window.open(url, '_blank')
     } catch (e) {
-      console.error('Error viewing document:', e)
+      logger.error('Error viewing document:', e)
       alert('Failed to load document')
     }
   }, [])

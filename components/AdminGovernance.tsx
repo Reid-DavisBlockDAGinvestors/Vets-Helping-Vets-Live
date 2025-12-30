@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { logger } from '@/lib/logger'
 
 type Vote = {
   id: string
@@ -66,7 +67,7 @@ export default function AdminGovernance() {
       const data = await res.json()
       setProposals(data?.items || [])
     } catch (e) {
-      console.error('Failed to load proposals:', e)
+      logger.error('Failed to load proposals:', e)
     } finally {
       setLoading(false)
     }
@@ -82,7 +83,7 @@ export default function AdminGovernance() {
       const data = await res.json()
       setVotes(data?.votes || [])
     } catch (e) {
-      console.error('Failed to load votes:', e)
+      logger.error('Failed to load votes:', e)
       setVotes([])
     } finally {
       setLoadingVotes(false)

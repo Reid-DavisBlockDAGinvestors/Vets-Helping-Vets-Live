@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 import ErrorWithBugReport from './ErrorWithBugReport'
 
 interface BugReport {
@@ -114,7 +115,7 @@ export default function AdminBugReports() {
         resolved: all.filter((r: BugReport) => r.status === 'resolved').length,
       })
     } catch (e) {
-      console.error('Fetch error:', e)
+      logger.error('Fetch error:', e)
       setError('Failed to fetch bug reports')
     } finally {
       setLoading(false)
@@ -176,7 +177,7 @@ export default function AdminBugReports() {
         fetchReports()
       }
     } catch (e) {
-      console.error('Update error:', e)
+      logger.error('Update error:', e)
     } finally {
       setUpdating(false)
     }
@@ -201,7 +202,7 @@ export default function AdminBugReports() {
         fetchReports()
       }
     } catch (e) {
-      console.error('Delete error:', e)
+      logger.error('Delete error:', e)
     } finally {
       setDeleting(false)
     }

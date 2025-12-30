@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 
 interface SubmitterData {
   email: string
@@ -86,7 +87,7 @@ export default function AdminSubmitters() {
         setSubmitterCampaigns(data?.campaigns || [])
       }
     } catch (e) {
-      console.error('Failed to load campaigns:', e)
+      logger.error('Failed to load campaigns:', e)
     } finally {
       setLoadingCampaigns(false)
     }

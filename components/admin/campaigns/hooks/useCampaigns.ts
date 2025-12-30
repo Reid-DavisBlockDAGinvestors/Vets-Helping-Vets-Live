@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 import { mapLegacyCategory } from '@/lib/categories'
 import type { 
   Campaign, 
@@ -150,7 +151,7 @@ export function useCampaigns(): UseCampaignsReturn {
             }
           }
         } catch (e) {
-          console.error('Failed to fetch on-chain stats:', e)
+          logger.error('Failed to fetch on-chain stats:', e)
         }
       }
 

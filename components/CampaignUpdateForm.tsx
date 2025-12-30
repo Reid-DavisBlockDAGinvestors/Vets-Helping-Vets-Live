@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ipfsToHttp } from '@/lib/ipfs'
+import { logger } from '@/lib/logger'
 
 // Supported formats
 const IMAGE_FORMATS = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
@@ -172,7 +173,7 @@ export default function CampaignUpdateForm({ campaign, walletAddress, onClose, o
           uris.push(data.uri)
         }
       } catch (err) {
-        console.error('Failed to upload media:', err)
+        logger.error('Failed to upload media:', err)
       }
     }
     return uris
