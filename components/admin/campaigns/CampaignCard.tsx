@@ -91,7 +91,9 @@ export function CampaignCard({
               <span>Goal: {formatCurrency(campaign.goal)}</span>
               <span>Created: {formatDate(campaign.created_at)}</span>
               {campaign.campaign_id && (
-                <span className="text-green-400">On-chain #{campaign.campaign_id}</span>
+                <span className="text-green-400">
+                  {campaign.contract_address?.toLowerCase().endsWith('7053') ? 'V6' : 'V5'} #{campaign.campaign_id}
+                </span>
               )}
             </div>
 

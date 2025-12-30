@@ -81,7 +81,7 @@ export default function NFTCard({ item }: { item: NFTItem }) {
                     : '0 sold'
                 }
               </span>
-              {item.updateCount && item.updateCount > 0 && (
+              {(item.updateCount ?? 0) > 0 && (
                 <span className={`rounded-full px-2.5 py-1 text-xs font-medium backdrop-blur-sm flex items-center gap-1 ${
                   item.hasRecentUpdate 
                     ? 'bg-green-500/30 text-green-200 border border-green-500/30 animate-pulse' 
