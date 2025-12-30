@@ -6,6 +6,7 @@
  * 
  * Structure:
  * - types.ts - All TypeScript interfaces
+ * - constants.ts - Contract addresses and configuration
  * - hooks/ - Price calculations, auth, and purchase logic
  * - CardPaymentForm.tsx - Stripe card payment UI
  * - CryptoPaymentSection.tsx - BDAG crypto payment UI
@@ -14,6 +15,9 @@
 
 // Types
 export * from './types'
+
+// Constants
+export * from './constants'
 
 // Hooks
 export { 
