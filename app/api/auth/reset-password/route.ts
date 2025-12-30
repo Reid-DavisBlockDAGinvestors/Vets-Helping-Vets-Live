@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { sendPasswordResetEmail } from '@/lib/mailer'
+import { logger } from '@/lib/logger'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://patriotpledgenfts.netlify.app'
 
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     })
 
     if (resetErr || !resetData?.properties?.action_link) {
-      console.error('[reset-password] Failed to generate reset link:', resetErr)
+      logger.error('[reset-password] Failed to generate reset link:', resetErr)
       return NextResponse.json({ error: 'RESET_LINK_FAILED' }, { status: 500 })
     }
 
@@ -49,13 +50,13 @@ export async function POST(req: NextRequest) {
     })
 
     if (emailResult.error) {
-      console.error('[reset-password] Failed to send email:', emailResult.error)
+      logger.error('[reset-password] Failed to send email:', emailResult.error)
       return NextResponse.json({ error: 'EMAIL_SEND_FAILED' }, { status: 500 })
     }
 
     return NextResponse.json({ ok: true, message: 'Password reset email sent' })
   } catch (e: any) {
-    console.error('[reset-password] Error:', e)
+    logger.error('[reset-password] Error:', e)
     return NextResponse.json({ error: 'RESET_FAILED', details: e?.message }, { status: 500 })
   }
 }

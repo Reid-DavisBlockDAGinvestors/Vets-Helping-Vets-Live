@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 
 // GET - Fetch posts with pagination and filters
 export async function GET(req: NextRequest) {
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
     const { data: posts, error } = await query
 
     if (error) {
-      console.error('Posts fetch error:', error)
+      logger.error('[community/posts] Fetch error:', error)
       return NextResponse.json({ error: 'FETCH_FAILED', details: error.message }, { status: 500 })
     }
 
@@ -99,7 +100,7 @@ export async function GET(req: NextRequest) {
       }
     )
   } catch (e: any) {
-    console.error('Posts error:', e)
+    logger.error('[community/posts] Error:', e)
     return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
   }
 }

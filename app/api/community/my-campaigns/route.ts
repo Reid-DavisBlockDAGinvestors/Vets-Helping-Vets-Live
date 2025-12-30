@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
         .in('status', ['minted', 'approved', 'pending'])
         .order('created_at', { ascending: false })
       
-      if (byEmailErr) console.error('[my-campaigns] byEmail error:', byEmailErr)
+      if (byEmailErr) logger.error('[my-campaigns] byEmail error:', byEmailErr)
       createdCampaigns = byEmail || []
     }
     
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
         .select('campaign_id')
         .ilike('email', userEmail)
       
-      if (emailErr) console.error('[my-campaigns] purchases by email error:', emailErr)
+      if (emailErr) logger.error('[my-campaigns] purchases by email error:', emailErr)
       purchases = purchasesByEmail || []
     }
     
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
         .select('campaign_id')
         .ilike('wallet_address', walletAddress)
       
-      if (walletErr) console.error('[my-campaigns] purchases by wallet error:', walletErr)
+      if (walletErr) logger.error('[my-campaigns] purchases by wallet error:', walletErr)
       // Merge unique campaign_ids
       for (const p of (purchasesByWallet || [])) {
         if (!purchases.find(ex => ex.campaign_id === p.campaign_id)) {
@@ -169,7 +169,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ campaigns })
   } catch (e: any) {
-    console.error('[my-campaigns] Error:', e)
+    logger.error('[my-campaigns] Error:', e)
     return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 
 // GET - Get campaign details and community feed
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 
     if (campaignErr || !campaign) {
-      console.error('[community/campaigns] Not found:', campaignId, campaignErr?.message)
+      logger.error('[community/campaigns] Not found:', campaignId, campaignErr?.message)
       return NextResponse.json({ error: 'CAMPAIGN_NOT_FOUND' }, { status: 404 })
     }
 

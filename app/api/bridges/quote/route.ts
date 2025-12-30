@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 // Multi-chain bridge quote placeholder for ETH/SOL→BDAG
 // Body: { asset: 'ETH'|'SOL', amount: number }
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
       notice: 'This is a placeholder. Integrate a real bridge/aggregator API for production.'
     })
   } catch (e) {
-    console.error('bridge quote error', e)
+    logger.error('[bridges/quote] Error:', e)
     return NextResponse.json({ error: 'BRIDGE_QUOTE_FAILED' }, { status: 500 })
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('Insert error:', insertError)
+      logger.error('[campaign-updates] Insert error:', insertError)
       return NextResponse.json({ error: 'INSERT_FAILED', details: insertError.message }, { status: 500 })
     }
 
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
       message: 'Update submitted for admin review'
     })
   } catch (e: any) {
-    console.error('Campaign update POST error:', e)
+    logger.error('[campaign-updates] POST error:', e)
     return NextResponse.json({ error: 'SUBMIT_FAILED', details: e?.message || String(e) }, { status: 500 })
   }
 }
@@ -168,7 +169,7 @@ export async function GET(req: NextRequest) {
       updates: data || []
     })
   } catch (e: any) {
-    console.error('Campaign updates GET error:', e)
+    logger.error('[campaign-updates] GET error:', e)
     return NextResponse.json({ error: 'FETCH_FAILED', details: e?.message || String(e) }, { status: 500 })
   }
 }

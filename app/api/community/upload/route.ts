@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 
 // POST - Upload image to Supabase storage
 export async function POST(req: NextRequest) {
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
       })
 
     if (uploadErr) {
-      console.error('Upload error:', uploadErr)
+      logger.error('[community/upload] Storage error:', uploadErr)
       // Check for common errors
       if (uploadErr.message?.includes('not found') || uploadErr.message?.includes('does not exist')) {
         return NextResponse.json({ 
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
       path: uploadData?.path
     })
   } catch (e: any) {
-    console.error('Upload error:', e)
+    logger.error('[community/upload] Error:', e)
     return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
   }
 }

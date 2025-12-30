@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 
 // POST - Toggle follow on a campaign
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ ok: true, following: true })
     }
   } catch (e: any) {
-    console.error('Follow error:', e)
+    logger.error('[community/campaigns/follow] Error:', e)
     return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
   }
 }

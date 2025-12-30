@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
       })
 
     if (error) {
-      console.error('[bug-reports/upload] Storage error:', error)
+      logger.error('[bug-reports/upload] Storage error:', error)
       
       // If bucket doesn't exist, try to create it
       if (error.message?.includes('not found') || error.message?.includes('does not exist')) {
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
       .from('bug-screenshots')
       .getPublicUrl(filename)
 
-    console.log('[bug-reports/upload] Screenshot uploaded:', filename)
+    logger.debug('[bug-reports/upload] Screenshot uploaded:', filename)
 
     return NextResponse.json({
       success: true,
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
       filename
     })
   } catch (e: any) {
-    console.error('[bug-reports/upload] Error:', e)
+    logger.error('[bug-reports/upload] Error:', e)
     return NextResponse.json(
       { error: 'Failed to upload screenshot', details: e?.message },
       { status: 500 }

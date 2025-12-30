@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
       }))
     })
   } catch (e: any) {
-    console.error('[debug/bug-reports] Error:', e)
+    logger.error('[debug/bug-reports] Error:', e)
     return NextResponse.json({ error: 'Failed to fetch bug reports', details: e?.message }, { status: 500 })
   }
 }

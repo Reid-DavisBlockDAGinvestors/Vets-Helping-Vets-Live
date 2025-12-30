@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -73,7 +74,7 @@ export async function GET(
       isAdmin,
     })
   } catch (e: any) {
-    console.error('[bug-reports/id] GET error:', e)
+    logger.error('[bug-reports/id] GET error:', e)
     return NextResponse.json({ error: 'Failed to fetch report', details: e?.message }, { status: 500 })
   }
 }

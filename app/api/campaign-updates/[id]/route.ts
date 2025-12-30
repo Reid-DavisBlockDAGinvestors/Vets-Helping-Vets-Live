@@ -153,7 +153,7 @@ export async function PATCH(req: NextRequest, context: { params: { id: string } 
               existingMetadata = await res.json()
             }
           } catch (e) {
-            console.warn('Could not fetch existing metadata:', e)
+            logger.warn('[campaign-updates] Could not fetch existing metadata:', e)
           }
         }
 
@@ -230,7 +230,7 @@ export async function PATCH(req: NextRequest, context: { params: { id: string } 
           .eq('id', update.submission_id)
 
       } catch (e: any) {
-        console.error('Metadata update failed:', e)
+        logger.error('[campaign-updates] Metadata update failed:', e)
         return NextResponse.json({ error: 'UPDATE_FAILED', details: e?.message }, { status: 500 })
       }
     }
@@ -259,7 +259,7 @@ export async function PATCH(req: NextRequest, context: { params: { id: string } 
       metadataUri
     })
   } catch (e: any) {
-    console.error('Campaign update PATCH error:', e)
+    logger.error('[campaign-updates] PATCH error:', e)
     return NextResponse.json({ error: 'PROCESS_FAILED', details: e?.message || String(e) }, { status: 500 })
   }
 }
@@ -310,7 +310,7 @@ export async function DELETE(req: NextRequest, context: { params: { id: string }
 
     return NextResponse.json({ ok: true, deleted: id })
   } catch (e: any) {
-    console.error('Campaign update DELETE error:', e)
+    logger.error('[campaign-updates] DELETE error:', e)
     return NextResponse.json({ error: 'DELETE_FAILED', details: e?.message || String(e) }, { status: 500 })
   }
 }

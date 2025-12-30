@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendBugReportMessageEmail } from '@/lib/mailer'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,7 +90,7 @@ export async function POST(
       .single()
 
     if (msgError) {
-      console.error('[bug-reports/messages] Insert error:', msgError)
+      logger.error('[bug-reports/messages] Insert error:', msgError)
       return NextResponse.json({ error: 'Failed to send message', details: msgError.message }, { status: 500 })
     }
 
@@ -116,7 +117,7 @@ export async function POST(
         .eq('id', reportId)
     }
 
-    console.log(`[bug-reports/messages] Message added to ${reportId} by ${userEmail} (admin: ${isAdmin})`)
+    logger.debug(`[bug-reports/messages] Message added to ${reportId} by ${userEmail} (admin: ${isAdmin})`)
 
     return NextResponse.json({ 
       success: true, 
@@ -124,7 +125,7 @@ export async function POST(
       emailSent,
     })
   } catch (e: any) {
-    console.error('[bug-reports/messages] POST error:', e)
+    logger.error('[bug-reports/messages] POST error:', e)
     return NextResponse.json({ error: 'Failed to send message', details: e?.message }, { status: 500 })
   }
 }

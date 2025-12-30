@@ -55,7 +55,7 @@ export async function GET(_req: NextRequest) {
         logger.api(`[Analytics] Donor Retention: ${repeatDonors}/${totalUniqueWallets} wallets (${donorRetention}%) from purchases table`)
       }
     } catch (e: any) {
-      console.error('[Analytics] Donor retention calc error:', e?.message)
+      logger.error('[Analytics] Donor retention calc error:', e?.message)
       // Table might not exist yet - that's OK
     }
 
