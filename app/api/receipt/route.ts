@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
     const bytes = await pdfDoc.save()
     return new NextResponse(Buffer.from(bytes), { headers: { 'Content-Type': 'application/pdf' } })
   } catch (e: any) {
-    console.error('receipt error', e)
+    logger.error('[receipt] Error:', e)
     return NextResponse.json({ error: 'RECEIPT_FAILED' }, { status: 500 })
   }
 }

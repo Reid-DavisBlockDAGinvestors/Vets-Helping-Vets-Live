@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { sendEmail } from '@/lib/mailer'
+import { logger } from '@/lib/logger'
 
 // POST /api/submissions/reject -> reject a submission with reason and send email
 export async function POST(req: NextRequest) {
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest) {
         
         emailSent = true
       } catch (emailErr) {
-        console.error('[Reject] Email send failed:', emailErr)
+        logger.error('[Reject] Email send failed:', emailErr)
         // Continue - email failure shouldn't block the rejection
       }
     }

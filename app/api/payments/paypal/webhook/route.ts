@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     // TODO: trigger milestone releases via oracle
     return NextResponse.json({ received: true })
   } catch (e) {
-    console.error('paypal webhook error', e)
+    logger.error('[paypal/webhook] Error:', e)
     return NextResponse.json({ received: true, error: 'WEBHOOK_ERROR' })
   }
 }

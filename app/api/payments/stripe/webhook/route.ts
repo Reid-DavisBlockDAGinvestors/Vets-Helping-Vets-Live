@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   try {
     event = Stripe.webhooks.constructEvent(buf, sig, secret)
   } catch (err: any) {
-    console.error('stripe webhook signature verify failed', err)
+    logger.error('[stripe/webhook] Signature verify failed:', err)
     return new NextResponse('Bad signature', { status: 400 })
   }
 
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       }
       case 'payment_intent.payment_failed':
       case 'invoice.payment_failed': {
-        console.warn('[webhook] payment failed', event.type)
+        logger.warn('[stripe/webhook] Payment failed:', event.type)
         break
       }
       default:
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
         break
     }
   } catch (e) {
-    console.error('webhook handler error', e)
+    logger.error('[stripe/webhook] Handler error:', e)
     return NextResponse.json({ received: true, error: 'HANDLER_ERROR' })
   }
 

@@ -31,7 +31,7 @@ export async function GET() {
       const supply = await contract.totalSupply()
       totalNFTs = Number(supply)
     } catch (e) {
-      console.error('[Stats] Error getting total supply:', e)
+      logger.error('[Stats] Error getting total supply:', e)
     }
 
     // Get campaign IDs from database (only real campaigns with submissions)
@@ -46,7 +46,7 @@ export async function GET() {
         .map((s: any) => s.campaign_id)
         .filter((id: any): id is number => id != null)
     } catch (e) {
-      console.error('[Stats] Error getting campaigns from DB:', e)
+      logger.error('[Stats] Error getting campaigns from DB:', e)
     }
 
     // Calculate total raised for these campaigns only
@@ -76,7 +76,7 @@ export async function GET() {
       bdagUsdRate: BDAG_USD_RATE
     })
   } catch (e: any) {
-    console.error('[Stats] Error:', e)
+    logger.error('[Stats] Error:', e)
     return NextResponse.json({
       totalRaisedUSD: 0,
       totalCampaigns: 0,

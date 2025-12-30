@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
       })
 
     if (uploadError) {
-      console.error('[verification-upload] Storage error:', uploadError)
+      logger.error('[verification-upload] Storage error:', uploadError)
       return NextResponse.json({ 
         error: 'Upload failed', 
         details: uploadError.message 
@@ -128,7 +129,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('[verification-upload] Error:', error)
+    logger.error('[verification-upload] Error:', error)
     return NextResponse.json({ 
       error: 'Upload failed', 
       details: error?.message 
@@ -177,14 +178,14 @@ export async function GET(req: NextRequest) {
       .createSignedUrl(bucketPath, 3600) // 1 hour expiry
 
     if (error) {
-      console.error('[verification-upload] Signed URL error:', error)
+      logger.error('[verification-upload] Signed URL error:', error)
       return NextResponse.json({ error: 'Failed to generate URL', details: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ url: data.signedUrl })
 
   } catch (error: any) {
-    console.error('[verification-upload] GET error:', error)
+    logger.error('[verification-upload] GET error:', error)
     return NextResponse.json({ error: 'Failed', details: error?.message }, { status: 500 })
   }
 }

@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
       .eq('id', submissionId)
 
     if (updateErr) {
-      console.error('[verify-campaign] Update error:', updateErr)
+      logger.error('[verify-campaign] Update error:', updateErr)
       return NextResponse.json({
         ok: false,
         error: 'UPDATE_FAILED',
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (e: any) {
-    console.error('[verify-campaign] Error:', e)
+    logger.error('[verify-campaign] Error:', e)
     return NextResponse.json({ 
       error: 'VERIFY_CAMPAIGN_FAILED', 
       details: e?.message 

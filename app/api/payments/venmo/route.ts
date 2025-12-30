@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 // Venmo payment placeholder
 // Body: { amount: number (USD cents), tokenId?: string }
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
       notice: 'Placeholder. Implement Venmo API + webhook capture in production.'
     })
   } catch (e:any) {
-    console.error('venmo create error', e)
+    logger.error('[venmo] Create error:', e)
     return NextResponse.json({ error: 'VENMO_CREATE_FAILED' }, { status: 500 })
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyCaptcha } from '@/lib/captcha'
 import { getContract, getRelayerSigner } from '@/lib/onchain'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ status: 'MINT_SERIES_SUBMITTED', txHashes: hashes })
   } catch (e: any) {
-    console.error('mint error', e)
+    logger.error('[mint] Error:', e)
     const details = process.env.NODE_ENV === 'production' ? undefined : (e?.message || String(e))
     return NextResponse.json({ error: 'MINT_FAILED', details }, { status: 500 })
   }

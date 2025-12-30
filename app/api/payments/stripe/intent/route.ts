@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
+import { logger } from '@/lib/logger'
 
 // Create a one-time PaymentIntent for fiat donations (USD)
 // Body: { amount: number (USD cents), tokenId?: string, customerEmail?: string }
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
       breakdown: { amount, nonprofitFeePct: 1, fee, toCreator }
     })
   } catch (e: any) {
-    console.error('stripe intent error', e)
+    logger.error('[stripe/intent] Error:', e)
     return NextResponse.json({ error: 'INTENT_FAILED' }, { status: 500 })
   }
 }

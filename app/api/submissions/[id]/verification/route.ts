@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 
@@ -44,7 +45,7 @@ export async function GET(
       ...data,
     })
   } catch (error: any) {
-    console.error('[Verification Status] Error:', error)
+    logger.error('[Verification Status] Error:', error)
     return NextResponse.json({ error: 'Failed to get verification status' }, { status: 500 })
   }
 }

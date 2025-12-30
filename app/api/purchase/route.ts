@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getExplorerUrl, getUsdPrice as getPrice, getRpcProvider, createProvider } from '@/lib/ethers'
 import { Contract, Wallet, parseUnits, formatUnits } from 'ethers'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
@@ -153,7 +154,7 @@ export async function POST(req: NextRequest) {
           explorerUrl
         })
       } catch (e: any) {
-        console.error('BDAG on-chain purchase failed', e)
+        logger.error('[purchase] BDAG on-chain purchase failed:', e)
         const details = process.env.NODE_ENV === 'production' ? undefined : (e?.message || String(e))
         return NextResponse.json({ error: 'BDAG_ONCHAIN_FAILED', details }, { status: 500 })
       }
@@ -182,7 +183,7 @@ export async function POST(req: NextRequest) {
       breakdown: { nonprofitFeePct: 1, feeAsset, toCreatorAsset, toAddress }
     })
   } catch (e: any) {
-    console.error('purchase error', e)
+    logger.error('[purchase] Error:', e)
     const details = process.env.NODE_ENV === 'production' ? undefined : (e?.message || String(e))
     return NextResponse.json({ error: 'PURCHASE_FAILED', details }, { status: 500 })
   }

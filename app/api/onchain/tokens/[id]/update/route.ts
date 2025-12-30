@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getContract, getRelayerSigner } from '@/lib/onchain'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest, context: { params: { id: string } }) {
   try {
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
           }
         }
       } catch (e) {
-        console.error('[onchain/update] benchmark computation failed', e)
+        logger.error('[onchain/update] Benchmark computation failed:', e)
       }
     }
 

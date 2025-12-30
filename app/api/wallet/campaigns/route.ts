@@ -3,6 +3,7 @@ import { ethers } from 'ethers'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { getContractByAddress, V5_ABI, V6_ABI } from '@/lib/contracts'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -87,7 +88,7 @@ export async function GET(req: NextRequest) {
               closed: camp.closed ?? camp[9] ?? false
             }
           } catch (e: any) {
-            console.error(`Failed to get on-chain data for campaign ${sub.campaign_id}:`, e?.message)
+            logger.error(`[wallet/campaigns] Failed to get on-chain data for campaign ${sub.campaign_id}:`, e?.message)
           }
         }
 
@@ -156,7 +157,7 @@ export async function GET(req: NextRequest) {
       campaigns
     })
   } catch (e: any) {
-    console.error('Wallet campaigns error:', e)
+    logger.error('[wallet/campaigns] Error:', e)
     return NextResponse.json({ error: 'FETCH_FAILED', details: e?.message || String(e) }, { status: 500 })
   }
 }

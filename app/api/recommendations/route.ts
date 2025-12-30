@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 // Placeholder recommendation engine using simple scoring
 // Score by causeType match and keyword overlap; later enhance using Supabase history
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     const ranked = (items as any[]).slice().sort((a, b) => score(b) - score(a)).slice(0, 6)
     return NextResponse.json({ items: ranked })
   } catch (e) {
-    console.error('recommendations error', e)
+    logger.error('[recommendations] Error:', e)
     return NextResponse.json({ error: 'RECOMMENDATIONS_FAILED' }, { status: 500 })
   }
 }

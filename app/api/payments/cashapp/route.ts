@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 // Cash App create payment placeholder
 // Body: { amount: number (USD cents), tokenId?: string }
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
       notice: 'Placeholder. Implement Square/Cash App payment + webhook capture in production.'
     })
   } catch (e:any) {
-    console.error('cashapp create error', e)
+    logger.error('[cashapp] Create error:', e)
     return NextResponse.json({ error: 'CASHAPP_CREATE_FAILED' }, { status: 500 })
   }
 }

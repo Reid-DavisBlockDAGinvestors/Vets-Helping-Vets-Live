@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
+import { logger } from '@/lib/logger'
 
 // Create a Stripe subscription for recurring donations.
 // Body: { amount: number (USD cents), customerEmail: string, tokenId?: string }
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
       breakdown: { amount, nonprofitFeePct: 1, fee, toCreator }
     })
   } catch (e: any) {
-    console.error('stripe subscribe error', e)
+    logger.error('[stripe/subscribe] Error:', e)
     return NextResponse.json({ error: 'SUBSCRIBE_FAILED' }, { status: 500 })
   }
 }

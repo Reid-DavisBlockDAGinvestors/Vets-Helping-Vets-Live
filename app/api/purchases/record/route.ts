@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getRelayerSigner, getContract } from '@/lib/onchain'
+import { logger } from '@/lib/logger'
 
 async function requireAdmin(req: NextRequest) {
   const auth = req.headers.get('authorization') || ''
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
           amount_usd: net ? Number(net) / 100 : null // Assuming cents
         })
       } catch (e) {
-        console.error('[purchases/record] Failed to track purchase:', e)
+        logger.error('[purchases/record] Failed to track purchase:', e)
       }
     }
 

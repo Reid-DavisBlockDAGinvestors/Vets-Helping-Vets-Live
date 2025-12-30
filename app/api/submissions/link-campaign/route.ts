@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (e: any) {
-    console.error('[link-campaign] Error:', e)
+    logger.error('[link-campaign] Error:', e)
     return NextResponse.json({ error: 'LINK_ERROR', details: e?.message }, { status: 500 })
   }
 }
