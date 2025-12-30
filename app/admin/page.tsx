@@ -6,6 +6,7 @@ import AdminGovernance from '@/components/AdminGovernance'
 import AdminUsers from '@/components/AdminUsers'
 import AdminSubmitters from '@/components/AdminSubmitters'
 import AdminBugReports from '@/components/AdminBugReports'
+import AdminSettings from '@/components/AdminSettings'
 import { supabase } from '@/lib/supabase'
 
 type AdminTab = 'campaigns' | 'users' | 'submitters' | 'governance' | 'bugs' | 'settings'
@@ -21,25 +22,16 @@ export default function AdminPage() {
   const [purchasesLoading, setPurchasesLoading] = useState(false)
   const [purchasesSummary, setPurchasesSummary] = useState<any>(null)
   const [authMsg, setAuthMsg] = useState('')
-  const [mktContracts, setMktContracts] = useState<any[]>([])
-  const [mktMsg, setMktMsg] = useState('')
   const [activeTab, setActiveTab] = useState<AdminTab>('campaigns')
-  
-  // Collapsible sections
-  const [showAdvanced, setShowAdvanced] = useState(false)
-  const [backfillMsg, setBackfillMsg] = useState('')
-  const [backfillAddr, setBackfillAddr] = useState('')
   const [checkingSession, setCheckingSession] = useState(true)
   
-  // Admin request state
+  // Admin request state (for login form only)
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [requestName, setRequestName] = useState('')
   const [requestReason, setRequestReason] = useState('')
   const [requestedRole, setRequestedRole] = useState<'admin' | 'moderator' | 'viewer'>('admin')
   const [requestMsg, setRequestMsg] = useState('')
   const [requestLoading, setRequestLoading] = useState(false)
-  const [adminRequests, setAdminRequests] = useState<any[]>([])
-  const [requestsLoading, setRequestsLoading] = useState(false)
   const [userPermissions, setUserPermissions] = useState<any>(null)
 
   // Check for existing session on mount
@@ -177,51 +169,6 @@ export default function AdminPage() {
     }
   }
 
-  // Load admin requests (for admins)
-  const loadAdminRequests = async () => {
-    setRequestsLoading(true)
-    try {
-      const { data: session } = await supabase.auth.getSession()
-      const token = session?.session?.access_token
-      if (!token) return
-
-      const res = await fetch('/api/admin/requests?status=pending', {
-        headers: { authorization: `Bearer ${token}` }
-      })
-      const data = await res.json().catch(() => ({}))
-      setAdminRequests(data?.requests || [])
-    } catch (e) {
-      console.error('Failed to load requests:', e)
-    } finally {
-      setRequestsLoading(false)
-    }
-  }
-
-  // Approve or reject a request
-  const handleRequest = async (requestId: string, action: 'approve' | 'reject', role?: string) => {
-    try {
-      const { data: session } = await supabase.auth.getSession()
-      const token = session?.session?.access_token
-      if (!token) return
-
-      const res = await fetch('/api/admin/requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-        body: JSON.stringify({ requestId, action, role })
-      })
-      const data = await res.json().catch(() => ({}))
-      
-      if (res.ok) {
-        // Refresh the list
-        loadAdminRequests()
-      } else {
-        alert(data?.message || data?.error || 'Action failed')
-      }
-    } catch (e: any) {
-      alert(e?.message || 'Action failed')
-    }
-  }
-
   useEffect(() => {
     const sub = supabase.auth.onAuthStateChange((_e, session) => {
       if (!session) setAuthed(false)
@@ -237,18 +184,6 @@ export default function AdminPage() {
       try {
         const res = await fetch('/api/analytics/summary')
         if (res.ok) setSummary(await res.json())
-      } catch {}
-      try {
-        const { data: session } = await supabase.auth.getSession()
-        const token = session?.session?.access_token
-        if (!token) return
-        const res3 = await fetch('/api/admin/marketplace-contracts', {
-          headers: { authorization: `Bearer ${token}` }
-        })
-        const data3 = await res3.json().catch(()=>({}))
-        if (res3.ok) {
-          setMktContracts(data3?.items || [])
-        }
       } catch {}
     }
     run()
@@ -523,246 +458,7 @@ export default function AdminPage() {
             <AdminBugReports />
           </div>
         )}
-        {activeTab === 'settings' && (
-          <>
-            {/* Admin Access Requests */}
-            <div className="rounded-xl bg-white/5 border border-white/10 p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-white">Admin Access Requests</h2>
-                  <p className="text-sm text-white/50">Review and approve requests for admin access</p>
-                </div>
-                <button
-                  onClick={loadAdminRequests}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
-                >
-                  {requestsLoading ? 'Loading...' : 'Refresh'}
-                </button>
-              </div>
-              
-              {adminRequests.length > 0 ? (
-                <div className="space-y-3">
-                  {adminRequests.map(req => (
-                    <div key={req.id} className="rounded-lg bg-white/5 border border-white/10 p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-white">{req.name || 'No name'}</span>
-                            <span className="text-white/50">•</span>
-                            <span className="text-white/70 text-sm">{req.email}</span>
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                              req.requested_role === 'admin' ? 'bg-blue-500/20 text-blue-400' :
-                              req.requested_role === 'moderator' ? 'bg-purple-500/20 text-purple-400' :
-                              'bg-gray-500/20 text-gray-400'
-                            }`}>
-                              {req.requested_role || 'admin'}
-                            </span>
-                          </div>
-                          {req.reason && (
-                            <p className="text-white/60 text-sm mt-1">{req.reason}</p>
-                          )}
-                          <p className="text-white/40 text-xs mt-2">
-                            Requested: {new Date(req.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <select
-                            id={`role-${req.id}`}
-                            className="rounded-lg bg-white/10 border border-white/10 px-2 py-1.5 text-white text-sm focus:outline-none"
-                            defaultValue={req.requested_role || 'admin'}
-                          >
-                            <option value="admin" className="bg-gray-800">Admin</option>
-                            <option value="moderator" className="bg-gray-800">Moderator</option>
-                            <option value="viewer" className="bg-gray-800">Viewer</option>
-                          </select>
-                          <button
-                            onClick={() => {
-                              const roleSelect = document.getElementById(`role-${req.id}`) as HTMLSelectElement
-                              handleRequest(req.id, 'approve', roleSelect?.value)
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleRequest(req.id, 'reject')}
-                            className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-colors"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-white/40">
-                  <div className="text-3xl mb-2">✅</div>
-                  <p>No pending requests</p>
-                  <p className="text-sm mt-1">Click Refresh to check for new requests</p>
-                </div>
-              )}
-            </div>
-
-            {/* Marketplace Contracts - Compact */}
-        <div className="rounded-xl bg-white/5 border border-white/10 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Marketplace Visibility</h2>
-              <p className="text-sm text-white/50">Control which contracts appear on the public marketplace</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {mktContracts.map(c => {
-              const addr: string = c.contract_address || ''
-              const label: string = c.label || ''
-              const enabled: boolean = c.enabled !== false
-              const short = addr && addr.length > 10 ? `${addr.slice(0,6)}…${addr.slice(-4)}` : addr || '(missing)'
-              return (
-                <div 
-                  key={addr || label} 
-                  className={`flex items-center gap-3 rounded-lg px-4 py-2.5 border transition-colors cursor-pointer ${
-                    enabled 
-                      ? 'bg-green-500/10 border-green-500/30 text-green-300' 
-                      : 'bg-white/5 border-white/10 text-white/50'
-                  }`}
-                  onClick={async () => {
-                    try {
-                      setMktMsg('')
-                      const { data: session } = await supabase.auth.getSession()
-                      const token = session?.session?.access_token
-                      if (!token) { setMktMsg('Missing admin session token'); return }
-                      const res = await fetch('/api/admin/marketplace-contracts', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ contractAddress: addr, enabled: !enabled, label })
-                      })
-                      if (res.ok) {
-                        setMktContracts(prev => prev.map(x => (x.contract_address === addr ? { ...x, enabled: !enabled } : x)))
-                      }
-                    } catch {}
-                  }}
-                >
-                  <div className={`w-3 h-3 rounded-full ${enabled ? 'bg-green-400' : 'bg-white/30'}`} />
-                  <div>
-                    <div className="font-mono text-xs">{short}</div>
-                    {label && <div className="text-xs opacity-70">{label}</div>}
-                  </div>
-                </div>
-              )
-            })}
-            {mktContracts.length === 0 && (
-              <div className="text-white/40 text-sm">No contracts configured yet</div>
-            )}
-          </div>
-          {mktMsg && <div className="text-xs text-red-400 mt-2">{mktMsg}</div>}
-        </div>
-
-        {/* Advanced Tools - Collapsible */}
-        <div className="rounded-xl bg-white/5 border border-white/10 overflow-hidden">
-          <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-xl">⚙️</span>
-              <div className="text-left">
-                <h2 className="font-semibold text-white">Advanced Tools</h2>
-                <p className="text-sm text-white/50">Backfill, cleanup, and other admin utilities</p>
-              </div>
-            </div>
-            <svg 
-              className={`w-5 h-5 text-white/40 transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          
-          {showAdvanced && (
-            <div className="border-t border-white/10 p-6 space-y-6">
-              {/* Backfill */}
-              <div>
-                <h3 className="font-medium text-white mb-2">Backfill On-chain Data</h3>
-                <p className="text-sm text-white/50 mb-3">Scan a contract and sync token data to the database</p>
-                <div className="flex gap-3">
-                  <select
-                    className="flex-1 rounded-lg bg-white/10 border border-white/10 p-2 text-white text-sm"
-                    onChange={e => setBackfillAddr(e.target.value)}
-                    value={backfillAddr || ''}
-                  >
-                    <option value="">Select contract…</option>
-                    <option value={process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''}>Current V5 Contract</option>
-                  </select>
-                  <input
-                    className="flex-1 rounded-lg bg-white/10 border border-white/10 p-2 text-white placeholder:text-white/40 text-sm"
-                    placeholder="Or paste address 0x…"
-                    value={backfillAddr}
-                    onChange={e => setBackfillAddr(e.target.value)}
-                  />
-                  <button
-                    className="rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 px-4 py-2 text-blue-300 text-sm transition-colors"
-                    onClick={async () => {
-                      setBackfillMsg('')
-                      const addr = backfillAddr.trim()
-                      if (!addr) { setBackfillMsg('Enter a contract address first'); return }
-                      try {
-                        const { data: session } = await supabase.auth.getSession()
-                        const token = session?.session?.access_token
-                        if (!token) { setBackfillMsg('Missing admin session token'); return }
-                        const res = await fetch('/api/admin/backfill-contract', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-                          body: JSON.stringify({ contractAddress: addr }),
-                        })
-                        const data = await res.json().catch(()=>({}))
-                        if (!res.ok) {
-                          setBackfillMsg(data?.error || 'Backfill failed')
-                          return
-                        }
-                        const count = Array.isArray(data?.upsertedTokenIds) ? data.upsertedTokenIds.length : 0
-                        setBackfillMsg(`✓ Synced ${count} tokens from ${addr.slice(0,6)}…${addr.slice(-4)}`)
-                      } catch (e:any) {
-                        setBackfillMsg(e?.message || 'Backfill failed')
-                      }
-                    }}
-                  >
-                    Run Backfill
-                  </button>
-                </div>
-                {backfillMsg && (
-                  <div className={`text-sm mt-2 ${backfillMsg.startsWith('✓') ? 'text-green-400' : 'text-red-400'}`}>
-                    {backfillMsg}
-                  </div>
-                )}
-              </div>
-
-              {/* Cleanup */}
-              <div>
-                <h3 className="font-medium text-white mb-2">Background Cleanup</h3>
-                <p className="text-sm text-white/50 mb-3">Process queued asset deletions from cleanup_tasks</p>
-                <button
-                  className="rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 px-4 py-2 text-white/70 text-sm transition-colors"
-                  onClick={async () => {
-                    try {
-                      const { data: session } = await supabase.auth.getSession()
-                      const token = session?.session?.access_token
-                      const headers: Record<string,string> = { 'Content-Type': 'application/json' }
-                      if (token) headers['authorization'] = `Bearer ${token}`
-                      const res = await fetch('/api/cleanup/run', { method: 'POST', headers })
-                      const data = await res.json().catch(()=>({}))
-                      alert(res.ok ? `Processed ${data?.processed || 0} tasks` : 'Cleanup failed')
-                    } catch {}
-                  }}
-                >
-                  Run Cleanup
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-          </>
-        )}
+        {activeTab === 'settings' && <AdminSettings />}
       </div>
 
       {/* Milestone Modal */}
