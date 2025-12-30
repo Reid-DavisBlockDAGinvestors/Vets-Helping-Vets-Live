@@ -103,28 +103,35 @@ This document consolidates all TODOs, planned features, and improvements into a 
 
 ## 🎨 Priority 2: UI/UX → 10/10
 
-### Phase 1: Foundation (Week 1-2)
+### ✅ Completed (Dec 30, 2025)
 - [x] Skeleton loading states
 - [x] Toast notifications (Sonner)
-- [ ] **Dark/Light mode toggle**
-  - Use `next-themes` package
-  - Store preference in localStorage
+- [x] **Dark/Light mode toggle**
+  - `ThemeToggle.tsx` with next-themes
   - System preference detection
+  - data-testid for E2E testing
 
-- [ ] **Page transitions**
-  - Install Framer Motion
-  - Add fade/slide transitions
-  - Stagger animations for lists
+- [x] **Page transitions**
+  - `PageTransition.tsx` with Framer Motion
+  - FadeIn, StaggerContainer, ScaleOnHover components
+  - Smooth page-to-page animations
 
+- [x] **Confetti on purchase success**
+  - `useConfetti.ts` hook with canvas-confetti
+  - Integrated into SuccessMessage component
+  - Multiple animation styles (burst, cannons, shower)
+
+- [x] **Accessibility audit**
+  - `SkipLink.tsx` for keyboard navigation
+  - `lib/accessibility.ts` utilities
+  - ARIA labels on 45+ elements across 20 files
+  - `accessibility.spec.ts` E2E tests
+
+### Remaining
 - [ ] **Loading improvements**
   - Optimistic UI updates
   - Progressive image loading
   - Blur placeholder for images
-
-### Phase 2: Polish (Week 3-4)
-- [ ] **Confetti on purchase success**
-  - Use `canvas-confetti` package
-  - Trigger on successful NFT mint
 
 - [ ] **Micro-interactions**
   - Button hover animations
@@ -135,12 +142,6 @@ This document consolidates all TODOs, planned features, and improvements into a 
   - Install Inter or Geist font
   - Consistent heading scale
   - Prose styling for story content
-
-- [ ] **Accessibility audit**
-  - ARIA labels on all interactive elements
-  - Keyboard navigation
-  - Screen reader testing
-  - WCAG 2.1 AA compliance
 
 ### Phase 3: Advanced (Week 5-8)
 - [ ] **Real-time updates**
@@ -170,21 +171,29 @@ This document consolidates all TODOs, planned features, and improvements into a 
 
 ## 🔒 Priority 3: Security → 10/10
 
-### Immediate Actions
+### ✅ Completed (Dec 30, 2025)
 - [x] Debug endpoints protected
 - [x] CAPTCHA on submissions
 - [x] Audit logging implemented
 - [x] RLS on 7 tables
 
+- [x] **Rate Limiting**
+  - `lib/rateLimit.ts` utility
+  - Pre-configured limiters for API, auth, purchase, upload
+  - In-memory store with automatic cleanup
+  - Rate limit headers on responses
+
+- [x] **Input validation**
+  - `lib/validation.ts` utility
+  - XSS prevention with HTML sanitization
+  - Email, URL, Ethereum address validators
+  - Form-specific validators (submission, purchase, bug report)
+
+### Remaining
 - [ ] **Content Security Policy**
   - Add CSP headers in next.config.mjs
   - Block inline scripts
   - Whitelist trusted domains
-
-- [ ] **Input sanitization**
-  - Install DOMPurify
-  - Sanitize all user-generated content
-  - Prevent XSS attacks
 
 - [ ] **Session management**
   - Session timeout after 30 min inactivity
