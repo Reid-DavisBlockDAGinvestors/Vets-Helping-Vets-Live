@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 
 interface AdminRequest {
   id: string
@@ -61,7 +62,7 @@ export default function AdminSettings() {
         setMktContracts(data?.items || [])
       }
     } catch (e) {
-      console.error('Failed to load contracts:', e)
+      logger.error('Failed to load contracts:', e)
     }
   }
 
@@ -79,7 +80,7 @@ export default function AdminSettings() {
       const data = await res.json().catch(() => ({}))
       setAdminRequests(data?.requests || [])
     } catch (e) {
-      console.error('Failed to load requests:', e)
+      logger.error('Failed to load requests:', e)
     } finally {
       setRequestsLoading(false)
     }
@@ -132,7 +133,7 @@ export default function AdminSettings() {
         ))
       }
     } catch (e) {
-      console.error('Failed to toggle contract:', e)
+      logger.error('Failed to toggle contract:', e)
     }
   }
 

@@ -97,14 +97,14 @@ export async function createVerificationSession(options: CreateSessionOptions): 
     const data = await response.json()
 
     if (!response.ok) {
-      console.error('[Didit] Create session failed:', data)
+      logger.error('[Didit] Create session failed:', data)
       return { success: false, error: data?.message || data?.error || 'Failed to create session' }
     }
 
     logger.debug('[Didit] Session created:', data.session_id)
     return { success: true, session: data }
   } catch (error: any) {
-    console.error('[Didit] Create session error:', error)
+    logger.error('[Didit] Create session error:', error)
     return { success: false, error: error?.message || 'Network error' }
   }
 }
@@ -132,13 +132,13 @@ export async function getSessionDecision(sessionId: string): Promise<{
     const data = await response.json()
 
     if (!response.ok) {
-      console.error('[Didit] Get decision failed:', data)
+      logger.error('[Didit] Get decision failed:', data)
       return { success: false, error: data?.message || 'Failed to get decision' }
     }
 
     return { success: true, decision: data }
   } catch (error: any) {
-    console.error('[Didit] Get decision error:', error)
+    logger.error('[Didit] Get decision error:', error)
     return { success: false, error: error?.message || 'Network error' }
   }
 }
@@ -182,14 +182,14 @@ export async function getSession(sessionId: string): Promise<{
     try {
       data = JSON.parse(rawText)
     } catch (parseErr) {
-      console.error('[Didit] Failed to parse response as JSON')
+      logger.error('[Didit] Failed to parse response as JSON')
       return { success: false, error: `Invalid response from Didit API: ${rawText.slice(0, 100)}` }
     }
     
     logger.debug('[Didit] Get session parsed response:', JSON.stringify(data, null, 2))
 
     if (!response.ok) {
-      console.error('[Didit] Get session failed:', data)
+      logger.error('[Didit] Get session failed:', data)
       return { success: false, error: data?.message || data?.detail || `HTTP ${response.status}` }
     }
 
@@ -204,7 +204,7 @@ export async function getSession(sessionId: string): Promise<{
 
     return { success: true, session }
   } catch (error: any) {
-    console.error('[Didit] Get session error:', error?.message || error)
+    logger.error('[Didit] Get session error:', error?.message || error)
     return { success: false, error: error?.message || 'Network error' }
   }
 }
@@ -214,7 +214,7 @@ export async function getSession(sessionId: string): Promise<{
  */
 export function verifyWebhookSignature(payload: string, signature: string): boolean {
   if (!DIDIT_WEBHOOK_SECRET) {
-    console.warn('[Didit] Webhook secret not configured')
+    logger.warn('[Didit] Webhook secret not configured')
     return false
   }
 
@@ -230,7 +230,7 @@ export function verifyWebhookSignature(payload: string, signature: string): bool
       Buffer.from(expectedSignature)
     )
   } catch (error) {
-    console.error('[Didit] Signature verification error:', error)
+    logger.error('[Didit] Signature verification error:', error)
     return false
   }
 }
