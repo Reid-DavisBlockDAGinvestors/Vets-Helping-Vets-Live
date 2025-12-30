@@ -3,11 +3,13 @@
 /**
  * SuccessMessage Component
  * 
- * Displays purchase success with NFT details
+ * Displays purchase success with NFT details and celebration confetti
  * Following ISP - focused on success display only
  */
 
+import { useEffect } from 'react'
 import type { PurchaseResult } from './types'
+import { useConfetti } from '@/hooks/useConfetti'
 
 export interface SuccessMessageProps {
   result: PurchaseResult
@@ -15,6 +17,15 @@ export interface SuccessMessageProps {
 }
 
 export function SuccessMessage({ result, contractAddress }: SuccessMessageProps) {
+  const { firePurchaseSuccess } = useConfetti()
+
+  // Fire confetti on successful purchase
+  useEffect(() => {
+    if (result.success) {
+      firePurchaseSuccess()
+    }
+  }, [result.success, firePurchaseSuccess])
+
   if (!result.success) return null
 
   return (

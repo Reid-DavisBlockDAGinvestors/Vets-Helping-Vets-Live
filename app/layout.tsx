@@ -6,6 +6,8 @@ import BugReportButton from '@/components/BugReportButton'
 import { Toaster } from '@/components/Toaster'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import ErrorBoundary from '@/components/ErrorBoundary'
+import SkipLink from '@/components/SkipLink'
+import { SKIP_TARGETS } from '@/lib/accessibility'
 
 export const metadata = {
   title: 'PatriotPledge NFTs',
@@ -17,8 +19,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen flex flex-col bg-patriotic-blue dark:bg-patriotic-blue light:bg-gray-50 text-patriotic-white dark:text-patriotic-white light:text-gray-900 transition-colors">
         <ThemeProvider>
+          <SkipLink />
           <NavBar />
-          <main className="flex-1">
+          <main id={SKIP_TARGETS.MAIN_CONTENT} className="flex-1">
             <ErrorBoundary>
               {children}
             </ErrorBoundary>
