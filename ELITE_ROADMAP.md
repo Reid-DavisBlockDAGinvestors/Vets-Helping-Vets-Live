@@ -143,22 +143,31 @@ This document consolidates all TODOs, planned features, and improvements into a 
   - Consistent heading scale
   - Prose styling for story content
 
-### Phase 3: Advanced (Week 5-8)
-- [ ] **Real-time updates**
-  - WebSocket for live donation feed
-  - Supabase Realtime integration
-  - Live progress bar updates
+### ✅ Phase 3: Advanced (Dec 30, 2025)
+- [x] **Real-time updates**
+  - `useRealtimeDonations.ts` hook with Supabase Realtime
+  - `LiveDonationFeed.tsx` component with live ticker
+  - Confetti triggers for large donations
+  - Social proof psychology built-in
 
-- [ ] **OG Image generation**
-  - Dynamic social sharing cards
-  - Campaign stats in image
-  - Vercel OG or Satori
+- [x] **OG Image generation**
+  - `/api/og` edge route with Next.js ImageResponse
+  - Dynamic social cards with campaign stats
+  - Progress bars, donor counts, trust badges
+  - 1200x630 optimized for social sharing
 
-- [ ] **Mobile app feel**
-  - PWA manifest
-  - Add to home screen
-  - Offline support
-  - Push notifications
+- [x] **PWA / Mobile app feel**
+  - `manifest.json` with icons, shortcuts, categories
+  - `sw.js` service worker with offline caching
+  - `/offline` page for network failures
+  - `ServiceWorkerRegistration.tsx` auto-update prompts
+  - Push notification ready
+
+- [x] **Psychology-Driven Engagement**
+  - `ProgressMilestone.tsx` - Goal gradient effect with celebrations
+  - `SocialProofBanner.tsx` - Rotating stats + donation toasts
+  - `UrgencyIndicator.tsx` - Scarcity/countdown triggers
+  - Designed to maximize giving behavior
 
 ### Metrics for 10/10
 - Lighthouse Performance: 90+
@@ -189,9 +198,12 @@ This document consolidates all TODOs, planned features, and improvements into a 
   - Email, URL, Ethereum address validators
   - Form-specific validators (submission, purchase, bug report)
 
+- [x] **Content Security Policy**
+  - CSP headers added to `next.config.mjs`
+  - Whitelisted: Supabase, Stripe, Cloudflare, Pinata, NowNodes
+  - Block object-src, enforce upgrade-insecure-requests
+
 ### Remaining
-- [ ] **Content Security Policy**
-  - Add CSP headers in next.config.mjs
   - Block inline scripts
   - Whitelist trusted domains
 
