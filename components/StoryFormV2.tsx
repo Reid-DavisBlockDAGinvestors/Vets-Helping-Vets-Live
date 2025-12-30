@@ -278,7 +278,7 @@ export default function StoryFormV2({ editSubmissionId }: StoryFormProps) {
   }
 
   return (
-    <form className="space-y-6 max-w-4xl">
+    <form data-testid="story-form" className="space-y-6 max-w-4xl">
       {/* Edit mode banner */}
       {form.editState.editingSubmissionId && (
         <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-4 flex items-start gap-3">
@@ -295,6 +295,7 @@ export default function StoryFormV2({ editSubmissionId }: StoryFormProps) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {CATEGORIES.map((cat) => (
             <button key={cat.id} type="button" onClick={() => form.setCategory(cat.id)}
+              data-testid={`category-btn-${cat.id}`}
               className={`rounded-lg px-3 py-3 text-sm font-medium transition-all flex flex-col items-center gap-1 ${
                 form.storyContent.category === cat.id 
                   ? 'bg-blue-500 text-white shadow-lg' 
@@ -313,6 +314,8 @@ export default function StoryFormV2({ editSubmissionId }: StoryFormProps) {
       {/* Section 2: Campaign Title */}
       <FormSection sectionNumber={2} title="Campaign Title" subtitle="Create a compelling title that captures attention">
         <input className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50" 
+          data-testid="story-title-input"
+          aria-label="Campaign title"
           value={form.storyContent.title} onChange={e => form.setTitle(e.target.value)} 
           placeholder="e.g., Help John recover from surgery and get back on his feet" />
       </FormSection>
@@ -320,6 +323,8 @@ export default function StoryFormV2({ editSubmissionId }: StoryFormProps) {
       {/* Section 3: Your Story */}
       <FormSection sectionNumber={3} title="Your Story" subtitle="Tell us about yourself and your situation">
         <textarea className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50 min-h-[120px]" 
+          data-testid="story-background-input"
+          aria-label="Your story background"
           value={form.storyContent.background} onChange={e => form.setBackground(e.target.value)}
           placeholder="Share your background, who you are, and what led to your current situation..." />
         <AIButtons field="background" value={form.storyContent.background} />
@@ -328,6 +333,8 @@ export default function StoryFormV2({ editSubmissionId }: StoryFormProps) {
       {/* Section 4: What You Need */}
       <FormSection sectionNumber={4} title="What You Need" subtitle="Explain specifically what you need help with">
         <textarea className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50 min-h-[100px]" 
+          data-testid="story-need-input"
+          aria-label="What you need"
           value={form.storyContent.need} onChange={e => form.setNeed(e.target.value)}
           placeholder="What specific help do you need? Be clear about your immediate needs..." />
         <AIButtons field="need" value={form.storyContent.need} />
@@ -336,6 +343,8 @@ export default function StoryFormV2({ editSubmissionId }: StoryFormProps) {
       {/* Section 5: How Funds Will Be Used */}
       <FormSection sectionNumber={5} title="How Funds Will Be Used" subtitle="Be transparent about how donations will help">
         <textarea className="w-full rounded-lg bg-white/10 border border-white/10 p-3 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50 min-h-[100px]" 
+          data-testid="story-funds-input"
+          aria-label="How funds will be used"
           value={form.storyContent.fundsUsage} onChange={e => form.setFundsUsage(e.target.value)}
           placeholder="Break down how the funds will be allocated..." />
         <AIButtons field="fundsUsage" value={form.storyContent.fundsUsage} />
@@ -347,6 +356,8 @@ export default function StoryFormV2({ editSubmissionId }: StoryFormProps) {
           <div className="relative flex-1 max-w-xs">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">$</span>
             <input type="number" className="w-full rounded-lg bg-white/10 border border-white/10 pl-8 pr-4 py-3 text-white text-xl font-semibold focus:outline-none focus:border-blue-500/50" 
+              data-testid="story-goal-input"
+              aria-label="Fundraising goal in USD"
               value={form.storyContent.goal} onChange={e => form.setGoal(Number(e.target.value))} min={100} />
           </div>
           <span className="text-white/50">USD</span>
@@ -527,10 +538,12 @@ export default function StoryFormV2({ editSubmissionId }: StoryFormProps) {
               {captcha.error && <p className="text-red-400 text-sm">CAPTCHA error: {captcha.error}</p>}
               <div className="flex gap-3">
                 <button type="button" onClick={handlePreview} disabled={form.submissionState.isSubmitting}
+                  data-testid="story-preview-btn"
                   className="rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 px-5 py-3 text-white transition-all disabled:opacity-50">
                   Preview NFT
                 </button>
                 <button type="button" onClick={handleSubmit} disabled={form.submissionState.isSubmitting || (captcha.isRequired && !captcha.isVerified)}
+                  data-testid="story-submit-btn"
                   className={`rounded-lg px-6 py-3 font-medium transition-all ${
                     !form.submissionState.isSubmitting && (!captcha.isRequired || captcha.isVerified)
                       ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25' 
