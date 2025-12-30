@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 // Simple Grok/xAI integration placeholder for story summarization/enhancement
 // Expects env GROK_API_KEY if using external API. Falls back to local heuristic.
@@ -43,7 +44,7 @@ Story:\n${story}`
           return NextResponse.json({ text: content })
         }
       } catch (err) {
-        console.warn('GROK_API fallback due to error', err)
+        logger.warn('[ai/summarize] GROK_API fallback due to error', err)
       }
     }
 
@@ -60,7 +61,7 @@ Story:\n${story}`
       return NextResponse.json({ text: summary.slice(0, 600) })
     }
   } catch (e) {
-    console.error('ai/summarize error', e)
+    logger.error('[ai/summarize] Error:', e)
     return NextResponse.json({ error: 'AI_SUMMARY_FAILED' }, { status: 500 })
   }
 }

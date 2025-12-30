@@ -97,7 +97,7 @@ export async function GET(_req: NextRequest) {
       recentMilestones: (milestoneData || []).slice(0, 10)
     })
   } catch (e: any) {
-    console.error('[Analytics] Error:', e)
+    logger.error('[Analytics] Error:', e)
     return NextResponse.json({
       fundsRaised: 0,
       purchases: 0,

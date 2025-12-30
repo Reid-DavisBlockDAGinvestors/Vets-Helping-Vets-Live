@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (e: any) {
-    console.error('[fix-campaign] Error:', e)
+    logger.error('[fix-campaign] Error:', e)
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }
 }
@@ -247,7 +247,7 @@ export async function GET(req: NextRequest) {
     })
 
   } catch (e: any) {
-    console.error('[fix-campaign] GET Error:', e)
+    logger.error('[fix-campaign] GET Error:', e)
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }
 }

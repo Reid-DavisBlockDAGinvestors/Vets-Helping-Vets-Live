@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { logger } from '@/lib/logger'
 
 // GET - Fetch all purchases (admin only)
 export async function GET(req: NextRequest) {
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
     const { data: purchases, error, count } = await query
 
     if (error) {
-      console.error('[admin/purchases] Query error:', error)
+      logger.error('[admin/purchases] Query error:', error)
       return NextResponse.json({ error: 'Failed to fetch purchases', details: error.message }, { status: 500 })
     }
 
@@ -93,7 +94,7 @@ export async function GET(req: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('[admin/purchases] Error:', error)
+    logger.error('[admin/purchases] Error:', error)
     return NextResponse.json({ error: 'Failed', details: error?.message }, { status: 500 })
   }
 }

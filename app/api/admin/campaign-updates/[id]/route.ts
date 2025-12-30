@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,13 +63,13 @@ export async function PATCH(req: NextRequest, context: { params: { id: string } 
       .single()
     
     if (error) {
-      console.error('Update error:', error)
+      logger.error('[admin/campaign-updates] Update error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
     
     return NextResponse.json({ success: true, update: data })
   } catch (e: any) {
-    console.error('Campaign update PATCH error:', e)
+    logger.error('[admin/campaign-updates] PATCH error:', e)
     return NextResponse.json({ error: e?.message || 'Update failed' }, { status: 500 })
   }
 }

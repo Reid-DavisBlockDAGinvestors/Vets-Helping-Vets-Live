@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (e: any) {
-    console.error('[verify-campaign] Error:', e)
+    logger.error('[verify-campaign] Error:', e)
     return NextResponse.json({ 
       error: 'Verification failed', 
       details: e?.message || String(e) 

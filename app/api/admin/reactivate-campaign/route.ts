@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         }, { status: 400 })
       }
     } catch (e: any) {
-      console.error(`[reactivate-campaign] Error fetching campaign:`, e.message)
+      logger.error(`[reactivate-campaign] Error fetching campaign:`, e.message)
       return NextResponse.json({ 
         error: 'Failed to fetch campaign state', 
         details: e.message 
@@ -68,14 +68,14 @@ export async function POST(req: NextRequest) {
         txHash: tx.hash
       })
     } catch (e: any) {
-      console.error(`[reactivate-campaign] Error reactivating:`, e.message)
+      logger.error(`[reactivate-campaign] Error reactivating:`, e.message)
       return NextResponse.json({ 
         error: 'Failed to reactivate campaign', 
         details: e.message 
       }, { status: 500 })
     }
   } catch (e: any) {
-    console.error('[reactivate-campaign] Error:', e)
+    logger.error('[reactivate-campaign] Error:', e)
     return NextResponse.json({ 
       error: 'Reactivate campaign failed', 
       details: e?.message 

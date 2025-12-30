@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 // GET - Get campaigns for a specific submitter
 export async function GET(req: NextRequest, { params }: { params: { email: string } }) {
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest, { params }: { params: { email: strin
       .order('created_at', { ascending: false })
 
     if (submissionsErr) {
-      console.error('[admin/submitters/campaigns] error:', submissionsErr)
+      logger.error('[admin/submitters/campaigns] error:', submissionsErr)
       return NextResponse.json({ error: 'QUERY_FAILED' }, { status: 500 })
     }
 
@@ -91,7 +92,7 @@ export async function GET(req: NextRequest, { params }: { params: { email: strin
 
     return NextResponse.json({ campaigns })
   } catch (e: any) {
-    console.error('[admin/submitters/campaigns] Error:', e)
+    logger.error('[admin/submitters/campaigns] Error:', e)
     return NextResponse.json({ error: 'FAILED', details: e?.message }, { status: 500 })
   }
 }

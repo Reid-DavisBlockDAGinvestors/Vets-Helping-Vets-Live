@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('[AI Assist] API error:', response.status, errorText)
+      logger.error('[AI Assist] API error:', response.status, errorText)
       return NextResponse.json({ 
         error: `AI service error: ${response.status}` 
       }, { status: 500 })
@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('[AI Assist] Error:', error)
+    logger.error('[AI Assist] Error:', error)
     return NextResponse.json({ 
       error: error?.message || 'AI assist failed' 
     }, { status: 500 })

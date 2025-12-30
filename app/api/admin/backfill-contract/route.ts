@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { PatriotPledgeV2ABI, getProvider } from '@/lib/onchain'
 import { ethers } from 'ethers'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
@@ -69,13 +70,13 @@ export async function POST(req: NextRequest) {
         upserted.push(tokenId)
       } catch (e) {
         // Skip individual token errors but continue with others
-        console.error('backfill token error', e)
+        logger.error('[backfill-contract] Token error:', e)
       }
     }
 
     return NextResponse.json({ ok: true, contractAddress: addr, totalSupply, upsertedTokenIds: upserted })
   } catch (e: any) {
-    console.error('backfill-contract error', e)
+    logger.error('[backfill-contract] Error:', e)
     return NextResponse.json({ error: 'BACKFILL_FAILED', details: e?.message || String(e) }, { status: 500 })
   }
 }
