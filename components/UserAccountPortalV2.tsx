@@ -105,7 +105,7 @@ export default function UserAccountPortalV2() {
         >
           <UserAvatar 
             avatarUrl={auth.communityProfile?.avatar_url} 
-            displayName={auth.communityProfile?.display_name || auth.user?.email} 
+            email={auth.communityProfile?.display_name || auth.user?.email} 
             size="sm"
           />
           <span className="text-white text-sm hidden sm:inline">
@@ -127,7 +127,7 @@ export default function UserAccountPortalV2() {
               <div className="flex items-center gap-3">
                 <UserAvatar 
                   avatarUrl={auth.communityProfile?.avatar_url} 
-                  displayName={auth.communityProfile?.display_name || auth.user?.email}
+                  email={auth.communityProfile?.display_name || auth.user?.email}
                   size="md"
                 />
                 <div className="flex-1 min-w-0">
@@ -187,7 +187,6 @@ export default function UserAccountPortalV2() {
               isConnected={wallet.isConnected}
               balance={wallet.balance}
               isOnBlockDAG={wallet.isOnBlockDAG}
-              onConnect={wallet.connect}
               onDisconnect={wallet.disconnect}
               onSwitchNetwork={wallet.switchToBlockDAG}
             />
