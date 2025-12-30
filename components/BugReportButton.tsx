@@ -271,6 +271,8 @@ export default function BugReportButton() {
       {/* Floating Bug Report Button */}
       <button
         onClick={openModal}
+        data-testid="bug-report-fab-btn"
+        aria-label="Report a Bug"
         className="fixed bottom-4 right-4 z-50 bg-red-600 hover:bg-red-500 text-white p-3 rounded-full shadow-lg transition-all hover:scale-110 group"
         title="Report a Bug"
       >
@@ -299,6 +301,8 @@ export default function BugReportButton() {
                 </div>
                 <button
                   onClick={() => !isSubmitting && setIsOpen(false)}
+                  data-testid="bug-report-close-btn"
+                  aria-label="Close bug report modal"
                   className="text-white/50 hover:text-white p-1"
                   disabled={isSubmitting}
                 >
@@ -354,6 +358,8 @@ export default function BugReportButton() {
                     <select
                       value={category}
                       onChange={e => setCategory(e.target.value)}
+                      data-testid="bug-report-category-select"
+                      aria-label="Bug category"
                       className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white focus:outline-none focus:border-blue-500/50"
                     >
                       {CATEGORIES.map(cat => (
@@ -374,6 +380,8 @@ export default function BugReportButton() {
                       value={title}
                       onChange={e => setTitle(e.target.value)}
                       placeholder="e.g., Cannot complete purchase"
+                      data-testid="bug-report-title-input"
+                      aria-label="Bug report title"
                       className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
                       maxLength={200}
                     />
@@ -389,6 +397,8 @@ export default function BugReportButton() {
                       onChange={e => setDescription(e.target.value)}
                       placeholder="Describe what you were trying to accomplish when the error occurred..."
                       rows={3}
+                      data-testid="bug-report-description-input"
+                      aria-label="Bug description"
                       className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50 resize-none"
                     />
                   </div>
@@ -403,6 +413,8 @@ export default function BugReportButton() {
                       onChange={e => setStepsToReproduce(e.target.value)}
                       placeholder="1. Go to page...&#10;2. Click on...&#10;3. Error appears..."
                       rows={3}
+                      data-testid="bug-report-steps-input"
+                      aria-label="Steps to reproduce"
                       className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50 resize-none"
                     />
                   </div>
@@ -417,6 +429,8 @@ export default function BugReportButton() {
                       onChange={e => setExpectedBehavior(e.target.value)}
                       placeholder="What should have happened instead..."
                       rows={2}
+                      data-testid="bug-report-expected-input"
+                      aria-label="Expected behavior"
                       className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50 resize-none"
                     />
                   </div>
@@ -508,6 +522,7 @@ export default function BugReportButton() {
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting || !title.trim() || !description.trim()}
+                    data-testid="bug-report-submit-btn"
                     className="w-full px-4 py-3 rounded-lg bg-red-600 hover:bg-red-500 disabled:bg-red-800 text-white font-medium transition-colors disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? 'Submitting...' : 'Submit Bug Report'}
