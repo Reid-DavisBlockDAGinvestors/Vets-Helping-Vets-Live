@@ -5,7 +5,7 @@ import SocialLinks from './SocialLinks'
 
 export default function Footer() {
   return (
-    <footer className="border-t border-white/10 bg-patriotic-navy">
+    <footer data-testid="main-footer" className="border-t border-white/10 bg-patriotic-navy">
       <div className="container py-6 text-sm text-white/70">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

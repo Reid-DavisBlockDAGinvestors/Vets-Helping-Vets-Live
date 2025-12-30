@@ -351,6 +351,8 @@ export default function UserAccountPortal() {
           // Not logged in
           <button
             onClick={() => setShowAuthModal(true)}
+            data-testid="sign-in-btn"
+            aria-label="Sign in"
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-all"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -362,7 +364,7 @@ export default function UserAccountPortal() {
 
         {/* Dropdown Menu - responsive positioning for mobile */}
         {isOpen && user && (
-          <div className="fixed sm:absolute inset-x-4 sm:inset-x-auto sm:right-0 top-16 sm:top-auto sm:mt-2 w-auto sm:w-80 bg-gray-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+          <div data-testid="user-dropdown" className="fixed sm:absolute inset-x-4 sm:inset-x-auto sm:right-0 top-16 sm:top-auto sm:mt-2 w-auto sm:w-80 bg-gray-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
             {/* User Info */}
             <div className="p-4 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
               <div className="flex items-center gap-3">
@@ -451,6 +453,7 @@ export default function UserAccountPortal() {
               )}
               <button
                 onClick={handleLogout}
+                data-testid="sign-out-btn"
                 className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
               >
                 <span>🚪</span>
@@ -469,9 +472,11 @@ export default function UserAccountPortal() {
               className="fixed inset-0 bg-black/80 backdrop-blur-sm"
               onClick={() => setShowAuthModal(false)}
             />
-            <div className="relative z-[100000] bg-gray-900 border border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div data-testid="auth-modal" className="relative z-[100000] bg-gray-900 border border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6">
             <button
               onClick={() => setShowAuthModal(false)}
+              data-testid="auth-modal-close-btn"
+              aria-label="Close modal"
               className="absolute top-4 right-4 text-white/50 hover:text-white"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -502,6 +507,8 @@ export default function UserAccountPortal() {
                       placeholder="First Name"
                       value={firstName}
                       onChange={e => setFirstName(e.target.value)}
+                      data-testid="signup-firstname-input"
+                      aria-label="First name"
                       className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
                     />
                     <input
@@ -509,6 +516,8 @@ export default function UserAccountPortal() {
                       placeholder="Last Name"
                       value={lastName}
                       onChange={e => setLastName(e.target.value)}
+                      data-testid="signup-lastname-input"
+                      aria-label="Last name"
                       className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
                     />
                   </div>
@@ -526,6 +535,8 @@ export default function UserAccountPortal() {
                 placeholder="Email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
+                data-testid="auth-email-input"
+                aria-label="Email address"
                 className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
               />
               {authMode !== 'forgot' && (
@@ -535,6 +546,8 @@ export default function UserAccountPortal() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && (authMode === 'login' ? handleLogin() : handleSignup())}
+                  data-testid="auth-password-input"
+                  aria-label="Password"
                   className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
                 />
               )}

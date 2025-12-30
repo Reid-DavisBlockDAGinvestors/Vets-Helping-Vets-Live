@@ -111,12 +111,13 @@ export default function NavBar() {
   const isActiveLink = (href: string) => pathname === href
 
   const headerContent = (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-patriotic-navy/95 backdrop-blur-lg">
+    <header data-testid="main-header" className="sticky top-0 z-50 border-b border-white/10 bg-patriotic-navy/95 backdrop-blur-lg">
       <div className="container">
         <div className="flex items-center justify-between h-14 sm:h-16">
           {/* Logo */}
           <Link 
             href="/" 
+            data-testid="logo-link"
             className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 hover:opacity-90 transition-opacity"
           >
             <span className="text-2xl">🎖️</span>
@@ -126,11 +127,12 @@ export default function NavBar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav data-testid="desktop-nav" className="hidden lg:flex items-center gap-1">
             {NAV_LINKS.map(link => (
               <Link
                 key={link.href}
                 href={link.href}
+                data-testid={`nav-link-${link.href.replace('/', '')}`}
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                   isActiveLink(link.href)
                     ? 'bg-white/10 text-white'
@@ -156,6 +158,8 @@ export default function NavBar() {
                 <>
                   <button
                     onClick={() => setWalletDropdownOpen(!walletDropdownOpen)}
+                    data-testid="wallet-connected-btn"
+                    aria-label="Wallet options"
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                       isOnBlockDAG 
                         ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30' 
@@ -171,7 +175,7 @@ export default function NavBar() {
 
                   {/* Wallet Dropdown */}
                   {walletDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-64 bg-gray-900 border border-white/10 rounded-xl shadow-xl overflow-hidden z-50">
+                    <div data-testid="wallet-dropdown" className="absolute right-0 mt-2 w-64 bg-gray-900 border border-white/10 rounded-xl shadow-xl overflow-hidden z-50">
                       <div className="p-4 border-b border-white/10">
                         <div className="text-xs text-white/50 mb-1">Connected Wallet</div>
                         <div className="font-mono text-sm text-white break-all">{address}</div>
@@ -191,6 +195,7 @@ export default function NavBar() {
                         {!isOnBlockDAG && (
                           <button
                             onClick={() => { switchToBlockDAG(); setWalletDropdownOpen(false); }}
+                            data-testid="switch-network-btn"
                             className="mt-2 w-full px-3 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg text-sm font-medium transition-colors"
                           >
                             Switch to BlockDAG
@@ -201,6 +206,7 @@ export default function NavBar() {
                       <div className="p-2">
                         <button
                           onClick={() => { disconnect(); setWalletDropdownOpen(false); }}
+                          data-testid="disconnect-wallet-btn"
                           className="w-full px-3 py-2 text-red-400 hover:bg-red-500/10 rounded-lg text-sm font-medium transition-colors text-left"
                         >
                           Disconnect
@@ -213,6 +219,8 @@ export default function NavBar() {
                 <button
                   onClick={handleConnect}
                   disabled={isConnecting}
+                  data-testid="connect-wallet-btn"
+                  aria-label="Connect wallet"
                   className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-patriotic-red hover:bg-red-600 disabled:bg-red-800 text-white rounded-lg text-sm font-medium transition-all disabled:cursor-wait"
                 >
                   {isConnecting ? (
@@ -247,6 +255,7 @@ export default function NavBar() {
             <button
               ref={hamburgerButtonRef}
               onClick={() => setMobileMenuOpen(prev => !prev)}
+              data-testid="mobile-menu-btn"
               className="lg:hidden p-3 -mr-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 active:bg-white/20 transition-colors touch-manipulation select-none"
               aria-label="Toggle menu"
               aria-expanded={mobileMenuOpen}
