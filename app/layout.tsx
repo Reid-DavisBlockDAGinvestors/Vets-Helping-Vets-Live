@@ -12,12 +12,20 @@ import SkipLink from '@/components/SkipLink'
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
 import { SKIP_TARGETS } from '@/lib/accessibility'
 
-export const metadata = {
+import type { Metadata, Viewport } from 'next'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#1e3a5f',
+}
+
+export const metadata: Metadata = {
+  metadataBase: new URL('https://patriotpledge.org'),
   title: 'PatriotPledge - Support Veterans & First Responders',
   description: 'The world\'s greatest NFT-powered fundraising platform for veterans and first responders. Make a difference today.',
   manifest: '/manifest.json',
-  themeColor: '#1e3a5f',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
