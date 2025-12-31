@@ -170,6 +170,7 @@ export async function GET(req: NextRequest) {
 
     // Build spending stats from purchases table
     const walletSpending: Record<string, { total: number, count: number, first_purchase: string | null }> = {}
+    const walletToEmail: Record<string, string> = {} // Map wallet addresses to emails
     const emailSpending: Record<string, { total: number, count: number }> = {}
     const userIdSpending: Record<string, { total: number, count: number }> = {}
 
@@ -186,6 +187,10 @@ export async function GET(req: NextRequest) {
         walletSpending[key].count += 1
         if (!walletSpending[key].first_purchase) {
           walletSpending[key].first_purchase = p.created_at
+        }
+        // Capture email associated with this wallet (use most recent)
+        if (p.email && !walletToEmail[key]) {
+          walletToEmail[key] = p.email
         }
       }
       
@@ -289,10 +294,16 @@ export async function GET(req: NextRequest) {
       if (addedWallets.has(walletKey)) continue
       addedWallets.add(walletKey)
       
+      // Get email from purchases table if available
+      const purchaseEmail = walletToEmail[walletKey] || null
+      const displayName = purchaseEmail 
+        ? purchaseEmail.split('@')[0] 
+        : `${walletKey.slice(0, 6)}...${walletKey.slice(-4)}`
+      
       users.push({
         id: walletKey,
-        email: null,
-        display_name: `${walletKey.slice(0, 6)}...${walletKey.slice(-4)}`,
+        email: purchaseEmail,
+        display_name: displayName,
         avatar_url: null,
         role: 'buyer',
         created_at: stats.first_purchase,
