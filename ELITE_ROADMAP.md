@@ -127,16 +127,24 @@ This document consolidates all TODOs, planned features, and improvements into a 
   - ARIA labels on 45+ elements across 20 files
   - `accessibility.spec.ts` E2E tests
 
+### ✅ Completed (Dec 31, 2025)
+- [x] **Micro-interactions**
+  - Button hover lift effect (`.btn-lift`)
+  - Card lift effects (`.card-hover`)
+  - Scale on hover (`.scale-hover`)
+  - Glow effect for CTAs (`.glow-hover`)
+  - Form field focus animations (`.input-focus`)
+  - Pulse animation (`.pulse-soft`)
+  - Shimmer loading (`.shimmer`)
+  - Fade in animation (`.fade-in`)
+  - Stagger children animation (`.stagger-children`)
+  - Bounce on click (`.bounce-click`)
+
 ### Remaining
 - [ ] **Loading improvements**
   - Optimistic UI updates
   - Progressive image loading
   - Blur placeholder for images
-
-- [ ] **Micro-interactions**
-  - Button hover animations
-  - Card lift effects
-  - Form field focus animations
 
 - [ ] **Typography upgrade**
   - Install Inter or Geist font
@@ -234,8 +242,8 @@ This document consolidates all TODOs, planned features, and improvements into a 
 ## 🧪 Priority 4: Test Coverage → 10/10
 
 ### Current Coverage
-- E2E Tests: 116 tests (Playwright) ✅ Updated Dec 27, 2025
-- Unit Tests: 0 (need to add)
+- E2E Tests: 119 tests (Playwright) ✅ Updated Dec 30, 2025
+- Unit Tests: 148 tests (Jest) ✅ Added Dec 31, 2025
 - Integration Tests: 0 (need to add)
 
 ### Test Pyramid
