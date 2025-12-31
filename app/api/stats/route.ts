@@ -1,79 +1,56 @@
 import { NextResponse } from 'next/server'
-import { ethers } from 'ethers'
-import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 60 // Cache for 60 seconds
+export const revalidate = 0 // No cache - always fresh data
 
-const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
-
+/**
+ * Stats API - Uses purchases table as source of truth
+ * This ensures accurate data regardless of blockchain RPC status
+ */
 export async function GET() {
   try {
-    const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
+    // Get total raised from purchases table (source of truth)
+    const { data: purchases, error: purchaseError } = await supabaseAdmin
+      .from('purchases')
+      .select('amount_usd, tip_usd, quantity')
     
-    if (!contractAddress) {
+    if (purchaseError) {
+      logger.error('[Stats] Error fetching purchases:', purchaseError)
       return NextResponse.json({
         totalRaisedUSD: 0,
         totalCampaigns: 0,
         totalNFTsMinted: 0,
-        error: 'No contract configured'
+        error: purchaseError.message
       })
     }
 
-    const provider = getProvider()
-    const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
-
-    // Get total NFTs minted (totalSupply)
-    let totalNFTs = 0
-    try {
-      const supply = await contract.totalSupply()
-      totalNFTs = Number(supply)
-    } catch (e) {
-      logger.error('[Stats] Error getting total supply:', e)
-    }
-
-    // Get campaign IDs from database (only real campaigns with submissions)
-    let campaignIds: number[] = []
-    try {
-      const { data: submissions } = await supabaseAdmin
-        .from('submissions')
-        .select('campaign_id')
-        .not('campaign_id', 'is', null)
-      
-      campaignIds = (submissions || [])
-        .map((s: any) => s.campaign_id)
-        .filter((id: any): id is number => id != null)
-    } catch (e) {
-      logger.error('[Stats] Error getting campaigns from DB:', e)
-    }
-
-    // Calculate total raised for these campaigns only
-    let totalGrossRaisedWei = BigInt(0)
+    // Calculate totals from purchases
+    let totalRaisedUSD = 0
+    let totalNFTsSold = 0
     
-    for (const campaignId of campaignIds) {
-      try {
-        const campaign = await contract.getCampaign(campaignId)
-        const grossRaised = BigInt(campaign.grossRaised ?? campaign[3] ?? 0n)
-        totalGrossRaisedWei += grossRaised
-      } catch {
-        // Campaign might not exist on chain
-      }
+    for (const p of purchases || []) {
+      totalRaisedUSD += (p.amount_usd || 0) + (p.tip_usd || 0)
+      totalNFTsSold += p.quantity || 1
     }
 
-    // Convert to BDAG then USD
-    const totalRaisedBDAG = Number(totalGrossRaisedWei) / 1e18
-    const totalRaisedUSD = totalRaisedBDAG * BDAG_USD_RATE
+    // Get campaign count from submissions
+    const { data: campaigns, error: campaignError } = await supabaseAdmin
+      .from('submissions')
+      .select('id')
+      .eq('status', 'minted')
+    
+    const totalCampaigns = campaigns?.length || 0
 
-    logger.api(`[Stats] Campaigns: ${campaignIds.length}, NFTs: ${totalNFTs}, Raised: $${totalRaisedUSD.toFixed(2)}`)
+    logger.api(`[Stats] Campaigns: ${totalCampaigns}, NFTs: ${totalNFTsSold}, Raised: $${totalRaisedUSD.toFixed(2)}`)
 
     return NextResponse.json({
       totalRaisedUSD: Math.round(totalRaisedUSD * 100) / 100,
-      totalRaisedBDAG: totalRaisedBDAG,
-      totalCampaigns: campaignIds.length,
-      totalNFTsMinted: totalNFTs,
-      bdagUsdRate: BDAG_USD_RATE
+      totalCampaigns,
+      totalNFTsMinted: totalNFTsSold,
+      totalPurchases: purchases?.length || 0,
+      source: 'database'
     })
   } catch (e: any) {
     logger.error('[Stats] Error:', e)

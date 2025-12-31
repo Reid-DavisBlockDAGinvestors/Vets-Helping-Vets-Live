@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
-import { ethers } from 'ethers'
-import { getProvider } from '@/lib/onchain'
-import { V5_ABI, V6_ABI } from '@/lib/contracts'
 import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
-const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
 const PLATFORM_FEE_PERCENT = 1 // 1% platform fee
-const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
 
 /**
  * GET /api/campaigns/stats?campaignIds=1,2,3
- * Returns on-chain stats for multiple campaigns
+ * Returns stats for multiple campaigns using DATABASE as source of truth
  * 
- * IMPORTANT: Uses each campaign's contract_address from Supabase, not a hardcoded env var
+ * This ensures accurate data even when blockchain RPC is unavailable
  */
 export async function GET(req: NextRequest) {
   try {
@@ -29,132 +25,99 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'No valid campaign IDs' }, { status: 400 })
     }
 
-    // Create Supabase client to fetch submission data for accurate pricing
+    // Create fresh Supabase client
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || '',
       process.env.SUPABASE_SERVICE_ROLE_KEY || '',
       { auth: { persistSession: false } }
     )
 
-    // Batch fetch all submissions for these campaign IDs - INCLUDE contract_address!
+    // Fetch submissions with sold_count (source of truth)
     const { data: submissions, error: subError } = await supabase
       .from('submissions')
-      .select('campaign_id, goal, num_copies, price_per_copy, contract_address')
+      .select('campaign_id, goal, num_copies, price_per_copy, contract_address, sold_count, title')
       .eq('status', 'minted')
       .in('campaign_id', campaignIds)
     
-    logger.debug(`[CampaignStats] Supabase query: campaignIds=${JSON.stringify(campaignIds)}, found=${submissions?.length || 0}, error=${subError?.message || 'none'}`)
-
-    // Build lookup map
-    const submissionMap: Record<number, any> = {}
-    for (const sub of submissions || []) {
-      if (sub.campaign_id != null) {
-        submissionMap[sub.campaign_id] = sub
-      }
+    if (subError) {
+      logger.error('[CampaignStats] Supabase error:', subError)
+      return NextResponse.json({ error: 'DB_ERROR', details: subError.message }, { status: 500 })
     }
-    logger.debug(`[CampaignStats] Found ${submissions?.length || 0} submissions for ${campaignIds.length} campaigns`)
 
-    const provider = getProvider()
-    
-    // Cache contracts by address
-    const contractCache: Record<string, ethers.Contract> = {}
-    function getContractForAddress(addr: string): ethers.Contract {
-      const normalizedAddr = addr.toLowerCase()
-      if (!contractCache[normalizedAddr]) {
-        const isV5 = normalizedAddr === V5_CONTRACT.toLowerCase()
-        const abi = isV5 ? V5_ABI : V6_ABI
-        contractCache[normalizedAddr] = new ethers.Contract(addr, abi, provider)
+    // Fetch purchases for accurate raised amounts
+    const { data: purchases } = await supabase
+      .from('purchases')
+      .select('campaign_id, amount_usd, tip_usd, quantity')
+      .in('campaign_id', campaignIds)
+
+    // Build purchase totals by campaign
+    const purchaseTotals: Record<number, { raised: number; tips: number; qty: number }> = {}
+    for (const p of purchases || []) {
+      const cid = p.campaign_id
+      if (!purchaseTotals[cid]) {
+        purchaseTotals[cid] = { raised: 0, tips: 0, qty: 0 }
       }
-      return contractCache[normalizedAddr]
+      purchaseTotals[cid].raised += p.amount_usd || 0
+      purchaseTotals[cid].tips += p.tip_usd || 0
+      purchaseTotals[cid].qty += p.quantity || 1
     }
 
     const stats: Record<number, any> = {}
 
-    await Promise.all(campaignIds.map(async (campaignId) => {
-      try {
-        const submission = submissionMap[campaignId]
-        
-        // Get contract address from submission, fallback to V5
-        const contractAddr = submission?.contract_address || V5_CONTRACT
-        const contract = getContractForAddress(contractAddr)
-        
-        logger.debug(`[CampaignStats] Campaign ${campaignId}: using contract ${contractAddr.slice(0, 10)}..., submission found=${!!submission}`)
-        
-        const camp = await contract.getCampaign(BigInt(campaignId))
-        
-        logger.debug(`[CampaignStats] Campaign ${campaignId}: goal=${submission?.goal}, num_copies=${submission?.num_copies}`)
-        
-        const grossRaisedWei = BigInt(camp.grossRaised ?? 0n)
-        const editionsMinted = Number(camp.editionsMinted ?? 0)
-        const maxEditions = Number(camp.maxEditions ?? 0)
-        
-        // Convert gross raised from BDAG to USD
-        const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
-        const grossRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
-        
-        // Get goal from Supabase, fallback to on-chain goal converted to USD
-        const onchainGoalWei = BigInt(camp.goal ?? camp[2] ?? 0n)
-        const onchainGoalBDAG = Number(onchainGoalWei) / 1e18
-        const onchainGoalUSD = onchainGoalBDAG * BDAG_USD_RATE
-        
-        // Goal from Supabase is in dollars
-        const goalUSD = submission?.goal ? Number(submission.goal) : (onchainGoalUSD > 0 ? onchainGoalUSD : 100)
-        const numEditions = Number(submission?.num_copies || maxEditions || 100)
-        
-        // Price calculation priority:
-        // 1. Explicit price_per_copy from Supabase (in dollars)
-        // 2. Goal / Editions (allows decimals like $0.50)
-        // 3. Default to goal / on-chain maxEditions
-        let pricePerEditionUSD = 0
-        let priceSource = 'none'
-        if (submission?.price_per_copy && Number(submission.price_per_copy) > 0) {
-          pricePerEditionUSD = Number(submission.price_per_copy)
-          priceSource = 'price_per_copy'
-        } else if (goalUSD > 0 && numEditions > 0) {
-          pricePerEditionUSD = goalUSD / numEditions
-          priceSource = `goal(${goalUSD})/editions(${numEditions})`
-        } else if (goalUSD > 0 && maxEditions > 0) {
-          // Fallback: use on-chain maxEditions directly
-          pricePerEditionUSD = goalUSD / maxEditions
-          priceSource = `goal(${goalUSD})/maxEditions(${maxEditions})`
-        }
-        
-        logger.debug(`[CampaignStats] Campaign ${campaignId}: priceSource=${priceSource}, price=$${pricePerEditionUSD.toFixed(4)}`)
-        
-        // Calculate NFT sales revenue = editions sold × price per edition
-        const nftSalesUSD = editionsMinted * pricePerEditionUSD
-        
-        logger.debug(`[CampaignStats] Campaign #${campaignId}: goal=$${goalUSD}, editions=${numEditions}, minted=${editionsMinted}, price=$${pricePerEditionUSD.toFixed(2)}, nftSales=$${nftSalesUSD.toFixed(2)}, grossRaised=$${grossRaisedUSD.toFixed(2)}`)
-        
-        // Tips = gross raised - NFT sales (anything paid above NFT price)
-        const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
-        
-        // Net after 1% platform fee (gas is paid by donor, not deducted from funds)
-        const netRaisedUSD = grossRaisedUSD * (1 - PLATFORM_FEE_PERCENT / 100)
-        
-        // Remaining editions
-        const remainingEditions = maxEditions > 0 ? maxEditions - editionsMinted : null
-        
-        stats[campaignId] = {
-          campaignId,
-          editionsMinted,
-          maxEditions,
-          remainingEditions,
-          pricePerEditionUSD,
-          nftSalesUSD,
-          tipsUSD,
-          grossRaisedUSD,
-          netRaisedUSD, // 99% of gross (1% platform fee)
-          totalRaisedUSD: grossRaisedUSD,
-          active: camp.active ?? true,
-          closed: camp.closed ?? false,
-          progressPercent: maxEditions > 0 ? Math.round((editionsMinted / maxEditions) * 100) : 0,
-        }
-      } catch (e: any) {
-        logger.error(`Error fetching campaign ${campaignId}:`, e?.message)
+    for (const campaignId of campaignIds) {
+      const submission = (submissions || []).find((s: any) => s.campaign_id === campaignId)
+      const purchaseData = purchaseTotals[campaignId] || { raised: 0, tips: 0, qty: 0 }
+      
+      if (!submission) {
         stats[campaignId] = { error: 'Campaign not found', campaignId }
+        continue
       }
-    }))
+
+      const goalUSD = Number(submission.goal || 100)
+      const maxEditions = Number(submission.num_copies || 100)
+      const editionsMinted = Number(submission.sold_count || 0)
+      
+      // Price per edition from database
+      let pricePerEditionUSD = 0
+      if (submission.price_per_copy && Number(submission.price_per_copy) > 0) {
+        pricePerEditionUSD = Number(submission.price_per_copy)
+      } else if (goalUSD > 0 && maxEditions > 0) {
+        pricePerEditionUSD = goalUSD / maxEditions
+      }
+      
+      // Use purchases table for accurate raised amounts
+      const grossRaisedUSD = purchaseData.raised + purchaseData.tips
+      const nftSalesUSD = purchaseData.raised
+      const tipsUSD = purchaseData.tips
+      
+      // Net after 1% platform fee
+      const netRaisedUSD = grossRaisedUSD * (1 - PLATFORM_FEE_PERCENT / 100)
+      
+      // Remaining editions
+      const remainingEditions = maxEditions > 0 ? Math.max(0, maxEditions - editionsMinted) : null
+      
+      // Progress percentage
+      const progressPercent = maxEditions > 0 ? Math.round((editionsMinted / maxEditions) * 100) : 0
+      
+      stats[campaignId] = {
+        campaignId,
+        editionsMinted,
+        maxEditions,
+        remainingEditions,
+        pricePerEditionUSD,
+        nftSalesUSD,
+        tipsUSD,
+        grossRaisedUSD,
+        netRaisedUSD,
+        totalRaisedUSD: grossRaisedUSD,
+        active: remainingEditions === null || remainingEditions > 0,
+        closed: remainingEditions === 0,
+        progressPercent,
+        source: 'database'
+      }
+      
+      logger.debug(`[CampaignStats] Campaign #${campaignId}: sold=${editionsMinted}/${maxEditions}, raised=$${grossRaisedUSD.toFixed(2)}`)
+    }
 
     return NextResponse.json({ stats })
   } catch (e: any) {

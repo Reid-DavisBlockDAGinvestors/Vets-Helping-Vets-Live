@@ -134,27 +134,37 @@ export async function GET(req: NextRequest) {
       const campaignId = sub.campaign_id ?? sub.token_id
       if (campaignId == null) return null
       
-      // Use goal from Supabase submission (source of truth for display)
+      // Use database as source of truth (more reliable than blockchain RPC)
       let goal = Number(sub.goal || 0)
+      let maxEditions = Number(sub.num_copies || sub.nft_editions || 100)
+      let editionsMinted = Number(sub.sold_count || 0) // From database
       let grossRaisedUSD = 0
-      let editionsMinted = 0
-      let maxEditions = Number(sub.num_copies || sub.nft_editions || 100) // Default 100 if not set
       
+      // Calculate raised from database sold_count × price
+      const pricePerNFT = goal > 0 && maxEditions > 0 ? goal / maxEditions : 1
+      grossRaisedUSD = editionsMinted * pricePerNFT
+      
+      // Try on-chain data as secondary source (may fail if RPC is down)
       try {
         const contract = getContractForAddress(subContractAddr)
-        // V5 getCampaign returns: category, baseURI, goal, grossRaised, netRaised, editionsMinted, maxEditions, pricePerEdition, active, closed
         const camp = await (contract as any).getCampaign(BigInt(campaignId))
-        // Convert grossRaised from wei (10^18) to BDAG, then to USD
         const grossRaisedWei = BigInt(camp.grossRaised ?? 0n)
         const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
-        grossRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
-        editionsMinted = Number(camp.editionsMinted ?? 0n)
-        // Use on-chain maxEditions if available and > 0
-        const onchainMax = Number(camp.maxEditions ?? 0n)
-        if (onchainMax > 0) maxEditions = onchainMax
-        logger.debug(`[fundraisers] Campaign ${campaignId} on-chain: editionsMinted=${editionsMinted}, maxEditions=${maxEditions}`)
+        const chainRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
+        const chainEditions = Number(camp.editionsMinted ?? 0n)
+        const chainMax = Number(camp.maxEditions ?? 0n)
+        
+        // Only use chain data if it shows MORE sales (chain is authoritative for actual mints)
+        if (chainEditions > editionsMinted) {
+          editionsMinted = chainEditions
+          grossRaisedUSD = chainRaisedUSD
+        }
+        if (chainMax > 0) maxEditions = chainMax
+        
+        logger.debug(`[fundraisers] Campaign ${campaignId}: DB sold=${sub.sold_count}, chain=${chainEditions}`)
       } catch (err: any) {
-        logger.error(`[fundraisers] Failed to fetch on-chain data for campaign ${campaignId} on contract ${subContractAddr}: ${err?.message}`)
+        // On-chain fetch failed - use database values (already set above)
+        logger.debug(`[fundraisers] Using DB data for campaign ${campaignId} (chain unavailable)`)
       }
 
       // Price per NFT = Goal ÷ Max Editions (this is always correct for V5 model)
