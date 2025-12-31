@@ -1,0 +1,59 @@
+# PatriotPledge NFT - Docker Compose Configuration
+# Usage: docker-compose up (development) or docker-compose -f docker-compose.prod.yml up (production)
+
+version: '3.8'
+
+services:
+  # Development service with hot-reload
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source code for hot-reload
+      - .:/app
+      # Preserve node_modules from container
+      - /app/node_modules
+      # Preserve .next build cache
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
+    env_file:
+      - .env.local
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Production service (use with docker-compose -f docker-compose.yml -f docker-compose.prod.yml up)
+  web-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+    env_file:
+      - .env.local
+    restart: always
+    profiles:
+      - production
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+# Named volumes for persistent data
+volumes:
+  node_modules:
+  next_cache:

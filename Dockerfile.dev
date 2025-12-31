@@ -1,0 +1,27 @@
+# PatriotPledge NFT - Development Dockerfile
+# Hot-reload enabled for local development
+
+FROM node:20-alpine
+
+# Install dependencies for native modules
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# Copy package files first (for better caching)
+COPY package.json package-lock.json ./
+
+# Install all dependencies (including devDependencies)
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Disable Next.js telemetry
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Expose development port
+EXPOSE 3000
+
+# Development command with hot-reload
+CMD ["npm", "run", "dev"]

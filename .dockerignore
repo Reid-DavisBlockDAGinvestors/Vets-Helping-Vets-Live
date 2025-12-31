@@ -1,0 +1,80 @@
+# PatriotPledge NFT - Docker Ignore
+# Files and directories to exclude from Docker build context
+
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+.next
+out
+dist
+build
+
+# Version control
+.git
+.gitignore
+
+# IDE and editor
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Testing
+test-results
+playwright-report
+coverage
+*.test.ts
+*.spec.ts
+tests/
+
+# Development files
+*.md
+!README.md
+*.log
+.env*.local
+.env.development
+.env.test
+
+# Hardhat/Solidity build artifacts
+artifacts
+cache
+typechain-types
+*.sol
+
+# Documentation
+docs
+AUDIT_REPORTS
+*.md
+
+# Miscellaneous
+.DS_Store
+Thumbs.db
+*.pem
+*.key
+
+# Supabase local
+supabase/.branches
+supabase/.temp
+
+# Scripts (not needed in container)
+scripts
+
+# Config files not needed at runtime
+hardhat.config.ts
+jest.config.js
+jest.setup.js
+playwright.config.ts
+eslint.config.mjs
+postcss.config.js
+tailwind.config.ts
+tsconfig.tsbuildinfo
+
+# Large files
+*.zip
+*.tar.gz
+*.rar
