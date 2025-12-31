@@ -17,7 +17,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { CATEGORIES, getCategoryById } from '@/lib/categories'
+import { CATEGORIES, getCategoryById, mapLegacyCategory } from '@/lib/categories'
 import { logger } from '@/lib/logger'
 import {
   usePosts,
@@ -77,7 +77,8 @@ export default function CommunityHubClientV2() {
   const {
     comments,
     fetchComments,
-    addComment
+    addComment,
+    deleteComment
   } = useComments(token)
 
   // Check auth on mount
@@ -120,7 +121,7 @@ export default function CommunityHubClientV2() {
             slug: f.slug,
             short_code: f.short_code,
             campaign_id: f.campaignId,
-            category: f.category || 'general'
+            category: mapLegacyCategory(f.category || 'general')
           }))
           setAllCampaigns(campaigns)
         }
@@ -407,6 +408,7 @@ export default function CommunityHubClientV2() {
                     onCommentInputChange={(value) => setCommentInputs(prev => ({ ...prev, [post.id]: value }))}
                     onSubmitComment={() => handleSubmitComment(post.id)}
                     onDeletePost={() => deletePost(post.id)}
+                    onDeleteComment={(commentId) => deleteComment(post.id, commentId)}
                     renderPostContent={renderPostContent}
                     campaignPreviews={campaignPreviews}
                   />

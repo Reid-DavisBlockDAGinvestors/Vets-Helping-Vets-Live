@@ -52,6 +52,9 @@ export function PostCard({
 }: PostCardProps) {
   const [showReactionPicker, setShowReactionPicker] = useState(false)
   const [showShareMenu, setShowShareMenu] = useState(false)
+  const [showPostMenu, setShowPostMenu] = useState(false)
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [replyContent, setReplyContent] = useState('')
 
   const formatDate = (date: string) => {
     const d = new Date(date)
@@ -143,23 +146,33 @@ export function PostCard({
           {/* Post Actions Menu */}
           {canEdit && (
             <div className="relative">
-              <button className="p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white">⋮</button>
-              <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded-lg shadow-xl border border-white/10 py-1 min-w-[120px] hidden group-hover:block">
-                {onEditPost && (
-                  <button onClick={onEditPost} className="w-full px-4 py-2 text-left text-sm text-white/70 hover:bg-white/10">
-                    ✏️ Edit
-                  </button>
-                )}
-                {onDeletePost && (
-                  <button 
-                    onClick={onDeletePost} 
-                    disabled={isDeleting}
-                    className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-white/10"
-                  >
-                    {isDeleting ? '...' : '🗑️ Delete'}
-                  </button>
-                )}
-              </div>
+              <button 
+                onClick={() => setShowPostMenu(!showPostMenu)}
+                className="p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white"
+              >
+                ⋮
+              </button>
+              {showPostMenu && (
+                <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded-lg shadow-xl border border-white/10 py-1 min-w-[120px] z-10">
+                  {onEditPost && (
+                    <button 
+                      onClick={() => { onEditPost(); setShowPostMenu(false); }} 
+                      className="w-full px-4 py-2 text-left text-sm text-white/70 hover:bg-white/10"
+                    >
+                      ✏️ Edit
+                    </button>
+                  )}
+                  {onDeletePost && (
+                    <button 
+                      onClick={() => { onDeletePost(); setShowPostMenu(false); }} 
+                      disabled={isDeleting}
+                      className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-white/10"
+                    >
+                      {isDeleting ? '...' : '🗑️ Delete'}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -272,25 +285,98 @@ export function PostCard({
           {/* Comments List */}
           {comments.length > 0 ? (
             <div className="space-y-3">
-              {comments.map((comment) => (
-                <div key={comment.id} className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden">
-                    {comment.user.avatar_url ? (
-                      <img src={comment.user.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      comment.user.display_name?.[0]?.toUpperCase() || '?'
-                    )}
-                  </div>
-                  <div className="flex-1 bg-white/5 rounded-lg px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-white text-sm">{comment.user.display_name}</span>
-                      {comment.user.is_verified && <span className="text-blue-400 text-xs">✓</span>}
-                      <span className="text-xs text-white/40">{formatDate(comment.created_at)}</span>
+              {comments.map((comment) => {
+                const canEditComment = currentUserId === comment.user_id || isAdmin
+                return (
+                  <div key={comment.id} className="space-y-2">
+                    <div className="flex gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden">
+                        {comment.user.avatar_url ? (
+                          <img src={comment.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          comment.user.display_name?.[0]?.toUpperCase() || '?'
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="bg-white/5 rounded-lg px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-white text-sm">{comment.user.display_name}</span>
+                            {comment.user.is_verified && <span className="text-blue-400 text-xs">✓</span>}
+                            <span className="text-xs text-white/40">{formatDate(comment.created_at)}</span>
+                          </div>
+                          <p className="text-white/80 text-sm mt-1">{comment.content}</p>
+                        </div>
+                        {/* Comment Actions */}
+                        <div className="flex items-center gap-3 mt-1 ml-2">
+                          <button
+                            onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                            className="text-xs text-white/50 hover:text-white transition-colors"
+                          >
+                            ↩️ Reply
+                          </button>
+                          {canEditComment && onEditComment && (
+                            <button
+                              onClick={() => onEditComment(comment.id)}
+                              className="text-xs text-white/50 hover:text-white transition-colors"
+                            >
+                              ✏️ Edit
+                            </button>
+                          )}
+                          {canEditComment && onDeleteComment && (
+                            <button
+                              onClick={() => onDeleteComment(comment.id)}
+                              className="text-xs text-red-400/70 hover:text-red-400 transition-colors"
+                            >
+                              🗑️ Delete
+                            </button>
+                          )}
+                        </div>
+                        {/* Reply Input */}
+                        {replyingTo === comment.id && (
+                          <div className="flex gap-2 mt-2 ml-2">
+                            <input
+                              type="text"
+                              value={replyContent}
+                              onChange={(e) => setReplyContent(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && replyContent.trim()) {
+                                  onCommentInputChange(`@${comment.user.display_name} ${replyContent}`)
+                                  onSubmitComment()
+                                  setReplyContent('')
+                                  setReplyingTo(null)
+                                }
+                              }}
+                              placeholder={`Reply to ${comment.user.display_name}...`}
+                              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => {
+                                if (replyContent.trim()) {
+                                  onCommentInputChange(`@${comment.user.display_name} ${replyContent}`)
+                                  onSubmitComment()
+                                  setReplyContent('')
+                                  setReplyingTo(null)
+                                }
+                              }}
+                              disabled={!replyContent.trim()}
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
+                            >
+                              Reply
+                            </button>
+                            <button
+                              onClick={() => { setReplyingTo(null); setReplyContent(''); }}
+                              className="px-2 py-1.5 text-white/50 hover:text-white text-xs transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-white/80 text-sm mt-1">{comment.content}</p>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <p className="text-center text-white/40 text-sm py-4">No comments yet. Be the first!</p>
