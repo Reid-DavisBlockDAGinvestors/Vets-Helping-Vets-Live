@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const postId = searchParams.get('post_id')
+    const postId = searchParams.get('postId') || searchParams.get('post_id')
     
     if (!postId) {
       return NextResponse.json({ error: 'POST_ID_REQUIRED' }, { status: 400 })
