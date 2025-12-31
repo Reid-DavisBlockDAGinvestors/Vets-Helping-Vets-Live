@@ -154,8 +154,15 @@ This document consolidates all TODOs, planned features, and improvements into a 
   - Graceful error fallback with placeholder
   - Skeleton loading with shimmer effect
 
+### ✅ Completed (Dec 31, 2025 - Session 2)
+- [x] **Optimistic UI**
+  - `useOptimisticForm.ts` hook with rollback support
+  - `useOptimisticList` for list CRUD operations
+  - `useOptimisticToggle` for like/follow actions
+  - TypeScript generics for type safety
+
 ### Remaining
-- [ ] Optimistic UI updates for forms
+- [ ] Apply optimistic UI to existing forms
 
 ### ✅ Phase 3: Advanced (Dec 30, 2025)
 - [x] **Real-time updates**
@@ -229,10 +236,11 @@ This document consolidates all TODOs, planned features, and improvements into a 
   - Block inline scripts
   - Whitelist trusted domains
 
-- [ ] **API key rotation**
-  - Document rotation schedule
-  - Create rotation scripts
-  - Alert on compromised keys
+- [x] **API key rotation** ✅ Dec 31, 2025
+  - `docs/API_KEY_ROTATION.md` - Full rotation guide
+  - `scripts/check-api-keys.ts` - Security check script
+  - Quarterly rotation schedule documented
+  - Emergency procedures defined
 
 - [ ] **Penetration testing**
   - Automated security scanning
@@ -327,6 +335,14 @@ This document consolidates all TODOs, planned features, and improvements into a 
 ### Current State
 - V5 Contract: Production (371 NFTs)
 - V6 Contract: Ready (0 NFTs)
+
+### ✅ Completed (Dec 31, 2025)
+- [x] **Contract registry v2.0**
+  - Dynamic Map-based registry with infinite version support
+  - `registerContract()` / `unregisterContract()` runtime management
+  - `loadContractFromEnv()` auto-loads V7+ from environment
+  - `getHighestVersion()` and `getRegisteredContractCount()` helpers
+  - 19 unit tests for registry functions
 
 ### Infinite Contract Support Architecture
 ```typescript
