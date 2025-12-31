@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useCallback, useRef } from 'react'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
@@ -33,7 +33,6 @@ export function useSessionManager({
   const lastActivityRef = useRef<number>(Date.now())
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null)
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const supabase = createClient()
 
   // Update last activity timestamp
   const updateActivity = useCallback(() => {
@@ -193,8 +192,6 @@ export function useRequireAuth(redirectTo = '/') {
  * useSensitiveAction - Requires re-authentication for sensitive actions
  */
 export function useSensitiveAction() {
-  const supabase = createClient()
-
   const requireReauth = useCallback(async (
     email: string,
     password: string
