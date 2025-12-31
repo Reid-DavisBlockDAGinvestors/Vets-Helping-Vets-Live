@@ -140,16 +140,22 @@ This document consolidates all TODOs, planned features, and improvements into a 
   - Stagger children animation (`.stagger-children`)
   - Bounce on click (`.bounce-click`)
 
-### Remaining
-- [ ] **Loading improvements**
-  - Optimistic UI updates
-  - Progressive image loading
-  - Blur placeholder for images
+### ✅ Completed (Dec 31, 2025 - Continued)
+- [x] **Typography upgrade**
+  - Installed Geist font (Vercel's premium font)
+  - Configured font-sans and font-mono in Tailwind
+  - Added consistent font size scale with line heights
+  - Created `.prose-story` for rich content styling
+  - Added `.text-gradient` for hero headings
 
-- [ ] **Typography upgrade**
-  - Install Inter or Geist font
-  - Consistent heading scale
-  - Prose styling for story content
+- [x] **Loading improvements**
+  - `OptimizedImage.tsx` component with blur-up loading
+  - `NFTImage` and `AvatarImage` specialized variants
+  - Graceful error fallback with placeholder
+  - Skeleton loading with shimmer effect
+
+### Remaining
+- [ ] Optimistic UI updates for forms
 
 ### ✅ Phase 3: Advanced (Dec 30, 2025)
 - [x] **Real-time updates**
@@ -211,14 +217,17 @@ This document consolidates all TODOs, planned features, and improvements into a 
   - Whitelisted: Supabase, Stripe, Cloudflare, Pinata, NowNodes
   - Block object-src, enforce upgrade-insecure-requests
 
+### ✅ Completed (Dec 31, 2025)
+- [x] **Session management**
+  - `useSessionManager.ts` hook with 30 min inactivity timeout
+  - Automatic token refresh every 10 minutes
+  - `useSensitiveAction` for re-auth on sensitive operations
+  - Activity detection (mouse, keyboard, scroll, touch)
+  - Graceful session expiry handling
+
 ### Remaining
   - Block inline scripts
   - Whitelist trusted domains
-
-- [ ] **Session management**
-  - Session timeout after 30 min inactivity
-  - Automatic token refresh
-  - Force re-auth for sensitive actions
 
 - [ ] **API key rotation**
   - Document rotation schedule
