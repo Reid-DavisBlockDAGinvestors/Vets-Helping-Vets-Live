@@ -318,3 +318,58 @@ html {
   stroke-dashoffset: 100;
   animation: checkmark 0.5s ease-out forwards;
 }
+
+/* ===== TYPOGRAPHY / PROSE STYLING ===== */
+
+/* Story content prose styling */
+.prose-story {
+  @apply text-base leading-relaxed;
+}
+.prose-story p {
+  @apply mb-4;
+}
+.prose-story h1 {
+  @apply text-4xl font-bold mb-6 tracking-tight;
+}
+.prose-story h2 {
+  @apply text-2xl font-semibold mb-4 mt-8 tracking-tight;
+}
+.prose-story h3 {
+  @apply text-xl font-semibold mb-3 mt-6;
+}
+.prose-story ul, .prose-story ol {
+  @apply mb-4 pl-6;
+}
+.prose-story li {
+  @apply mb-2;
+}
+.prose-story blockquote {
+  @apply border-l-4 border-blue-500 pl-4 italic my-4 text-gray-300;
+}
+.prose-story a {
+  @apply text-blue-400 hover:text-blue-300 underline;
+}
+.prose-story strong {
+  @apply font-semibold text-white;
+}
+.prose-story code {
+  @apply font-mono bg-gray-800 px-1.5 py-0.5 rounded text-sm;
+}
+
+/* Heading weight utilities */
+.heading-display {
+  @apply font-bold tracking-tight;
+}
+.heading-section {
+  @apply font-semibold tracking-tight;
+}
+
+/* Text gradient for hero headings */
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400;
+}
+
+/* Monospace for blockchain/code elements */
+.font-blockchain {
+  @apply font-mono text-sm tracking-wider;
+}

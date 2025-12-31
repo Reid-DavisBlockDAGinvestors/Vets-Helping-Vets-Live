@@ -1,5 +1,7 @@
 import './globals.css'
 import { ReactNode } from 'react'
+import { GeistSans } from 'geist/font/sans'
+import { GeistMono } from 'geist/font/mono'
 import NavBar from '@/components/NavBar'
 import Footer from '@/components/Footer'
 import BugReportButton from '@/components/BugReportButton'
@@ -40,8 +42,8 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen flex flex-col bg-patriotic-blue dark:bg-patriotic-blue light:bg-gray-50 text-patriotic-white dark:text-patriotic-white light:text-gray-900 transition-colors">
+    <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
+      <body className="min-h-screen flex flex-col bg-patriotic-blue dark:bg-patriotic-blue light:bg-gray-50 text-patriotic-white dark:text-patriotic-white light:text-gray-900 transition-colors font-sans">
         <ThemeProvider>
           <SkipLink />
           <NavBar />
