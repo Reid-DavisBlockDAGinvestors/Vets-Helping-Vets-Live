@@ -34,7 +34,7 @@ export function AuthModal({
           className="fixed inset-0 bg-black/80 backdrop-blur-sm"
           onClick={onClose}
         />
-        <div className="relative z-[100000] bg-gray-900 border border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div data-testid="auth-modal" className="relative z-[100000] bg-gray-900 border border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white/50 hover:text-white"
@@ -57,6 +57,8 @@ export function AuthModal({
                   <input
                     type="text"
                     placeholder="First Name"
+                    aria-label="First Name"
+                    data-testid="first-name-input"
                     value={formState.firstName}
                     onChange={e => onFormChange({ firstName: e.target.value })}
                     className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
@@ -64,6 +66,8 @@ export function AuthModal({
                   <input
                     type="text"
                     placeholder="Last Name"
+                    aria-label="Last Name"
+                    data-testid="last-name-input"
                     value={formState.lastName}
                     onChange={e => onFormChange({ lastName: e.target.value })}
                     className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
@@ -82,6 +86,8 @@ export function AuthModal({
             <input
               type="email"
               placeholder="Email"
+              aria-label="Email"
+              data-testid="email-input"
               value={formState.email}
               onChange={e => onFormChange({ email: e.target.value })}
               className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50"
@@ -91,6 +97,8 @@ export function AuthModal({
               <input
                 type="password"
                 placeholder="Password"
+                aria-label="Password"
+                data-testid="password-input"
                 value={formState.password}
                 onChange={e => onFormChange({ password: e.target.value })}
                 onKeyDown={e => e.key === 'Enter' && onSubmit()}
@@ -112,6 +120,7 @@ export function AuthModal({
 
             <button
               onClick={onSubmit}
+              data-testid="auth-submit-btn"
               disabled={loading || !formState.email || (mode !== 'forgot' && !formState.password) || (mode === 'signup' && (!formState.firstName || !formState.lastName))}
               className="w-full px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-medium transition-colors disabled:cursor-not-allowed"
             >
