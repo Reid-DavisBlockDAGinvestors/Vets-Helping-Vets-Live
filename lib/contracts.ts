@@ -1,13 +1,21 @@
 /**
  * Multi-contract registry for PatriotPledge NFT platform
- * Supports V5, V6, and future contract versions
+ * Supports infinite contract versions with dynamic loading
+ * 
+ * @version 2.0 - Enhanced for infinite version support
  */
 
 import { ethers } from 'ethers'
 import { getProvider } from './onchain'
+import { logger } from './logger'
 
-// Contract version type
-export type ContractVersion = 'v5' | 'v6' | 'v7' | 'v8' | 'v9' | 'v10'
+// Contract version type - now supports any vN format
+export type ContractVersion = `v${number}`
+
+// Helper to create version string
+export function createVersion(n: number): ContractVersion {
+  return `v${n}` as ContractVersion
+}
 
 // Contract info interface
 export interface ContractInfo {
@@ -134,84 +142,156 @@ export const V6_ABI = [
   'function refundCampaign(uint256 campaignId) external'
 ]
 
-// Contract registry
-export const CONTRACT_REGISTRY: Record<ContractVersion, ContractInfo> = {
-  v5: {
+// Dynamic contract registry - supports infinite versions
+const contractRegistry = new Map<ContractVersion, ContractInfo>()
+
+// Default feature set for new contracts (V6+ baseline)
+const DEFAULT_FEATURES: ContractFeatures = {
+  batchMint: true,
+  royalties: true,
+  pausable: true,
+  burnable: true,
+  setTokenURI: true,
+  freezable: true,
+  blacklist: true,
+  soulbound: true
+}
+
+// Empty feature set for legacy or basic contracts
+const EMPTY_FEATURES: ContractFeatures = {
+  batchMint: false,
+  royalties: false,
+  pausable: false,
+  burnable: false,
+  setTokenURI: false,
+  freezable: false,
+  blacklist: false,
+  soulbound: false
+}
+
+/**
+ * Register a new contract version dynamically
+ */
+export function registerContract(info: ContractInfo): void {
+  contractRegistry.set(info.version, info)
+  logger.debug(`[ContractRegistry] Registered ${info.version} at ${info.address}`)
+}
+
+/**
+ * Unregister a contract version
+ */
+export function unregisterContract(version: ContractVersion): boolean {
+  return contractRegistry.delete(version)
+}
+
+/**
+ * Load contract from environment variables
+ * Format: CONTRACT_ADDRESS_V{N}, CONTRACT_NAME_V{N}, CONTRACT_ACTIVE_V{N}
+ */
+export function loadContractFromEnv(versionNumber: number): ContractInfo | null {
+  const version = createVersion(versionNumber)
+  const addressKey = `CONTRACT_ADDRESS_V${versionNumber}`
+  const publicAddressKey = `NEXT_PUBLIC_CONTRACT_ADDRESS_V${versionNumber}`
+  
+  const address = process.env[addressKey] || process.env[publicAddressKey]
+  
+  if (!address) {
+    return null
+  }
+  
+  const nameKey = `CONTRACT_NAME_V${versionNumber}`
+  const activeKey = `CONTRACT_ACTIVE_V${versionNumber}`
+  
+  // Determine which ABI to use based on version
+  const abi = versionNumber >= 6 ? V6_ABI : V5_ABI
+  const features = versionNumber >= 6 ? { ...DEFAULT_FEATURES } : { ...EMPTY_FEATURES }
+  
+  return {
+    version,
+    address,
+    name: process.env[nameKey] || `PatriotPledgeNFTV${versionNumber}`,
+    chainId: 1043,
+    isActive: process.env[activeKey] === 'true',
+    isMintable: true,
+    features,
+    abi
+  }
+}
+
+/**
+ * Initialize registry with known contracts
+ */
+function initializeRegistry(): void {
+  // V5 - Legacy contract
+  registerContract({
     version: 'v5',
     address: process.env.CONTRACT_ADDRESS_V5 || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V5 || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890',
     name: 'PatriotPledgeNFTV5',
     chainId: 1043,
-    isActive: false,    // No new campaigns on V5
-    isMintable: true,   // Can still mint existing campaigns
-    features: {
-      batchMint: false,
-      royalties: false,
-      pausable: false,
-      burnable: false,
-      setTokenURI: false,
-      freezable: false,
-      blacklist: false,
-      soulbound: false
-    },
+    isActive: false,
+    isMintable: true,
+    features: { ...EMPTY_FEATURES },
     abi: V5_ABI
-  },
-  v6: {
+  })
+
+  // V6 - Current active contract
+  registerContract({
     version: 'v6',
     address: process.env.CONTRACT_ADDRESS_V6 || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V6 || '0xaE54e4E8A75a81780361570c17b8660CEaD27053',
     name: 'PatriotPledgeNFTV6',
     chainId: 1043,
-    isActive: true,     // V6 is now the active contract for new campaigns
-    isMintable: true,   // V6 has live campaigns (Reid & Gravy, etc.)
-    features: {
-      batchMint: true,
-      royalties: true,
-      pausable: true,
-      burnable: true,
-      setTokenURI: true,
-      freezable: true,
-      blacklist: true,
-      soulbound: true
-    },
+    isActive: true,
+    isMintable: true,
+    features: { ...DEFAULT_FEATURES },
     abi: V6_ABI
-  },
-  // Placeholder for future versions
-  v7: { version: 'v7', address: '', name: '', chainId: 1043, isActive: false, isMintable: false, features: { batchMint: false, royalties: false, pausable: false, burnable: false, setTokenURI: false, freezable: false, blacklist: false, soulbound: false }, abi: [] },
-  v8: { version: 'v8', address: '', name: '', chainId: 1043, isActive: false, isMintable: false, features: { batchMint: false, royalties: false, pausable: false, burnable: false, setTokenURI: false, freezable: false, blacklist: false, soulbound: false }, abi: [] },
-  v9: { version: 'v9', address: '', name: '', chainId: 1043, isActive: false, isMintable: false, features: { batchMint: false, royalties: false, pausable: false, burnable: false, setTokenURI: false, freezable: false, blacklist: false, soulbound: false }, abi: [] },
-  v10: { version: 'v10', address: '', name: '', chainId: 1043, isActive: false, isMintable: false, features: { batchMint: false, royalties: false, pausable: false, burnable: false, setTokenURI: false, freezable: false, blacklist: false, soulbound: false }, abi: [] }
+  })
+
+  // Auto-load any additional contracts from environment (V7+)
+  for (let i = 7; i <= 100; i++) {
+    const contract = loadContractFromEnv(i)
+    if (contract) {
+      registerContract(contract)
+    }
+  }
 }
+
+// Initialize on module load
+initializeRegistry()
+
+// Legacy export for backwards compatibility
+export const CONTRACT_REGISTRY: Record<string, ContractInfo> = Object.fromEntries(contractRegistry)
 
 /**
  * Get the currently active contract version for new campaigns
  */
 export function getActiveContractVersion(): ContractVersion {
-  for (const [version, info] of Object.entries(CONTRACT_REGISTRY)) {
+  for (const [version, info] of contractRegistry.entries()) {
     if (info.isActive && info.address) {
-      return version as ContractVersion
+      return version
     }
   }
-  return 'v6' // Default to v6
+  return 'v6' as ContractVersion // Default to v6
 }
 
 /**
  * Get contract info by version
  */
-export function getContractInfo(version: ContractVersion): ContractInfo {
-  return CONTRACT_REGISTRY[version]
+export function getContractInfo(version: ContractVersion): ContractInfo | undefined {
+  return contractRegistry.get(version)
 }
 
 /**
  * Get contract address by version
  */
 export function getContractAddress(version: ContractVersion): string {
-  return CONTRACT_REGISTRY[version]?.address || ''
+  return contractRegistry.get(version)?.address || ''
 }
 
 /**
  * Get all deployed contracts (with addresses)
  */
 export function getAllDeployedContracts(): ContractInfo[] {
-  return Object.values(CONTRACT_REGISTRY).filter(c => c.address && c.address.length === 42)
+  return Array.from(contractRegistry.values()).filter(c => c.address && c.address.length === 42)
 }
 
 /**
@@ -222,12 +302,31 @@ export function getMintableContracts(): ContractInfo[] {
 }
 
 /**
+ * Get total registered contract count
+ */
+export function getRegisteredContractCount(): number {
+  return contractRegistry.size
+}
+
+/**
+ * Get highest registered version number
+ */
+export function getHighestVersion(): number {
+  let highest = 0
+  for (const version of contractRegistry.keys()) {
+    const num = parseInt(version.slice(1))
+    if (num > highest) highest = num
+  }
+  return highest
+}
+
+/**
  * Create an ethers Contract instance for a specific version
  */
 export function getContractByVersion(version: ContractVersion, signerOrProvider?: ethers.Signer | ethers.Provider): ethers.Contract {
   const info = getContractInfo(version)
-  if (!info.address) {
-    throw new Error(`Contract ${version} not deployed`)
+  if (!info || !info.address) {
+    throw new Error(`Contract ${version} not deployed or not registered`)
   }
   const sp = signerOrProvider || getProvider()
   return new ethers.Contract(info.address, info.abi, sp)
