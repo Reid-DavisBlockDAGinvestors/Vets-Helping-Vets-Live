@@ -30,19 +30,19 @@ interface DeploymentConfig {
 
 const DEPLOYMENT_CONFIGS: Record<string, DeploymentConfig> = {
   sepolia: {
-    treasuryWallet: process.env.TREASURY_WALLET || "0x07b3c4BB8842a9eE0698F1A3c6778bcC456d9362",
+    treasuryWallet: process.env.TREASURY_WALLET || "0xbFD14c5A940E783AEc1993598143B59D3C971eF1",
     platformFeeBps: 100, // 1%
     maxGasPriceGwei: 50,
     requireConfirmation: false,
   },
   ethereum: {
-    treasuryWallet: process.env.TREASURY_WALLET || "0x07b3c4BB8842a9eE0698F1A3c6778bcC456d9362",
+    treasuryWallet: process.env.TREASURY_WALLET || "0xbFD14c5A940E783AEc1993598143B59D3C971eF1",
     platformFeeBps: 100, // 1%
     maxGasPriceGwei: parseInt(process.env.MAX_GAS_PRICE_GWEI || "100"),
     requireConfirmation: true, // ALWAYS confirm on mainnet
   },
   blockdag: {
-    treasuryWallet: process.env.TREASURY_WALLET || "0x07b3c4BB8842a9eE0698F1A3c6778bcC456d9362",
+    treasuryWallet: process.env.TREASURY_WALLET || "0xbFD14c5A940E783AEc1993598143B59D3C971eF1",
     platformFeeBps: 100,
     maxGasPriceGwei: 1000, // BDAG gas is cheap
     requireConfirmation: true,
