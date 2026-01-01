@@ -15,17 +15,33 @@ type WalletState = {
 }
 
 const BLOCKDAG_CHAIN_ID = 1043 // BlockDAG Awakening Testnet
-const BLOCKDAG_CHAIN_CONFIG = {
-  chainId: '0x413', // 1043 in hex
-  chainName: 'BlockDAG Awakening Testnet',
-  nativeCurrency: {
-    name: 'BDAG',
-    symbol: 'BDAG',
-    decimals: 18,
+const SEPOLIA_CHAIN_ID = 11155111 // Ethereum Sepolia Testnet
+
+const CHAIN_CONFIGS: Record<number, {
+  chainId: string
+  chainName: string
+  nativeCurrency: { name: string; symbol: string; decimals: number }
+  rpcUrls: string[]
+  blockExplorerUrls: string[]
+}> = {
+  [BLOCKDAG_CHAIN_ID]: {
+    chainId: '0x413', // 1043 in hex
+    chainName: 'BlockDAG Awakening Testnet',
+    nativeCurrency: { name: 'BDAG', symbol: 'BDAG', decimals: 18 },
+    rpcUrls: ['https://rpc.awakening.bdagscan.com'],
+    blockExplorerUrls: ['https://awakening.bdagscan.com'],
   },
-  rpcUrls: ['https://rpc.awakening.bdagscan.com'],
-  blockExplorerUrls: ['https://awakening.bdagscan.com'],
+  [SEPOLIA_CHAIN_ID]: {
+    chainId: '0xaa36a7', // 11155111 in hex
+    chainName: 'Sepolia Testnet',
+    nativeCurrency: { name: 'Sepolia ETH', symbol: 'ETH', decimals: 18 },
+    rpcUrls: ['https://ethereum-sepolia-rpc.publicnode.com'],
+    blockExplorerUrls: ['https://sepolia.etherscan.io'],
+  },
 }
+
+// Legacy alias
+const BLOCKDAG_CHAIN_CONFIG = CHAIN_CONFIGS[BLOCKDAG_CHAIN_ID]
 
 const WALLETCONNECT_PROJECT_ID = 'a86a6a0afc0849fdb0832b5ec288b5a2'
 const DISCONNECTED_KEY = 'wallet_user_disconnected'
@@ -271,24 +287,38 @@ export function useWallet() {
     })
   }, [])
 
-  const switchToBlockDAG = useCallback(async () => {
+  const switchToChain = useCallback(async (targetChainId: number) => {
     const ethereum = (window as any).ethereum
     if (!ethereum) return
+
+    const chainConfig = CHAIN_CONFIGS[targetChainId]
+    if (!chainConfig) {
+      console.error(`No config for chain ${targetChainId}`)
+      return
+    }
 
     try {
       await ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: BLOCKDAG_CHAIN_CONFIG.chainId }],
+        params: [{ chainId: chainConfig.chainId }],
       })
     } catch (switchError: any) {
       if (switchError.code === 4902) {
         await ethereum.request({
           method: 'wallet_addEthereumChain',
-          params: [BLOCKDAG_CHAIN_CONFIG],
+          params: [chainConfig],
         })
       }
     }
   }, [])
+
+  const switchToBlockDAG = useCallback(async () => {
+    return switchToChain(BLOCKDAG_CHAIN_ID)
+  }, [switchToChain])
+
+  const switchToSepolia = useCallback(async () => {
+    return switchToChain(SEPOLIA_CHAIN_ID)
+  }, [switchToChain])
 
   // Listen for account/chain changes
   useEffect(() => {
@@ -355,6 +385,8 @@ export function useWallet() {
   }, [updateBalance])
 
   const isOnBlockDAG = state.chainId === BLOCKDAG_CHAIN_ID
+  const isOnSepolia = state.chainId === SEPOLIA_CHAIN_ID
+  const isOnSupportedChain = isOnBlockDAG || isOnSepolia
 
   // Detect if we're on mobile
   const isMobile = typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
@@ -388,6 +420,8 @@ export function useWallet() {
   return {
     ...state,
     isOnBlockDAG,
+    isOnSepolia,
+    isOnSupportedChain,
     isMobile,
     hasInjectedWallet,
     connect,
@@ -396,8 +430,11 @@ export function useWallet() {
     openInMetaMaskBrowser, // Direct deep link to MetaMask app
     disconnect,
     switchToBlockDAG,
+    switchToSepolia,
+    switchToChain,
     updateBalance: () => state.address && updateBalance(state.address),
     BLOCKDAG_CHAIN_ID,
+    SEPOLIA_CHAIN_ID,
   }
 }
 

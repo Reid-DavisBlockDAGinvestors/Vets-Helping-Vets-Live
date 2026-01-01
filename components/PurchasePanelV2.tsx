@@ -24,6 +24,7 @@ import {
   type PurchasePanelProps,
   type PaymentTab,
 } from './purchase-panel'
+import { useEthPurchase, usdToEth } from './purchase-panel/hooks/useEthPurchase'
 import { getEffectiveContractAddress, PRESET_AMOUNTS, TIP_OPTIONS } from './purchase-panel/constants'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
@@ -52,13 +53,17 @@ export default function PurchasePanelV2({
   const [donorNote, setDonorNote] = useState('')
   const [donorName, setDonorName] = useState('')
   const [showNoteField, setShowNoteField] = useState(false)
+  const [selectedNetwork, setSelectedNetwork] = useState<'bdag' | 'sepolia'>('bdag')
 
   // Modular hooks
   const wallet = useWallet()
   const auth = usePurchaseAuth()
   const config = usePurchaseConfig(pricePerNft, quantity, tipAmount, customAmount, remainingCopies)
   
-  // BDAG purchase hook
+  // V7 Sepolia contract address
+  const sepoliaContractAddress = process.env.NEXT_PUBLIC_V7_CONTRACT_SEPOLIA || ''
+
+  // BDAG purchase hook (BlockDAG network)
   const bdagPurchase = useBdagPurchase({
     targetId,
     contractAddress: effectiveContractAddress,
@@ -77,8 +82,34 @@ export default function PurchasePanelV2({
     donorName: donorName.trim() || undefined,
   })
 
+  // ETH purchase hook (Sepolia testnet)
+  const ethPurchase = useEthPurchase({
+    targetId,
+    contractAddress: sepoliaContractAddress,
+    contractVersion: 'v7',
+    chainId: 11155111,
+    pricePerNft: pricePerNft ?? null,
+    hasNftPrice: config.hasNftPrice,
+    ethAmount: usdToEth(config.totalAmount - tipAmount),
+    ethTipAmount: usdToEth(tipAmount),
+    totalAmountUsd: config.totalAmount,
+    tipAmountUsd: tipAmount,
+    quantity,
+    auth,
+    wallet: {
+      ...wallet,
+      chainId: wallet.chainId,
+    },
+    isPendingOnchain,
+    donorNote: donorNote.trim() || undefined,
+    donorName: donorName.trim() || undefined,
+  })
+
+  // Select active purchase hook based on network
+  const activePurchase = selectedNetwork === 'sepolia' ? ethPurchase : bdagPurchase
+
   // Combined result from card or crypto
-  const result = bdagPurchase.result || (cardResult?.success ? { success: true } : null)
+  const result = activePurchase.result || (cardResult?.success ? { success: true } : null)
 
   // Pending on-chain state
   if (isPendingOnchain) {
@@ -236,15 +267,67 @@ export default function PurchasePanelV2({
 
         {/* Crypto Tab */}
         {activeTab === 'crypto' && (
-          <CryptoPaymentSection
-            wallet={wallet}
-            bdagAmount={config.bdagAmount}
-            totalAmount={config.totalAmount}
-            cryptoMsg={bdagPurchase.cryptoMsg}
-            txHash={bdagPurchase.txHash}
-            loading={bdagPurchase.loading}
-            onPurchase={bdagPurchase.purchaseWithWallet}
-          />
+          <div className="space-y-4">
+            {/* Network Selector */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Select Network</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setSelectedNetwork('bdag')}
+                  data-testid="network-bdag-btn"
+                  className={`rounded-lg py-3 px-4 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                    selectedNetwork === 'bdag' 
+                      ? 'bg-blue-600 text-white ring-2 ring-blue-400' 
+                      : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                  }`}
+                >
+                  <span>🔷</span> BlockDAG
+                </button>
+                <button
+                  onClick={() => setSelectedNetwork('sepolia')}
+                  data-testid="network-sepolia-btn"
+                  className={`rounded-lg py-3 px-4 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                    selectedNetwork === 'sepolia' 
+                      ? 'bg-purple-600 text-white ring-2 ring-purple-400' 
+                      : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                  }`}
+                >
+                  <span>🧪</span> Sepolia (ETH)
+                </button>
+              </div>
+              {selectedNetwork === 'sepolia' && (
+                <p className="text-xs text-yellow-400/80 mt-2">⚠️ Sepolia is a testnet - uses test ETH only</p>
+              )}
+            </div>
+
+            {/* Price Display */}
+            <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+              <div className="flex justify-between items-center">
+                <span className="text-white/70">Amount</span>
+                <span className="text-white font-medium">
+                  {selectedNetwork === 'sepolia' 
+                    ? `${usdToEth(config.totalAmount).toFixed(6)} ETH` 
+                    : `${config.bdagAmount.toFixed(2)} BDAG`}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm mt-1">
+                <span className="text-white/50">≈ USD</span>
+                <span className="text-white/50">${config.totalAmount}</span>
+              </div>
+            </div>
+
+            {/* Crypto Payment Section */}
+            <CryptoPaymentSection
+              wallet={wallet}
+              bdagAmount={selectedNetwork === 'bdag' ? config.bdagAmount : usdToEth(config.totalAmount)}
+              totalAmount={config.totalAmount}
+              cryptoMsg={activePurchase.cryptoMsg}
+              txHash={activePurchase.txHash}
+              loading={activePurchase.loading}
+              onPurchase={activePurchase.purchaseWithWallet}
+              network={selectedNetwork}
+            />
+          </div>
         )}
 
         {/* Other Payment Tab */}

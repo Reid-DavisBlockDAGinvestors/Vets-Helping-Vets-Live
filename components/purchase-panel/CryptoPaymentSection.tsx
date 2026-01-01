@@ -16,10 +16,12 @@ export interface CryptoPaymentSectionProps {
     address: string | null
     balance: string | null
     isOnBlockDAG: boolean
+    isOnSepolia?: boolean
     error: string | null
     connectAuto: () => Promise<void>
     disconnect: () => void
     switchToBlockDAG: () => Promise<void>
+    switchToSepolia?: () => Promise<void>
   }
   bdagAmount: number
   totalAmount: number
@@ -27,6 +29,7 @@ export interface CryptoPaymentSectionProps {
   txHash: string | null
   loading: boolean
   onPurchase: () => Promise<void>
+  network?: 'bdag' | 'sepolia'
 }
 
 export function CryptoPaymentSection({
@@ -36,12 +39,19 @@ export function CryptoPaymentSection({
   cryptoMsg,
   txHash,
   loading,
-  onPurchase
+  onPurchase,
+  network = 'bdag'
 }: CryptoPaymentSectionProps) {
+  const isOnCorrectNetwork = network === 'sepolia' ? wallet.isOnSepolia : wallet.isOnBlockDAG
+  const networkName = network === 'sepolia' ? 'Sepolia' : 'BlockDAG'
+  const currencySymbol = network === 'sepolia' ? 'ETH' : 'BDAG'
+  const explorerUrl = network === 'sepolia' 
+    ? 'https://sepolia.etherscan.io/tx/' 
+    : 'https://awakening.bdagscan.com/tx/'
   if (!wallet.isConnected) {
     return (
       <div className="space-y-3" data-testid="crypto-connect-section">
-        <p className="text-sm text-white/70">Connect your wallet to pay with BDAG</p>
+        <p className="text-sm text-white/70">Connect your wallet to pay with {currencySymbol}</p>
         <button 
           onClick={wallet.connectAuto} 
           disabled={wallet.isConnecting}
@@ -77,25 +87,27 @@ export function CryptoPaymentSection({
         </p>
         {wallet.balance && (
           <p className="text-white/50 text-xs mt-1" data-testid="wallet-balance">
-            Balance: {parseFloat(wallet.balance).toFixed(4)} BDAG
+            Balance: {parseFloat(wallet.balance).toFixed(4)} {currencySymbol}
           </p>
         )}
-        {!wallet.isOnBlockDAG && (
+        {!isOnCorrectNetwork && (
           <button 
-            onClick={wallet.switchToBlockDAG} 
+            onClick={network === 'sepolia' ? wallet.switchToSepolia : wallet.switchToBlockDAG} 
             data-testid="switch-network-btn"
             className="mt-2 text-xs text-amber-400 hover:text-amber-300"
           >
-            ⚠️ Switch to BlockDAG Network
+            ⚠️ Switch to {networkName} Network
           </button>
         )}
       </div>
 
-      {/* BDAG Amount */}
-      <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3" data-testid="bdag-amount">
+      {/* Crypto Amount */}
+      <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3" data-testid="crypto-amount">
         <div className="flex justify-between items-center">
-          <span className="text-white/70 text-sm">Amount in BDAG</span>
-          <span className="text-white font-bold">{bdagAmount.toLocaleString()} BDAG</span>
+          <span className="text-white/70 text-sm">Amount in {currencySymbol}</span>
+          <span className="text-white font-bold">
+            {network === 'sepolia' ? bdagAmount.toFixed(6) : bdagAmount.toLocaleString()} {currencySymbol}
+          </span>
         </div>
         <p className="text-xs text-white/40 mt-1">≈ ${totalAmount} USD</p>
       </div>
@@ -127,22 +139,22 @@ export function CryptoPaymentSection({
 
       <button 
         onClick={onPurchase} 
-        disabled={loading || !wallet.isOnBlockDAG}
+        disabled={loading || !isOnCorrectNetwork}
         data-testid="crypto-purchase-btn"
-        className="w-full rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 px-6 py-4 font-semibold text-white shadow-lg disabled:opacity-50"
+        className={`w-full rounded-lg bg-gradient-to-r ${network === 'sepolia' ? 'from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500' : 'from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500'} px-6 py-4 font-semibold text-white shadow-lg disabled:opacity-50`}
       >
-        {loading ? 'Processing...' : `Pay ${bdagAmount.toLocaleString()} BDAG`}
+        {loading ? 'Processing...' : `Pay ${network === 'sepolia' ? bdagAmount.toFixed(6) : bdagAmount.toLocaleString()} ${currencySymbol}`}
       </button>
 
       {txHash && (
         <a 
-          href={`https://awakening.bdagscan.com/tx/${txHash}`} 
+          href={`${explorerUrl}${txHash}`} 
           target="_blank" 
           rel="noopener noreferrer"
           data-testid="tx-link"
           className="block text-center text-sm text-blue-400 hover:underline"
         >
-          View transaction →
+          View transaction on {networkName} →
         </a>
       )}
     </div>
