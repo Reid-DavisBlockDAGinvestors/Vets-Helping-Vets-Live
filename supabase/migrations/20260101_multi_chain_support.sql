@@ -47,15 +47,40 @@ SET chain_id = 1043
 WHERE chain_id IS NULL;
 
 -- ============================================
--- 4. Update contracts table with more chains
+-- 4. Create contracts table if not exists
 -- ============================================
--- Insert V7 placeholder for Sepolia (will be updated after deployment)
+CREATE TABLE IF NOT EXISTS public.contracts (
+  id SERIAL PRIMARY KEY,
+  version VARCHAR(10) NOT NULL UNIQUE,
+  address VARCHAR(42) NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  chain_id INTEGER NOT NULL DEFAULT 1043,
+  deployed_at TIMESTAMP WITH TIME ZONE,
+  deployed_block BIGINT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  is_mintable BOOLEAN NOT NULL DEFAULT true,
+  features JSONB DEFAULT '{}',
+  abi_hash VARCHAR(64),
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Insert existing contracts (BlockDAG)
+INSERT INTO public.contracts (version, address, name, chain_id, is_active, is_mintable, features)
+VALUES 
+  ('v5', '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890', 'PatriotPledgeNFTV5', 1043, false, true,
+   '{"batch_mint": false, "royalties": false}'::jsonb),
+  ('v6', '0xaE54e4E8A75a81780361570c17b8660CEaD27053', 'PatriotPledgeNFTV6', 1043, true, true,
+   '{"batch_mint": true, "royalties": true}'::jsonb)
+ON CONFLICT (version) DO NOTHING;
+
+-- Insert V7 placeholders for Ethereum networks
 INSERT INTO public.contracts (version, address, name, chain_id, is_active, is_mintable, features)
 VALUES 
   ('v7-sepolia', '0x0000000000000000000000000000000000000000', 'PatriotPledgeNFTV7 (Sepolia)', 11155111, true, true,
-   '{"batch_mint": true, "royalties": true, "pausable": true, "burnable": true, "setTokenURI": true, "freezable": true, "blacklist": true, "soulbound": true, "immediate_payout": true, "bug_bounty": true}'::jsonb),
+   '{"batch_mint": true, "immediate_payout": true}'::jsonb),
   ('v7-ethereum', '0x0000000000000000000000000000000000000000', 'PatriotPledgeNFTV7 (Ethereum)', 1, false, false,
-   '{"batch_mint": true, "royalties": true, "pausable": true, "burnable": true, "setTokenURI": true, "freezable": true, "blacklist": true, "soulbound": true, "immediate_payout": true, "bug_bounty": true}'::jsonb)
+   '{"batch_mint": true, "immediate_payout": true}'::jsonb)
 ON CONFLICT (version) DO NOTHING;
 
 -- ============================================
@@ -120,7 +145,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ============================================
+-- 8. Donor Notes Feature - Personal messages with NFT purchases
+-- ============================================
+ALTER TABLE purchases 
+ADD COLUMN IF NOT EXISTS donor_note TEXT;
+
+ALTER TABLE purchases 
+ADD COLUMN IF NOT EXISTS donor_name VARCHAR(100);
+
+ALTER TABLE purchases 
+ADD COLUMN IF NOT EXISTS notify_submitter BOOLEAN DEFAULT true;
+
 -- Comments
 COMMENT ON COLUMN submissions.chain_id IS 'Blockchain network ID (1043=BlockDAG, 1=Ethereum, 11155111=Sepolia, 137=Polygon, 8453=Base)';
 COMMENT ON COLUMN submissions.chain_name IS 'Human-readable network name for display';
 COMMENT ON TABLE chain_configs IS 'Configuration for supported blockchain networks';
+COMMENT ON COLUMN purchases.donor_note IS 'Optional personal note from donor to campaign submitter';
+COMMENT ON COLUMN purchases.donor_name IS 'Display name donor wants to share (can be anonymous)';
+COMMENT ON COLUMN purchases.notify_submitter IS 'Whether to send email notification to submitter for this purchase';

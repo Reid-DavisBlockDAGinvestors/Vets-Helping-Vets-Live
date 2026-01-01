@@ -36,7 +36,9 @@ export async function POST(req: NextRequest) {
       buyerEmail, // Email for receipt
       userId, // Logged-in user ID if available
       paymentMethod, // crypto_bdag, stripe, etc.
-      referrer // How user found the campaign
+      referrer, // How user found the campaign
+      donorNote, // Optional personal message to campaign creator
+      donorName // Optional display name (can stay anonymous)
     } = body
 
     // Get request metadata for fraud prevention
@@ -95,7 +97,9 @@ export async function POST(req: NextRequest) {
           payment_method: paymentMethod || 'crypto_bdag',
           ip_address: ipAddress,
           user_agent: userAgent,
-          referrer: referrer || null
+          referrer: referrer || null,
+          donor_note: donorNote || null,
+          donor_name: donorName || null
         })
       
       if (purchaseError) {
@@ -175,6 +179,8 @@ export async function POST(req: NextRequest) {
           campaignTitle: sub.title || 'Your Campaign',
           campaignId: sub.campaign_id || effectiveId,
           donorWallet: walletAddress || 'Anonymous',
+          donorName: donorName || undefined,
+          donorNote: donorNote || undefined,
           amountBDAG: amountBDAG || 0,
           amountUSD: amountUSD,
           tokenId: emailTokenId,

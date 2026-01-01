@@ -42,6 +42,8 @@ export interface UseBdagPurchaseProps {
     updateBalance: () => void
   }
   isPendingOnchain?: boolean
+  donorNote?: string    // Personal message to campaign creator
+  donorName?: string    // Display name for donor (optional)
 }
 
 export interface UseBdagPurchaseReturn {
@@ -68,7 +70,9 @@ export function useBdagPurchase(props: UseBdagPurchaseProps): UseBdagPurchaseRet
     quantity,
     auth,
     wallet,
-    isPendingOnchain
+    isPendingOnchain,
+    donorNote,
+    donorName
   } = props
 
   const [loading, setLoading] = useState(false)
@@ -252,6 +256,8 @@ export function useBdagPurchase(props: UseBdagPurchaseProps): UseBdagPurchaseRet
             paymentMethod: 'crypto_bdag',
             contractVersion: contractVersion || 'v6',
             contractAddress,
+            donorNote: donorNote || null,
+            donorName: donorName || null,
           })
         })
       } catch {}
@@ -277,7 +283,7 @@ export function useBdagPurchase(props: UseBdagPurchaseProps): UseBdagPurchaseRet
   }, [
     targetId, contractAddress, contractVersion, pricePerNft, hasNftPrice,
     bdagAmount, bdagTipAmount, totalAmount, tipAmount, quantity,
-    auth, wallet, isPendingOnchain
+    auth, wallet, isPendingOnchain, donorNote, donorName
   ])
 
   return {

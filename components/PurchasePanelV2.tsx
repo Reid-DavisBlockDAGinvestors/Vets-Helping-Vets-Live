@@ -49,6 +49,9 @@ export default function PurchasePanelV2({
   const [isMonthly, setIsMonthly] = useState(false)
   const [cardResult, setCardResult] = useState<{ success: boolean } | null>(null)
   const [otherLoading, setOtherLoading] = useState(false)
+  const [donorNote, setDonorNote] = useState('')
+  const [donorName, setDonorName] = useState('')
+  const [showNoteField, setShowNoteField] = useState(false)
 
   // Modular hooks
   const wallet = useWallet()
@@ -70,6 +73,8 @@ export default function PurchasePanelV2({
     auth,
     wallet,
     isPendingOnchain,
+    donorNote: donorNote.trim() || undefined,
+    donorName: donorName.trim() || undefined,
   })
 
   // Combined result from card or crypto
@@ -131,6 +136,48 @@ export default function PurchasePanelV2({
           <div className="flex justify-between items-center pt-2 border-t border-white/10">
             <span className="text-white/70">Total</span>
             <span className="text-xl font-bold text-white">${config.totalAmount}</span>
+          </div>
+
+          {/* Personal Note to Creator */}
+          <div className="pt-2">
+            {!showNoteField ? (
+              <button
+                onClick={() => setShowNoteField(true)}
+                className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                data-testid="add-note-btn"
+              >
+                <span>💌</span> Add a personal note to the fundraiser
+              </button>
+            ) : (
+              <div className="space-y-3 bg-white/5 rounded-lg p-3 border border-white/10">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm font-medium text-white/80">💌 Personal Note</label>
+                  <button
+                    onClick={() => { setShowNoteField(false); setDonorNote(''); setDonorName(''); }}
+                    className="text-xs text-white/50 hover:text-white/70"
+                  >✕ Remove</button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Your name (optional, or stay anonymous)"
+                  value={donorName}
+                  onChange={e => setDonorName(e.target.value)}
+                  maxLength={100}
+                  className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30"
+                  data-testid="donor-name-input"
+                />
+                <textarea
+                  placeholder="Write a message to the fundraiser... They'll receive it with their donation notification."
+                  value={donorNote}
+                  onChange={e => setDonorNote(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30 resize-none"
+                  data-testid="donor-note-input"
+                />
+                <p className="text-xs text-white/40">{donorNote.length}/500 characters</p>
+              </div>
+            )}
           </div>
         </div>
       ) : (

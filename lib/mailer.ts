@@ -474,6 +474,8 @@ export type CreatorPurchaseNotificationData = {
   campaignTitle: string
   campaignId: number
   donorWallet: string
+  donorName?: string        // Display name of donor (optional)
+  donorNote?: string        // Personal message from donor (optional)
   amountBDAG: number
   amountUSD?: number
   tokenId?: number
@@ -510,9 +512,19 @@ export async function sendCreatorPurchaseNotification(data: CreatorPurchaseNotif
         <tr><td style="padding: 8px 0;">Campaign ID:</td><td style="text-align: right; color: #fff;">#${data.campaignId}</td></tr>
         ${data.tokenId ? `<tr><td style="padding: 8px 0;">Token ID:</td><td style="text-align: right; color: #fff;">#${data.tokenId}</td></tr>` : ''}
         ${data.editionNumber ? `<tr><td style="padding: 8px 0;">Edition Sold:</td><td style="text-align: right; color: #fff;">#${data.editionNumber}</td></tr>` : ''}
-        <tr><td style="padding: 8px 0;">Donor Wallet:</td><td style="text-align: right; color: #3b82f6; font-size: 12px;">${data.donorWallet.slice(0, 6)}...${data.donorWallet.slice(-4)}</td></tr>
+        <tr><td style="padding: 8px 0;">Supporter:</td><td style="text-align: right; color: #fff;">${data.donorName || 'Anonymous'}</td></tr>
+        <tr><td style="padding: 8px 0;">Wallet:</td><td style="text-align: right; color: #3b82f6; font-size: 12px;">${data.donorWallet.slice(0, 6)}...${data.donorWallet.slice(-4)}</td></tr>
       </table>
     </div>
+    
+    ${data.donorNote ? `
+    <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.1) 100%); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #a78bfa; font-size: 16px; margin: 0 0 10px 0;">💌 Personal Message from ${data.donorName || 'Your Supporter'}</h3>
+      <p style="color: #fff; font-size: 16px; line-height: 1.6; margin: 0; font-style: italic;">
+        "${data.donorNote}"
+      </p>
+    </div>
+    ` : ''}
     
     ${progressPercent !== null ? `
     <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin: 20px 0;">
