@@ -68,14 +68,29 @@ export default function NFTCard({ item }: { item: NFTItem }) {
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           
+          {/* SOLD OUT Banner */}
+          {item.sold !== undefined && item.total && item.total > 0 && item.sold >= item.total && (
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-10">
+              <div className="bg-red-600 text-white font-bold text-xl px-6 py-2 rounded-lg transform -rotate-12 shadow-lg border-2 border-red-400">
+                🔴 SOLD OUT
+              </div>
+            </div>
+          )}
+          
           {/* Top Badges Row */}
-          <div className="absolute top-3 left-3 right-3 flex justify-between items-start">
+          <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-20">
             {/* Series Badge - Left Side */}
             <div className="flex flex-col gap-1.5">
               {/* Edition/Series counter */}
-              <span className="rounded-full px-2.5 py-1 text-xs font-semibold backdrop-blur-sm bg-black/50 text-white border border-white/20">
+              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold backdrop-blur-sm border border-white/20 ${
+                item.sold !== undefined && item.total && item.total > 0 && item.sold >= item.total
+                  ? 'bg-red-600/80 text-white'
+                  : 'bg-black/50 text-white'
+              }`}>
                 {item.sold !== undefined && item.total && item.total > 0 
-                  ? `${item.sold}/${item.total} sold`
+                  ? item.sold >= item.total 
+                    ? `SOLD OUT (${item.total})`
+                    : `${item.sold}/${item.total} sold`
                   : item.sold !== undefined 
                     ? `${item.sold} sold`
                     : '0 sold'

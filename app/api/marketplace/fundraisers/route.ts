@@ -191,6 +191,9 @@ export async function GET(req: NextRequest) {
       const updateCount = updateCountMap[sub.id] || 0
       const lastUpdated = lastUpdateMap[sub.id] || null
       
+      // Determine sold out status
+      const soldOut = maxEditions > 0 && editionsMinted >= maxEditions
+      
       return {
         id: sub.id,
         slug: sub.slug || null,
@@ -211,6 +214,8 @@ export async function GET(req: NextRequest) {
         maxEditions,
         pricePerEdition,
         remaining,
+        soldOut, // Explicit sold-out flag
+        active: !soldOut, // Campaign is active if not sold out
         // Living NFT update info
         updateCount,
         lastUpdated,
