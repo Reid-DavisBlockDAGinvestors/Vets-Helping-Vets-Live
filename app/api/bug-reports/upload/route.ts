@@ -9,7 +9,45 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 )
 
-// POST - Upload a screenshot for bug report
+// Allowed file types for bug reports - comprehensive list
+const ALLOWED_TYPES: Record<string, string[]> = {
+  // Images
+  'image/jpeg': ['jpg', 'jpeg'],
+  'image/png': ['png'],
+  'image/gif': ['gif'],
+  'image/webp': ['webp'],
+  'image/svg+xml': ['svg'],
+  'image/bmp': ['bmp'],
+  // Documents
+  'application/pdf': ['pdf'],
+  'application/msword': ['doc'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['docx'],
+  'application/vnd.ms-excel': ['xls'],
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['xlsx'],
+  'application/vnd.ms-powerpoint': ['ppt'],
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['pptx'],
+  // Text
+  'text/plain': ['txt'],
+  'text/csv': ['csv'],
+  'text/markdown': ['md'],
+  'application/json': ['json'],
+  // Archives
+  'application/zip': ['zip'],
+  'application/x-rar-compressed': ['rar'],
+  'application/x-7z-compressed': ['7z'],
+  // Video
+  'video/mp4': ['mp4'],
+  'video/webm': ['webm'],
+  'video/quicktime': ['mov'],
+  // Audio
+  'audio/mpeg': ['mp3'],
+  'audio/wav': ['wav'],
+  'audio/ogg': ['ogg'],
+}
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB for documents/videos
+
+// POST - Upload an attachment for bug report
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
@@ -20,19 +58,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    if (!allowedTypes.includes(file.type)) {
+    const allowedMimeTypes = Object.keys(ALLOWED_TYPES)
+    if (!allowedMimeTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.' },
+        { error: `Invalid file type: ${file.type}. Supported: images, PDFs, documents, text, archives, audio, video.` },
         { status: 400 }
       )
     }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024
-    if (file.size > maxSize) {
+    // Validate file size (max 50MB)
+    if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: 'File too large. Maximum size is 10MB.' },
+        { error: 'File too large. Maximum size is 50MB.' },
         { status: 400 }
       )
     }
@@ -40,8 +77,8 @@ export async function POST(req: NextRequest) {
     // Generate unique filename
     const timestamp = Date.now()
     const randomId = Math.random().toString(36).substring(2, 8)
-    const extension = file.name.split('.').pop() || 'png'
-    const filename = `bug-screenshot-${timestamp}-${randomId}.${extension}`
+    const extension = file.name.split('.').pop()?.toLowerCase() || 'bin'
+    const filename = `bug-attachment-${timestamp}-${randomId}.${extension}`
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer()

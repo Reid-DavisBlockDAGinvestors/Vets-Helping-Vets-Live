@@ -435,10 +435,10 @@ export default function BugReportButton() {
                     />
                   </div>
 
-                  {/* Screenshots */}
+                  {/* Attachments */}
                   <div>
                     <label className="text-sm text-white/70 block mb-2">
-                      Screenshots <span className="text-white/40">(drag & drop or click to upload)</span>
+                      Attachments <span className="text-white/40">(screenshots, documents, videos)</span>
                     </label>
                     
                     {/* Upload area */}
@@ -469,40 +469,60 @@ export default function BugReportButton() {
                       ) : (
                         <>
                           <svg className="w-8 h-8 mx-auto text-white/40 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                           </svg>
-                          <p className="text-white/60 text-sm">Drop screenshots here or click to upload</p>
-                          <p className="text-white/40 text-xs mt-1">JPEG, PNG, GIF, WebP • Max 10MB each</p>
+                          <p className="text-white/60 text-sm">Drop files here or click to browse</p>
+                          <p className="text-white/40 text-xs mt-1">Images, PDFs, Docs, Videos • Max 50MB each</p>
                         </>
                       )}
                     </div>
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.md,.json,.zip,.rar,.7z,video/*,audio/*"
                       multiple
                       className="hidden"
                       onChange={handleScreenshotUpload}
                     />
 
-                    {/* Screenshot previews */}
+                    {/* Attachment previews */}
                     {screenshots.length > 0 && (
                       <div className="flex flex-wrap gap-3 mt-3">
-                        {screenshots.map((ss, i) => (
-                          <div key={i} className="relative group">
-                            <img
-                              src={ss.url}
-                              alt={`Screenshot ${i + 1}`}
-                              className="w-24 h-24 object-cover rounded-lg border border-white/10"
-                            />
-                            <button
-                              onClick={() => removeScreenshot(i)}
-                              className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
+                        {screenshots.map((ss, i) => {
+                          const isImage = ss.filename.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i)
+                          const isPdf = ss.filename.match(/\.pdf$/i)
+                          const isDoc = ss.filename.match(/\.(doc|docx|xls|xlsx|ppt|pptx)$/i)
+                          const isVideo = ss.filename.match(/\.(mp4|webm|mov)$/i)
+                          const isAudio = ss.filename.match(/\.(mp3|wav|ogg)$/i)
+                          const isArchive = ss.filename.match(/\.(zip|rar|7z)$/i)
+                          
+                          return (
+                            <div key={i} className="relative group">
+                              {isImage ? (
+                                <img
+                                  src={ss.url}
+                                  alt={`Attachment ${i + 1}`}
+                                  className="w-24 h-24 object-cover rounded-lg border border-white/10"
+                                />
+                              ) : (
+                                <div className="w-24 h-24 rounded-lg border border-white/10 bg-white/5 flex flex-col items-center justify-center p-2">
+                                  <span className="text-2xl">
+                                    {isPdf ? '📄' : isDoc ? '📝' : isVideo ? '🎬' : isAudio ? '🎵' : isArchive ? '📦' : '📎'}
+                                  </span>
+                                  <span className="text-[10px] text-white/60 mt-1 truncate w-full text-center">
+                                    {ss.filename.split('-').pop()?.slice(0, 12)}
+                                  </span>
+                                </div>
+                              )}
+                              <button
+                                onClick={() => removeScreenshot(i)}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>

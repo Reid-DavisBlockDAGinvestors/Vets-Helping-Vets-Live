@@ -19,9 +19,11 @@ interface PostCardProps {
   onDeletePost?: () => void
   onEditComment?: (commentId: string) => void
   onDeleteComment?: (commentId: string) => void
+  onLikeComment?: (commentId: string, reactionType?: string) => void
   renderPostContent: (content: string) => React.ReactNode
   campaignPreviews: Record<string, CampaignPreview>
   isDeleting?: boolean
+  token?: string | null
 }
 
 const REACTION_EMOJIS: Record<string, string> = {
@@ -47,14 +49,53 @@ export function PostCard({
   onDeletePost,
   onEditComment,
   onDeleteComment,
+  onLikeComment,
   renderPostContent,
-  isDeleting
+  isDeleting,
+  token
 }: PostCardProps) {
   const [showReactionPicker, setShowReactionPicker] = useState(false)
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [showPostMenu, setShowPostMenu] = useState(false)
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyContent, setReplyContent] = useState('')
+  const [showCommentReactionPicker, setShowCommentReactionPicker] = useState<string | null>(null)
+  const [commentLikes, setCommentLikes] = useState<Record<string, { liked: boolean; count: number }>>({})
+
+  // Handle comment like
+  const handleCommentLike = async (commentId: string, reactionType: string = 'love') => {
+    if (!token) return
+    
+    try {
+      const res = await fetch('/api/community/like', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ comment_id: commentId, reaction_type: reactionType })
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        // Update local state for immediate feedback
+        setCommentLikes(prev => ({
+          ...prev,
+          [commentId]: {
+            liked: data.liked,
+            count: prev[commentId]?.count !== undefined 
+              ? prev[commentId].count + (data.liked ? 1 : -1)
+              : (data.liked ? 1 : 0)
+          }
+        }))
+        // Also call parent handler if provided
+        onLikeComment?.(commentId, reactionType)
+      }
+    } catch (e) {
+      console.error('Failed to like comment:', e)
+    }
+    setShowCommentReactionPicker(null)
+  }
 
   const formatDate = (date: string) => {
     const d = new Date(date)
@@ -311,9 +352,46 @@ export function PostCard({
                         </div>
                         {/* Comment Actions */}
                         <div className="flex items-center gap-3 mt-1 ml-2">
+                          {/* Comment Reaction Button */}
+                          <div 
+                            className="relative"
+                            onMouseEnter={() => setShowCommentReactionPicker(comment.id)}
+                            onMouseLeave={() => setShowCommentReactionPicker(null)}
+                          >
+                            <button
+                              onClick={() => handleCommentLike(comment.id, 'love')}
+                              className={`text-xs transition-colors flex items-center gap-1 ${
+                                commentLikes[comment.id]?.liked ? 'text-red-400' : 'text-white/50 hover:text-white'
+                              }`}
+                              data-testid={`comment-like-btn-${comment.id}`}
+                            >
+                              <span>{commentLikes[comment.id]?.liked ? '❤️' : '🤍'}</span>
+                              <span>{commentLikes[comment.id]?.count ?? comment.likes_count ?? 0}</span>
+                            </button>
+                            
+                            {showCommentReactionPicker === comment.id && (
+                              <div 
+                                className="absolute bottom-full left-0 mb-1 flex gap-1 p-1.5 bg-gray-800 rounded-lg shadow-xl border border-white/10 z-50"
+                                data-testid={`comment-reaction-picker-${comment.id}`}
+                              >
+                                {Object.entries(REACTION_EMOJIS).map(([type, emoji]) => (
+                                  <button
+                                    key={type}
+                                    onClick={() => handleCommentLike(comment.id, type)}
+                                    className="p-1 hover:bg-white/10 rounded text-sm transition-transform hover:scale-125"
+                                    title={type}
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          
                           <button
                             onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
                             className="text-xs text-white/50 hover:text-white transition-colors"
+                            data-testid={`comment-reply-btn-${comment.id}`}
                           >
                             ↩️ Reply
                           </button>

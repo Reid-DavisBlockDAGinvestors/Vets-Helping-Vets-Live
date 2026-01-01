@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import { openBugReport } from '@/components/BugReportButton'
 
 interface BountyTier {
   id: string
@@ -266,15 +267,15 @@ export default function BugBountyPage() {
 
         {/* CTA */}
         <div className="text-center">
-          <Link
-            href="/"
+          <button
+            onClick={() => openBugReport({ category: 'general', title: '', description: '' })}
             className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-red-600 to-blue-600 hover:from-red-500 hover:to-blue-500 text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg"
             data-testid="report-bug-cta"
           >
             🐛 Report a Bug Now
-          </Link>
+          </button>
           <p className="text-white/40 text-sm mt-4">
-            Click the bug icon in the bottom-right corner on any page to submit a report.
+            Click the button above or the bug icon in the bottom-right corner on any page.
           </p>
         </div>
 

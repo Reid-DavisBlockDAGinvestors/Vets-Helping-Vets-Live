@@ -417,6 +417,7 @@ export default function CommunityHubClientV2() {
                     onDeleteComment={(commentId) => deleteComment(post.id, commentId)}
                     renderPostContent={renderPostContent}
                     campaignPreviews={campaignPreviews}
+                    token={token}
                   />
                 ))}
               </div>
