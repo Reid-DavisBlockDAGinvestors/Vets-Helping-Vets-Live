@@ -1,0 +1,11 @@
+{
+  "contract": "PatriotPledgeNFTV7",
+  "address": "0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "treasury": "0xbFD14c5A940E783AEc1993598143B59D3C971eF1",
+  "platformFeeBps": 100,
+  "deployer": "0x4E8E445A9957cD251059cd52A00777A25f8cD53e",
+  "txHash": "0xc215ae280c51da9adddc631f44bae2006026ffd0db0c7382695ae93fe524dd2e",
+  "deployedAt": "2026-01-01T23:51:45.427Z"
+}

@@ -1389,6 +1389,51 @@
       "artifacts": [
         "Pausable"
       ]
+    },
+    "C:\\Users\\Reid Davis\\CascadeProjects\\windsurf-project-2\\contracts\\PatriotPledgeNFTV7.sol": {
+      "lastModificationDate": 1767295454376,
+      "contentHash": "62cb4196c824faa2d82538887d0ecc9f",
+      "sourceName": "contracts/PatriotPledgeNFTV7.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC721/ERC721.sol",
+        "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol",
+        "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol",
+        "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol",
+        "@openzeppelin/contracts/access/Ownable.sol",
+        "@openzeppelin/contracts/utils/Pausable.sol",
+        "@openzeppelin/contracts/utils/ReentrancyGuard.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "PatriotPledgeNFTV7"
+      ]
     }
   }
 }

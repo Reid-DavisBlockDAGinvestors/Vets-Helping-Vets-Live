@@ -13,11 +13,14 @@
  *   npx hardhat run scripts/deploy-v7.ts --network ethereum
  */
 
-const hre = require("hardhat");
-const { ethers, network, run } = hre;
+import { ethers, network, run } from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
 import * as readline from "readline";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ============ Configuration ============
 
