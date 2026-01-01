@@ -6,6 +6,45 @@ import { getCategoryById } from '@/lib/categories'
 import { StatusBadge, UpdateStatusBadge } from './StatusBadge'
 import type { Campaign, CampaignUpdate } from './types'
 
+// Chain explorer URLs
+const CHAIN_EXPLORERS: Record<number, string> = {
+  1043: 'https://awakening.bdagscan.com',
+  1: 'https://etherscan.io',
+  11155111: 'https://sepolia.etherscan.io',
+  137: 'https://polygonscan.com',
+  8453: 'https://basescan.org',
+}
+
+// Chain display info
+const CHAIN_INFO: Record<number, { name: string; color: string; icon: string }> = {
+  1043: { name: 'BlockDAG', color: 'bg-blue-500/20 text-blue-400', icon: '🔷' },
+  1: { name: 'Ethereum', color: 'bg-purple-500/20 text-purple-400', icon: '⟠' },
+  11155111: { name: 'Sepolia', color: 'bg-yellow-500/20 text-yellow-400', icon: '🧪' },
+  137: { name: 'Polygon', color: 'bg-violet-500/20 text-violet-400', icon: '🟣' },
+  8453: { name: 'Base', color: 'bg-blue-500/20 text-blue-400', icon: '🔵' },
+}
+
+function getExplorerTxUrl(chainId: number | null, txHash: string): string {
+  const baseUrl = chainId ? CHAIN_EXPLORERS[chainId] : CHAIN_EXPLORERS[1043]
+  return `${baseUrl || CHAIN_EXPLORERS[1043]}/tx/${txHash}`
+}
+
+function NetworkBadge({ chainId, chainName }: { chainId: number | null; chainName: string | null }) {
+  if (!chainId) return null
+  
+  const info = CHAIN_INFO[chainId]
+  if (!info) return null
+  
+  return (
+    <span 
+      className={`px-2 py-0.5 rounded-full text-xs ${info.color}`}
+      data-testid={`network-badge-${chainId}`}
+    >
+      {info.icon} {chainName || info.name}
+    </span>
+  )
+}
+
 interface CampaignCardProps {
   campaign: Campaign
   isExpanded: boolean
@@ -87,14 +126,16 @@ export function CampaignCard({
               )}
             </div>
             
-            <div className="flex items-center gap-4 mt-1 text-sm text-white/50">
+            <div className="flex items-center gap-4 mt-1 text-sm text-white/50 flex-wrap">
               <span>Goal: {formatCurrency(campaign.goal)}</span>
               <span>Created: {formatDate(campaign.created_at)}</span>
-              {campaign.campaign_id && (
+              {campaign.campaign_id != null && (
                 <span className="text-green-400">
-                  {campaign.contract_address?.toLowerCase().endsWith('7053') ? 'V6' : 'V5'} #{campaign.campaign_id}
+                  {campaign.contract_version?.toUpperCase() || 'V5'} #{campaign.campaign_id}
                 </span>
               )}
+              {/* Network Badge */}
+              <NetworkBadge chainId={campaign.chain_id} chainName={campaign.chain_name} />
             </div>
 
             {/* Updates indicator */}
@@ -310,10 +351,11 @@ export function CampaignCard({
 
             {campaign.tx_hash && (
               <a
-                href={`https://awakening.bdagscan.com/tx/${campaign.tx_hash}`}
+                href={getExplorerTxUrl(campaign.chain_id, campaign.tx_hash)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2 rounded-lg bg-purple-500/20 text-purple-400 text-sm font-medium hover:bg-purple-500/30"
+                data-testid="view-tx-link"
               >
                 🔗 View TX
               </a>

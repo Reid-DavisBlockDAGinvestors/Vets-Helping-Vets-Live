@@ -83,6 +83,9 @@ export interface Campaign {
   tx_hash: string | null
   contract_address: string | null
   contract_version: string | null
+  // Multi-chain support
+  chain_id: number | null
+  chain_name: string | null
   onchainStats: OnchainStats | null
   updates: CampaignUpdate[]
   pendingUpdates: number
@@ -97,6 +100,7 @@ export interface CampaignFilters {
   statusFilter: StatusFilter
   sortBy: SortOption
   hasUpdatesOnly: boolean
+  networkFilter: 'all' | number  // Filter by chain_id
 }
 
 /**

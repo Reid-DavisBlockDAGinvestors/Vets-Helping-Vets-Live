@@ -31,6 +31,7 @@ const defaultFilters: CampaignFilters = {
   statusFilter: 'all',
   sortBy: 'recent',
   hasUpdatesOnly: false,
+  networkFilter: 'all',
 }
 
 /**
