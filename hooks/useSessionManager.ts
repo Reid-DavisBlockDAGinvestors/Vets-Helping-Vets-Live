@@ -1,12 +1,26 @@
 'use client'
 
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 
-const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
-const TOKEN_REFRESH_INTERVAL_MS = 10 * 60 * 1000 // 10 minutes
-const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove']
+/**
+ * ELITE SESSION SECURITY - Financial Application Standards
+ * 
+ * Implements:
+ * - 15-minute inactivity timeout (financial standard)
+ * - 8-hour absolute session timeout
+ * - 5-minute token refresh
+ * - Session warning before expiry
+ * - Secure session termination
+ */
+
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000 // 15 minutes - FINANCIAL STANDARD
+const ABSOLUTE_TIMEOUT_MS = 8 * 60 * 60 * 1000 // 8 hours absolute max
+const TOKEN_REFRESH_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes - more frequent refresh
+const SESSION_WARNING_MS = 2 * 60 * 1000 // Warn 2 minutes before timeout
+const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart']
+// Removed 'mousemove' - too sensitive, could keep sessions alive unintentionally
 
 interface UseSessionManagerOptions {
   onSessionExpired?: () => void

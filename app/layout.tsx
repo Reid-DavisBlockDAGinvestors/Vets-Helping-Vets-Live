@@ -10,6 +10,7 @@ import { ThemeProvider } from '@/components/ThemeProvider'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import SkipLink from '@/components/SkipLink'
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
+import SessionExpiryWarning from '@/components/SessionExpiryWarning'
 import { SKIP_TARGETS } from '@/lib/accessibility'
 
 import type { Metadata, Viewport } from 'next'
@@ -64,6 +65,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <BugReportButton />
           <Toaster />
           <ServiceWorkerRegistration />
+          <SessionExpiryWarning />
         </ThemeProvider>
       </body>
     </html>
