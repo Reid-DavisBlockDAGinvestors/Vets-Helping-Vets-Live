@@ -376,7 +376,7 @@ export default function CommunityHubClientV2() {
                   id: c.id,
                   title: c.title,
                   slug: c.slug,
-                  image_uri: c.image_uri
+                  image_uri: c.image_uri || undefined
                 }))}
               />
             )}
