@@ -5,8 +5,10 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useWallet } from '@/hooks/useWallet'
+import { supabase } from '@/lib/supabase'
 import UserAccountPortal from './UserAccountPortalV2'
 import ThemeToggle from './ThemeToggle'
+import { NotificationCenter } from './notifications'
 
 const NAV_LINKS = [
   { href: '/marketplace', label: 'Marketplace' },
@@ -23,6 +25,7 @@ export default function NavBar() {
   const [walletDropdownOpen, setWalletDropdownOpen] = useState(false)
   const [walletModalOpen, setWalletModalOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [authToken, setAuthToken] = useState<string | null>(null)
   const pathname = usePathname()
   const walletDropdownRef = useRef<HTMLDivElement>(null)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
@@ -48,6 +51,21 @@ export default function NavBar() {
   // Track client-side mounting for portal
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  // Get auth token for notifications
+  useEffect(() => {
+    const getToken = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setAuthToken(session?.access_token || null)
+    }
+    getToken()
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthToken(session?.access_token || null)
+    })
+    
+    return () => subscription.unsubscribe()
   }, [])
 
   // Close wallet dropdown when clicking outside (desktop only, simpler logic)
@@ -149,6 +167,9 @@ export default function NavBar() {
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Theme Toggle */}
             <ThemeToggle />
+            
+            {/* Notifications - Only show when logged in */}
+            {authToken && <NotificationCenter token={authToken} />}
             
             {/* User Account */}
             <UserAccountPortal />
