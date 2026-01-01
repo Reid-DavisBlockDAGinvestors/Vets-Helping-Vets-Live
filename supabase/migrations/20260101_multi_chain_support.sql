@@ -47,11 +47,11 @@ SET chain_id = 1043
 WHERE chain_id IS NULL;
 
 -- ============================================
--- 4. Create contracts table if not exists
+-- 4. Contracts table - Create if not exists, then expand version column
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.contracts (
   id SERIAL PRIMARY KEY,
-  version VARCHAR(10) NOT NULL UNIQUE,
+  version VARCHAR(20) NOT NULL UNIQUE,
   address VARCHAR(42) NOT NULL,
   name VARCHAR(100) NOT NULL,
   chain_id INTEGER NOT NULL DEFAULT 1043,
@@ -65,7 +65,13 @@ CREATE TABLE IF NOT EXISTS public.contracts (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
--- Insert existing contracts (BlockDAG)
+-- Expand version column if it's too small (fixes VARCHAR(10) from previous migration)
+ALTER TABLE public.contracts ALTER COLUMN version TYPE VARCHAR(20);
+
+-- Drop unique constraint on address if it exists (allows same address on different chains)
+ALTER TABLE public.contracts DROP CONSTRAINT IF EXISTS contracts_address_key;
+
+-- Insert existing contracts (BlockDAG) - skip if already exist
 INSERT INTO public.contracts (version, address, name, chain_id, is_active, is_mintable, features)
 VALUES 
   ('v5', '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890', 'PatriotPledgeNFTV5', 1043, false, true,
