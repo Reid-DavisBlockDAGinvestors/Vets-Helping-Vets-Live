@@ -5,12 +5,16 @@
 ## Pre-Deployment Checklist
 
 ### Authentication & Session Management
-- [x] Session timeout after inactivity (30 min)
-- [x] Automatic token refresh (10 min intervals)
-- [x] Secure session storage
+- [x] Session timeout after inactivity (15 min - financial standard) ✅ Jan 1, 2026
+- [x] Absolute session timeout (8 hours max)
+- [x] Automatic token refresh (5 min intervals)
+- [x] Secure session storage (sessionStorage + PKCE)
 - [x] HTTPS-only cookies
+- [x] Session expiry warning modal
 - [ ] Multi-factor authentication (future)
-- [x] Password strength requirements
+- [x] Password strength requirements (12+ chars, mixed case, numbers, symbols)
+- [x] Account lockout after 5 failed attempts ✅ Jan 1, 2026
+- [x] Escalating lockout duration
 
 ### Input Validation
 - [x] Server-side validation on all inputs
@@ -23,10 +27,13 @@
 
 ### API Security
 - [x] Rate limiting implemented (`lib/rateLimit.ts`)
+- [x] Tiered rate limiting (auth/sensitive/standard) ✅ Jan 1, 2026
+- [x] Exponential backoff for repeat violators
 - [x] CORS properly configured
 - [x] Admin routes protected
 - [x] CAPTCHA on public forms
 - [x] Request size limits
+- [x] Security headers in middleware ✅ Jan 1, 2026
 - [ ] API versioning (future)
 
 ### Data Protection
@@ -111,9 +118,11 @@
 ### A09: Logging & Monitoring
 | Check | Status | Notes |
 |-------|--------|-------|
-| Security event logging | ✅ | `lib/logger.ts` |
-| Audit trail | ✅ | Database audit logs |
+| Security event logging | ✅ | `lib/security.ts` + `security_events` table |
+| Audit trail | ✅ | Database audit logs + security events |
 | Log injection prevention | ✅ | Structured logging |
+| Failed login tracking | ✅ | `failed_login_attempts` table |
+| Session tracking | ✅ | `user_sessions` table |
 | Monitoring alerts | ⚠️ | Consider Sentry |
 
 ### A10: Server-Side Request Forgery
@@ -225,5 +234,5 @@ npm audit --audit-level=high
 
 ---
 
-*Last Updated: December 31, 2025*
-*Next Review: January 31, 2026*
+*Last Updated: January 1, 2026*
+*Next Review: February 1, 2026*
