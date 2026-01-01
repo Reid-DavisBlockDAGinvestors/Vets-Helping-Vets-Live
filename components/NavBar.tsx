@@ -212,7 +212,7 @@ export default function NavBar() {
                         <div className="text-xs text-white/50 mb-1">Network</div>
                         <div className={`flex items-center gap-2 ${isOnBlockDAG ? 'text-green-400' : 'text-yellow-400'}`}>
                           <span className={`w-2 h-2 rounded-full ${isOnBlockDAG ? 'bg-green-400' : 'bg-yellow-400'}`}></span>
-                          {isOnBlockDAG ? 'BlockDAG Testnet' : 'Wrong Network'}
+                          {isOnBlockDAG ? 'BlockDAG Mainnet' : 'Wrong Network'}
                         </div>
                         {!isOnBlockDAG && (
                           <button

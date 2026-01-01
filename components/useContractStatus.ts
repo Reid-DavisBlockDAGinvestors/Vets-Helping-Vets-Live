@@ -65,7 +65,7 @@ export function useContractStatus(): ContractStatus {
 
         const networkName = (net as any).name || chainIdHex;
         const expected = new Set(["0x413", "0xc7"]);
-        const networkLabel = expected.has(chainIdHex.toLowerCase()) ? "BlockDAG Testnet (Awakening)" : "unknown";
+        const networkLabel = expected.has(chainIdHex.toLowerCase()) ? "BlockDAG Mainnet" : "unknown";
         const wrongChain = !expected.has(chainIdHex.toLowerCase());
         const explorerBase = expected.has(chainIdHex.toLowerCase())
           ? (process.env.NEXT_PUBLIC_EXPLORER_BASE || "https://awakening.bdagscan.com")

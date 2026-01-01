@@ -40,7 +40,7 @@ export default function ContractStatus() {
                 className="rounded bg-patriotic-red px-3 py-2 text-white hover:opacity-90"
                 onClick={() => status.switchNetwork?.()}
               >
-                Switch Network to BlockDAG Testnet
+                Switch Network to BlockDAG Mainnet
               </button>
             </div>
           )}
