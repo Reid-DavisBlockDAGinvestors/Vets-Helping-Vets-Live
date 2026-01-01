@@ -79,9 +79,8 @@ contract PatriotPledgeNFTV7 is
     // ============ Fee Configuration ============
     
     struct FeeConfig {
-        uint16 platformFeeBps;     // Platform fee (e.g., 300 = 3%)
-        uint16 nonprofitFeeBps;    // Nonprofit fee (e.g., 500 = 5%)
-        bool immediatePayout;      // Enable immediate payouts globally
+        uint16 platformFeeBps;     // Platform fee (e.g., 100 = 1%)
+        bool immediatePayout;      // Enable immediate payouts globally (default: false)
     }
     
     FeeConfig public feeConfig;
@@ -170,7 +169,7 @@ contract PatriotPledgeNFTV7 is
     event AddressBlacklisted(address indexed addr, bool blacklisted);
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
     event DefaultRoyaltyUpdated(uint96 newRoyaltyBps);
-    event FeeConfigUpdated(uint16 platformFeeBps, uint16 nonprofitFeeBps, bool immediatePayout);
+    event FeeConfigUpdated(uint16 platformFeeBps, bool immediatePayout);
     event EmergencyWithdraw(address indexed to, uint256 amount);
 
     // ============ Modifiers ============
@@ -194,19 +193,17 @@ contract PatriotPledgeNFTV7 is
     
     constructor(
         address _platformTreasury,
-        uint16 _platformFeeBps,
-        uint16 _nonprofitFeeBps
+        uint16 _platformFeeBps
     ) ERC721("PatriotPledge Edition", "PPE") Ownable(msg.sender) {
         require(_platformTreasury != address(0), "Invalid treasury");
-        require(_platformFeeBps + _nonprofitFeeBps <= MAX_FEE_BPS, "Fees too high");
+        require(_platformFeeBps <= MAX_FEE_BPS, "Fee too high");
         
         platformTreasury = _platformTreasury;
         deploymentChainId = block.chainid;
         
         feeConfig = FeeConfig({
             platformFeeBps: _platformFeeBps,
-            nonprofitFeeBps: _nonprofitFeeBps,
-            immediatePayout: true // Default to immediate payout
+            immediatePayout: false // Default: admin-controlled distribution
         });
         
         _setDefaultRoyalty(_platformTreasury, defaultRoyaltyBps);
@@ -226,18 +223,16 @@ contract PatriotPledgeNFTV7 is
     
     function setFeeConfig(
         uint16 _platformFeeBps,
-        uint16 _nonprofitFeeBps,
         bool _immediatePayout
     ) external onlyOwner {
-        require(_platformFeeBps + _nonprofitFeeBps <= MAX_FEE_BPS, "Fees too high");
+        require(_platformFeeBps <= MAX_FEE_BPS, "Fee too high");
         
         feeConfig = FeeConfig({
             platformFeeBps: _platformFeeBps,
-            nonprofitFeeBps: _nonprofitFeeBps,
             immediatePayout: _immediatePayout
         });
         
-        emit FeeConfigUpdated(_platformFeeBps, _nonprofitFeeBps, _immediatePayout);
+        emit FeeConfigUpdated(_platformFeeBps, _immediatePayout);
     }
     
     function setPlatformTreasury(address newTreasury) external onlyOwner {
@@ -555,7 +550,7 @@ contract PatriotPledgeNFTV7 is
      * @notice Internal function to distribute funds immediately
      * @param campaignId Campaign ID
      * @param contribution Amount after tips
-     * @param tipAmount Tip amount (goes to nonprofit)
+     * @param tipAmount Tip amount (goes to submitter)
      */
     function _distributeFunds(
         uint256 campaignId,
@@ -564,34 +559,27 @@ contract PatriotPledgeNFTV7 is
     ) internal {
         Campaign storage c = campaigns[campaignId];
         
-        // Calculate fees
+        // Calculate platform fee (1% default)
         uint256 platformFee = (contribution * feeConfig.platformFeeBps) / BPS_DENOMINATOR;
-        uint256 nonprofitFee = (contribution * feeConfig.nonprofitFeeBps) / BPS_DENOMINATOR;
-        uint256 submitterAmount = contribution - platformFee - nonprofitFee;
+        
+        // Submitter receives: contribution - platform fee + tips
+        uint256 submitterAmount = contribution - platformFee + tipAmount;
         
         // Track distribution
         campaignDistributed[campaignId] += contribution + tipAmount;
-        c.netRaised += submitterAmount;
+        c.netRaised += (contribution - platformFee); // Net is after platform fee only
         
-        // Send to platform treasury
+        // Send platform fee to treasury
         if (platformFee > 0) {
             (bool success1, ) = platformTreasury.call{value: platformFee}("");
             require(success1, "Platform fee transfer failed");
             emit ImmediatePayoutSent(campaignId, platformTreasury, platformFee, "platform");
         }
         
-        // Send to nonprofit (including tips)
-        uint256 nonprofitTotal = nonprofitFee + tipAmount;
-        if (nonprofitTotal > 0) {
-            (bool success2, ) = c.nonprofit.call{value: nonprofitTotal}("");
-            require(success2, "Nonprofit fee transfer failed");
-            emit ImmediatePayoutSent(campaignId, c.nonprofit, nonprofitTotal, "nonprofit");
-        }
-        
-        // Send to submitter (the fundraiser)
+        // Send remainder + tips to submitter (the fundraiser)
         if (submitterAmount > 0) {
-            (bool success3, ) = c.submitter.call{value: submitterAmount}("");
-            require(success3, "Submitter transfer failed");
+            (bool success2, ) = c.submitter.call{value: submitterAmount}("");
+            require(success2, "Submitter transfer failed");
             emit ImmediatePayoutSent(campaignId, c.submitter, submitterAmount, "submitter");
         }
         
@@ -600,7 +588,7 @@ contract PatriotPledgeNFTV7 is
             c.submitter,
             submitterAmount,
             platformFee,
-            nonprofitFee,
+            0, // No nonprofit fee
             tipAmount
         );
     }
@@ -837,12 +825,10 @@ contract PatriotPledgeNFTV7 is
     
     function getFeeConfig() external view returns (
         uint16 platformFeeBps,
-        uint16 nonprofitFeeBps,
         bool immediatePayout
     ) {
         return (
             feeConfig.platformFeeBps,
-            feeConfig.nonprofitFeeBps,
             feeConfig.immediatePayout
         );
     }

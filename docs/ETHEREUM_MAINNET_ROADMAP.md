@@ -113,21 +113,33 @@ pragma solidity ^0.8.24;
 │        │                                                │   │
 │        ▼                                                │   │
 │  ┌─────────────────────────────────────────────────┐   │   │
-│  │            IMMEDIATE DISTRIBUTION                │   │   │
+│  │       DISTRIBUTION (Admin-controlled OR Instant) │   │   │
 │  ├─────────────────────────────────────────────────┤   │   │
 │  │                                                 │   │   │
-│  │  Platform Fee (3%):     $3.00  → Treasury       │   │   │
-│  │  Nonprofit Fee (5%):    $5.00  → Nonprofit      │   │   │
-│  │  Submitter Net (92%):   $92.00 → Submitter      │   │   │
-│  │  Tip (optional):        $10.00 → Nonprofit*     │   │   │
+│  │  Platform Fee (1%):     $1.00  → Treasury       │   │   │
+│  │  Submitter Net (99%):   $99.00 → Submitter      │   │   │
+│  │  Tip (optional):        $10.00 → Submitter      │   │   │
 │  │                                                 │   │   │
-│  │  *Nonprofit can forward tips to submitter       │   │   │
+│  │  Total to Submitter:    $109.00                 │   │   │
 │  └─────────────────────────────────────────────────┘   │   │
 │                                                        │   │
-│  Total Gas Estimate: ~250,000 gas (~$5-15 on ETH)      │   │
+│  Treasury: 0x07b3c4BB8842a9eE0698F1A3c6778bcC456d9362  │   │
+│  Total Gas Estimate: ~200,000 gas (~$4-12 on ETH)      │   │
 │                                                        │   │
 └────────────────────────────────────────────────────────┴───┘
 ```
+
+### Distribution Modes
+
+1. **Admin-Controlled (Default)**
+   - Funds accumulate in contract
+   - Admin distributes via `distributePendingFunds()` after approval
+   - Full control over when submitter receives funds
+
+2. **Instant Distribution (Optional)**
+   - Enable via `setCampaignImmediatePayout(campaignId, true)`
+   - Submitter receives funds immediately on each donation
+   - Platform fee deducted automatically
 
 ### V7 New Functions
 
@@ -208,13 +220,11 @@ modifier onlyThisChain() {
 
 #### 0.2 Contract Development
 - [ ] Create PatriotPledgeNFTV7.sol with immediate payouts
-- [ ] Add fee distribution logic
-- [ ] Add bug bounty pool functions
-- [ ] Add chain-awareness checks
-- [ ] Gas optimization pass
-
-#### 0.3 Testing
-- [ ] Unit tests for all V7 functions
+- [x] **Bug Bounty Pool** - On-chain bug bounty payments (**BDAG ONLY**)
+  - `fundBugBountyPool()` - Add BDAG to pool
+  - `payBugBounty(recipient, amount, reportId)` - Pay rewards in BDAG
+  - Event tracking for all payments
+  - **Note:** Bug bounties are paid on BlockDAG chain only, not Ethereum
 - [ ] Integration tests on Goerli/Sepolia
 - [ ] Gas benchmarking (target: <300k gas per mint)
 - [ ] Fuzz testing for edge cases
@@ -356,13 +366,12 @@ export const SUPPORTED_CHAINS = {
 ETHEREUM_RPC=https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY
 ETHEREUM_CHAIN_ID=1
 
-# Multi-sig Treasury (Gnosis Safe)
-TREASURY_MULTISIG=0x...
+# Treasury Wallet (single wallet, not multi-sig)
+TREASURY_WALLET=0x07b3c4BB8842a9eE0698F1A3c6778bcC456d9362
 
 # Fee Configuration
-PLATFORM_FEE_BPS=300          # 3%
-NONPROFIT_FEE_BPS=500         # 5%
-IMMEDIATE_PAYOUT_ENABLED=true
+PLATFORM_FEE_BPS=100          # 1% platform fee
+IMMEDIATE_PAYOUT_ENABLED=false # Default: admin-controlled
 
 # Contract Addresses
 V7_CONTRACT_ETHEREUM=0x...
@@ -426,10 +435,13 @@ CREATE TABLE fee_distributions (
 
 | Recipient | Percentage | Notes |
 |-----------|------------|-------|
-| Platform (Treasury) | 3% | Operations, development |
-| Nonprofit Partner | 5% | Verification, support |
-| Submitter | 92% | Direct to fundraiser |
-| Tips | 100% to Nonprofit* | *Can forward to submitter |
+| Platform (Treasury) | 1% | Operations, development |
+| Submitter | 99% | Direct to fundraiser |
+| Tips | 100% to Submitter | Tips go directly to fundraiser |
+
+**Treasury Wallet:** `0x07b3c4BB8842a9eE0698F1A3c6778bcC456d9362`
+
+> **Note:** There is no nonprofit fee. The platform operates on a simple 1% fee model.
 
 ### Chain-Specific Considerations
 
@@ -494,10 +506,12 @@ AFTER (Production):
 
 ## 🔐 Security Considerations
 
-### Multi-Sig Requirements
-- Treasury: 2-of-3 multi-sig minimum
-- Contract ownership: Transfer to multi-sig after deployment
-- Emergency pause: Single admin can pause, multi-sig to unpause
+### Wallet Configuration
+- **Treasury Wallet:** `0x07b3c4BB8842a9eE0698F1A3c6778bcC456d9362`
+- Contract ownership: Same wallet as treasury
+- Emergency pause: Admin can pause/unpause
+
+> **Note:** Using single wallet for simplicity. Multi-sig can be added later if needed.
 
 ### Audit Checklist
 - [ ] Reentrancy protection on all fund transfers
