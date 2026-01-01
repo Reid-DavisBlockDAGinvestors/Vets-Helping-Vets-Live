@@ -450,6 +450,16 @@ const CONTRACT_REGISTRY: Record<string, ContractConfig> = {
 }
 ```
 
+### V7 Contract Planned Features (Jan 1, 2026)
+- [ ] **Bug Bounty Pool** - On-chain bug bounty payments
+  - `fundBugBounty()` - Add funds to pool
+  - `payBugBounty(recipient, amount, bugReportId)` - Pay rewards
+  - Event tracking for all payments
+- [ ] **Batch Minting** - Mint multiple NFTs in single tx
+  - `mintBatchWithBDAG(campaignId, quantity)`
+  - `mintBatchWithBDAGAndTip(campaignId, quantity, tipAmount)`
+  - Single wallet confirmation for bulk purchases
+
 ### Planned Contract Types
 - [ ] **Vesting Contract** - Milestone-based fund release
 - [ ] **Staking Contract** - Stake NFTs for rewards
