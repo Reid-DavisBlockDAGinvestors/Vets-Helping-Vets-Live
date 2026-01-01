@@ -232,20 +232,57 @@ This document consolidates all TODOs, planned features, and improvements into a 
   - Activity detection (mouse, keyboard, scroll, touch)
   - Graceful session expiry handling
 
-### Remaining
-  - Block inline scripts
-  - Whitelist trusted domains
-
 - [x] **API key rotation** ✅ Dec 31, 2025
   - `docs/API_KEY_ROTATION.md` - Full rotation guide
   - `scripts/check-api-keys.ts` - Security check script
   - Quarterly rotation schedule documented
   - Emergency procedures defined
 
+### ✅ Completed (Jan 1, 2026) - ELITE FINANCIAL-GRADE SECURITY
+- [x] **Session timeout reduced to 15 minutes** (financial standard)
+  - `useSessionManager.ts` updated with 15 min inactivity timeout
+  - 8-hour absolute session maximum
+  - 5-minute token refresh interval
+  - Session expiry warning modal with countdown
+  - `SessionExpiryWarning.tsx` component
+
+- [x] **Tiered rate limiting**
+  - Auth endpoints: 5 requests, 1/10sec refill (strictest)
+  - Sensitive endpoints: 10 requests, 1/2sec refill
+  - Standard API: 60 requests, 1/sec refill
+  - Exponential backoff for repeat violators
+  - `middleware.ts` upgraded
+
+- [x] **Account lockout**
+  - 5 failed attempts triggers 30-minute lockout
+  - Escalating lockout duration (doubles each time)
+  - `lib/security.ts` module
+
+- [x] **Password requirements**
+  - Minimum 12 characters
+  - Uppercase, lowercase, number, special char required
+  - Password strength scoring
+
+- [x] **Security event logging**
+  - `security_events` table for audit trail
+  - `user_sessions` table for session tracking
+  - `failed_login_attempts` table
+
+- [x] **PKCE authentication flow**
+  - More secure than implicit flow
+  - SessionStorage instead of localStorage
+
+- [x] **Bug Bounty Program** 🐛
+  - `/bug-bounty` page with tiers, leaderboard, rules
+  - `/api/bug-bounty` API for rewards management
+  - Reward tiers: Low ($5-25), Medium ($25-100), High ($100-500), Critical ($500-2500)
+  - Rank system: Bug Hunter → Bug Slayer → Security Scout → Elite Hunter → Legendary
+  - Database tables: `bug_bounty_tiers`, `bug_bounty_rewards`, `bug_bounty_stats`
+
+### Remaining
 - [ ] **Penetration testing**
   - Automated security scanning
   - OWASP Top 10 checklist
-  - Bug bounty program (future)
 
 ### Metrics for 10/10
 - Zero OWASP Top 10 vulnerabilities

@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: '/community', label: 'Community' },
   { href: '/submit', label: 'Submit Story' },
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/bug-bounty', label: '🐛 Bug Bounty' },
   { href: '/governance', label: 'Governance' },
   { href: '/admin', label: 'Admin' },
 ]
