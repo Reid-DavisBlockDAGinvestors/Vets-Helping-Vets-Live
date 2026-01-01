@@ -84,10 +84,10 @@ export default function BugBountyPage() {
   }, [])
 
   const defaultTiers: BountyTier[] = [
-    { id: 'low', name: 'Low Severity', description: 'Minor UI issues, typos, cosmetic bugs', min_reward_usd: 5, max_reward_usd: 25, min_reward_bdag: 100, max_reward_bdag: 500, color: '#22c55e', icon: '🟢' },
-    { id: 'medium', name: 'Medium Severity', description: 'Functional bugs, broken features, usability issues', min_reward_usd: 25, max_reward_usd: 100, min_reward_bdag: 500, max_reward_bdag: 2000, color: '#eab308', icon: '🟡' },
-    { id: 'high', name: 'High Severity', description: 'Security vulnerabilities, data exposure, critical bugs', min_reward_usd: 100, max_reward_usd: 500, min_reward_bdag: 2000, max_reward_bdag: 10000, color: '#f97316', icon: '🟠' },
-    { id: 'critical', name: 'Critical Severity', description: 'Major security flaws, smart contract vulnerabilities', min_reward_usd: 500, max_reward_usd: 2500, min_reward_bdag: 10000, max_reward_bdag: 50000, color: '#ef4444', icon: '🔴' },
+    { id: 'low', name: 'Low Severity', description: 'Minor UI issues, typos, cosmetic bugs', min_reward_usd: 5, max_reward_usd: 10, min_reward_bdag: 100, max_reward_bdag: 200, color: '#22c55e', icon: '🟢' },
+    { id: 'medium', name: 'Medium Severity', description: 'Functional bugs, broken features, usability issues', min_reward_usd: 10, max_reward_usd: 25, min_reward_bdag: 200, max_reward_bdag: 500, color: '#eab308', icon: '🟡' },
+    { id: 'high', name: 'High Severity', description: 'Security vulnerabilities, data exposure, critical bugs', min_reward_usd: 25, max_reward_usd: 50, min_reward_bdag: 500, max_reward_bdag: 1000, color: '#f97316', icon: '🟠' },
+    { id: 'critical', name: 'Critical Severity', description: 'Major security flaws, smart contract vulnerabilities', min_reward_usd: 50, max_reward_usd: 100, min_reward_bdag: 1000, max_reward_bdag: 2000, color: '#ef4444', icon: '🔴' },
   ]
 
   const displayTiers = tiers.length > 0 ? tiers : defaultTiers

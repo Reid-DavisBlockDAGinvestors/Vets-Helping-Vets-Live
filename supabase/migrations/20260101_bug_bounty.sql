@@ -15,12 +15,12 @@ CREATE TABLE IF NOT EXISTS bug_bounty_tiers (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Insert default bounty tiers
+-- Insert default bounty tiers (Max $100 USD equivalent)
 INSERT INTO bug_bounty_tiers (id, name, description, min_reward_usd, max_reward_usd, min_reward_bdag, max_reward_bdag, color, icon) VALUES
-  ('low', 'Low Severity', 'Minor UI issues, typos, cosmetic bugs', 5, 25, 100, 500, '#22c55e', '🟢'),
-  ('medium', 'Medium Severity', 'Functional bugs, broken features, usability issues', 25, 100, 500, 2000, '#eab308', '🟡'),
-  ('high', 'High Severity', 'Security vulnerabilities, data exposure, critical bugs', 100, 500, 2000, 10000, '#f97316', '🟠'),
-  ('critical', 'Critical Severity', 'Major security flaws, smart contract vulnerabilities, data breach risks', 500, 2500, 10000, 50000, '#ef4444', '🔴')
+  ('low', 'Low Severity', 'Minor UI issues, typos, cosmetic bugs', 5, 10, 100, 200, '#22c55e', '🟢'),
+  ('medium', 'Medium Severity', 'Functional bugs, broken features, usability issues', 10, 25, 200, 500, '#eab308', '🟡'),
+  ('high', 'High Severity', 'Security vulnerabilities, data exposure, critical bugs', 25, 50, 500, 1000, '#f97316', '🟠'),
+  ('critical', 'Critical Severity', 'Major security flaws, smart contract vulnerabilities', 50, 100, 1000, 2000, '#ef4444', '🔴')
 ON CONFLICT (id) DO NOTHING;
 
 -- Bug bounty rewards tracking
