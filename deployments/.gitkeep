@@ -1,0 +1,7 @@
+# Deployment logs are stored here
+# Each deployment creates a JSON log file with:
+# - Contract address
+# - Deployment transaction hash
+# - Constructor arguments
+# - Gas used
+# - Timestamp

@@ -5,7 +5,7 @@
  * Supports BlockDAG (current), Ethereum Mainnet, Polygon, and Base.
  */
 
-export type ChainId = 1043 | 1 | 137 | 8453
+export type ChainId = 1043 | 1 | 11155111 | 137 | 8453
 
 export type ContractVersion = 'v5' | 'v6' | 'v7'
 
@@ -60,7 +60,7 @@ export const CHAIN_CONFIGS: Record<ChainId, ChainConfig> = {
     iconUrl: '/images/chains/bdag.png'
   },
 
-  // Ethereum Mainnet (NEW - Production Ready)
+  // Ethereum Mainnet (Production - V7)
   1: {
     chainId: 1,
     name: 'Ethereum Mainnet',
@@ -74,14 +74,39 @@ export const CHAIN_CONFIGS: Record<ChainId, ChainConfig> = {
       decimals: 18
     },
     contracts: {
-      // v7: 'TBD - Deploy to mainnet'
+      v7: process.env.NEXT_PUBLIC_V7_CONTRACT_ETHEREUM || ''
     },
     gasEstimate: 'high',
     avgBlockTime: 12,
     confirmations: 3,
     immediatePayoutSupported: true,
     isTestnet: false,
-    isActive: false, // Activate when V7 is deployed
+    isActive: false, // Activate when V7 is deployed and verified
+    iconUrl: '/images/chains/eth.png'
+  },
+
+  // Ethereum Sepolia Testnet (V7 Testing)
+  11155111: {
+    chainId: 11155111,
+    name: 'Sepolia Testnet',
+    shortName: 'SEP',
+    rpcUrl: process.env.NEXT_PUBLIC_ETHEREUM_SEPOLIA_RPC || '',
+    explorerUrl: 'https://sepolia.etherscan.io',
+    explorerApiUrl: 'https://api-sepolia.etherscan.io/api',
+    nativeCurrency: {
+      name: 'Sepolia ETH',
+      symbol: 'ETH',
+      decimals: 18
+    },
+    contracts: {
+      v7: process.env.NEXT_PUBLIC_V7_CONTRACT_SEPOLIA || ''
+    },
+    gasEstimate: 'medium',
+    avgBlockTime: 12,
+    confirmations: 2,
+    immediatePayoutSupported: true,
+    isTestnet: true,
+    isActive: true, // Active for testing
     iconUrl: '/images/chains/eth.png'
   },
 
