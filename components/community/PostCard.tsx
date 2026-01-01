@@ -187,14 +187,17 @@ export function PostCard({
       {/* Post Actions */}
       <div className="px-4 pb-4 flex items-center gap-4 border-t border-white/10 pt-3">
         {/* Like Button with Reaction Picker */}
-        <div className="relative">
+        <div 
+          className="relative"
+          onMouseEnter={() => setShowReactionPicker(true)}
+          onMouseLeave={() => setShowReactionPicker(false)}
+        >
           <button
             onClick={() => onToggleLike('love')}
-            onMouseEnter={() => setShowReactionPicker(true)}
-            onMouseLeave={() => setShowReactionPicker(false)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
               post.isLiked ? 'bg-red-500/20 text-red-400' : 'hover:bg-white/10 text-white/60'
             }`}
+            data-testid="like-btn"
           >
             <span>{post.isLiked ? '❤️' : '🤍'}</span>
             <span className="text-sm">{post.likes_count}</span>
@@ -202,9 +205,8 @@ export function PostCard({
           
           {showReactionPicker && (
             <div 
-              className="absolute bottom-full left-0 mb-2 flex gap-1 p-2 bg-gray-800 rounded-xl shadow-xl border border-white/10"
-              onMouseEnter={() => setShowReactionPicker(true)}
-              onMouseLeave={() => setShowReactionPicker(false)}
+              className="absolute bottom-full left-0 mb-2 flex gap-1 p-2 bg-gray-800 rounded-xl shadow-xl border border-white/10 z-50"
+              data-testid="reaction-picker"
             >
               {Object.entries(REACTION_EMOJIS).map(([type, emoji]) => (
                 <button
@@ -212,6 +214,7 @@ export function PostCard({
                   onClick={() => { onToggleLike(type); setShowReactionPicker(false) }}
                   className="p-2 hover:bg-white/10 rounded-lg text-xl transition-transform hover:scale-125"
                   title={type}
+                  data-testid={`reaction-${type}`}
                 >
                   {emoji}
                 </button>

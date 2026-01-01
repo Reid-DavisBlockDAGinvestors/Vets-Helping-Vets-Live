@@ -372,6 +372,12 @@ export default function CommunityHubClientV2() {
                 userProfile={userProfile}
                 userEmail={user?.email}
                 renderContentPreview={renderPostContent}
+                campaigns={allCampaigns.map(c => ({
+                  id: c.id,
+                  title: c.title,
+                  slug: c.slug,
+                  image_uri: c.image_uri
+                }))}
               />
             )}
 
