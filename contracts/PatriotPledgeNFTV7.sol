@@ -544,6 +544,172 @@ contract PatriotPledgeNFTV7 is
         return tokenIds;
     }
 
+    /**
+     * @notice Batch mint with tip and immediate payout
+     */
+    function mintBatchWithImmediatePayoutAndTip(
+        uint256 campaignId,
+        uint256 quantity,
+        uint256 tipAmount
+    ) external payable whenNotPaused notBlacklisted(msg.sender) nonReentrant onlyThisChain returns (uint256[] memory tokenIds) {
+        Campaign storage c = campaigns[campaignId];
+        require(c.active, "Campaign not active");
+        require(!c.closed, "Campaign closed");
+        require(!c.refunded, "Campaign refunded");
+        require(quantity > 0 && quantity <= MAX_BATCH_SIZE, "Invalid quantity");
+        require(c.maxEditions == 0 || c.editionsMinted + quantity <= c.maxEditions, "Exceeds max editions");
+        require(msg.value >= (c.pricePerEdition * quantity) + tipAmount, "Insufficient payment");
+
+        tokenIds = new uint256[](quantity);
+        uint256 totalPaid = msg.value;
+        uint256 contribution = totalPaid - tipAmount;
+        uint256 perNFT = totalPaid / quantity;
+
+        for (uint256 i = 0; i < quantity; i++) {
+            uint256 tokenId = _nextTokenId++;
+            uint256 editionNumber = ++c.editionsMinted;
+            
+            _safeMint(msg.sender, tokenId);
+            _setTokenURI(tokenId, c.baseURI);
+            
+            tokenToCampaign[tokenId] = campaignId;
+            tokenEditionNumber[tokenId] = editionNumber;
+            campaignEditions[campaignId].push(tokenId);
+            
+            tokenIds[i] = tokenId;
+            emit EditionMinted(campaignId, tokenId, msg.sender, editionNumber, perNFT);
+        }
+
+        c.grossRaised += totalPaid;
+        c.tipsReceived += tipAmount;
+        
+        // Distribute funds if immediate payout is enabled
+        if (c.immediatePayoutEnabled && feeConfig.immediatePayout) {
+            _distributeFunds(campaignId, contribution, tipAmount);
+        } else {
+            c.netRaised += contribution;
+        }
+        
+        emit ContributionRecorded(campaignId, totalPaid, contribution, tipAmount, true);
+        
+        return tokenIds;
+    }
+
+    // ============ Legacy Minting (V5/V6 Compatible) ============
+
+    /**
+     * @notice Legacy mint with native currency (V5/V6 compatible)
+     * @dev For backward compatibility - uses immediate payout if enabled
+     */
+    function mintWithBDAG(uint256 campaignId) external payable whenNotPaused notBlacklisted(msg.sender) nonReentrant returns (uint256) {
+        return _mintWithPayment(campaignId, 0);
+    }
+
+    /**
+     * @notice Legacy mint with tip (V5/V6 compatible)
+     */
+    function mintWithBDAGAndTip(uint256 campaignId, uint256 tipAmount) external payable whenNotPaused notBlacklisted(msg.sender) nonReentrant returns (uint256) {
+        return _mintWithPayment(campaignId, tipAmount);
+    }
+
+    /**
+     * @notice Legacy batch mint (V6 compatible)
+     */
+    function mintBatchWithBDAG(uint256 campaignId, uint256 quantity) external payable whenNotPaused notBlacklisted(msg.sender) nonReentrant returns (uint256[] memory) {
+        return _mintBatchWithPayment(campaignId, quantity, 0);
+    }
+
+    /**
+     * @notice Legacy batch mint with tip (V6 compatible)
+     */
+    function mintBatchWithBDAGAndTip(uint256 campaignId, uint256 quantity, uint256 tipAmount) external payable whenNotPaused notBlacklisted(msg.sender) nonReentrant returns (uint256[] memory) {
+        return _mintBatchWithPayment(campaignId, quantity, tipAmount);
+    }
+
+    /**
+     * @dev Internal single mint helper
+     */
+    function _mintWithPayment(uint256 campaignId, uint256 tipAmount) internal returns (uint256) {
+        Campaign storage c = campaigns[campaignId];
+        require(c.active, "Campaign not active");
+        require(!c.closed, "Campaign closed");
+        require(!c.refunded, "Campaign refunded");
+        require(c.maxEditions == 0 || c.editionsMinted < c.maxEditions, "Max editions reached");
+        require(msg.value >= c.pricePerEdition + tipAmount, "Insufficient payment");
+
+        uint256 tokenId = _nextTokenId++;
+        uint256 editionNumber = ++c.editionsMinted;
+        uint256 contribution = msg.value - tipAmount;
+        
+        _safeMint(msg.sender, tokenId);
+        _setTokenURI(tokenId, c.baseURI);
+        
+        tokenToCampaign[tokenId] = campaignId;
+        tokenEditionNumber[tokenId] = editionNumber;
+        campaignEditions[campaignId].push(tokenId);
+        
+        c.grossRaised += msg.value;
+        c.tipsReceived += tipAmount;
+        
+        // Distribute if immediate payout enabled
+        if (c.immediatePayoutEnabled && feeConfig.immediatePayout) {
+            _distributeFunds(campaignId, contribution, tipAmount);
+        } else {
+            c.netRaised += contribution;
+        }
+
+        emit EditionMinted(campaignId, tokenId, msg.sender, editionNumber, msg.value);
+        emit ContributionRecorded(campaignId, msg.value, contribution, tipAmount, true);
+        
+        return tokenId;
+    }
+
+    /**
+     * @dev Internal batch mint helper
+     */
+    function _mintBatchWithPayment(uint256 campaignId, uint256 quantity, uint256 tipAmount) internal returns (uint256[] memory tokenIds) {
+        Campaign storage c = campaigns[campaignId];
+        require(c.active, "Campaign not active");
+        require(!c.closed, "Campaign closed");
+        require(!c.refunded, "Campaign refunded");
+        require(quantity > 0 && quantity <= MAX_BATCH_SIZE, "Invalid quantity");
+        require(c.maxEditions == 0 || c.editionsMinted + quantity <= c.maxEditions, "Exceeds max editions");
+        require(msg.value >= (c.pricePerEdition * quantity) + tipAmount, "Insufficient payment");
+
+        tokenIds = new uint256[](quantity);
+        uint256 totalPaid = msg.value;
+        uint256 contribution = totalPaid - tipAmount;
+        uint256 perNFT = totalPaid / quantity;
+
+        for (uint256 i = 0; i < quantity; i++) {
+            uint256 tokenId = _nextTokenId++;
+            uint256 editionNumber = ++c.editionsMinted;
+            
+            _safeMint(msg.sender, tokenId);
+            _setTokenURI(tokenId, c.baseURI);
+            
+            tokenToCampaign[tokenId] = campaignId;
+            tokenEditionNumber[tokenId] = editionNumber;
+            campaignEditions[campaignId].push(tokenId);
+            
+            tokenIds[i] = tokenId;
+            emit EditionMinted(campaignId, tokenId, msg.sender, editionNumber, perNFT);
+        }
+
+        c.grossRaised += totalPaid;
+        c.tipsReceived += tipAmount;
+        
+        if (c.immediatePayoutEnabled && feeConfig.immediatePayout) {
+            _distributeFunds(campaignId, contribution, tipAmount);
+        } else {
+            c.netRaised += contribution;
+        }
+        
+        emit ContributionRecorded(campaignId, totalPaid, contribution, tipAmount, true);
+        
+        return tokenIds;
+    }
+
     // ============ Internal Fund Distribution ============
 
     /**
@@ -766,6 +932,54 @@ contract PatriotPledgeNFTV7 is
             if (_ownerOf(tokenIds[i]) != address(0)) {
                 _setTokenURI(tokenIds[i], uri);
                 emit TokenURIFixed(tokenIds[i], uri);
+            }
+        }
+    }
+
+    /**
+     * @notice Fix token-campaign link by adding token to campaignEditions array
+     * @dev Used to repair tokens that weren't properly added to the array
+     * @param tokenId The token to link
+     * @param campaignId The campaign it belongs to
+     */
+    function fixTokenCampaignLink(uint256 tokenId, uint256 campaignId) external onlyOwner {
+        require(_ownerOf(tokenId) != address(0), "Token does not exist");
+        
+        // Update mapping
+        tokenToCampaign[tokenId] = campaignId;
+        
+        // Check if already in array
+        uint256[] storage editions = campaignEditions[campaignId];
+        for (uint256 i = 0; i < editions.length; i++) {
+            if (editions[i] == tokenId) return; // Already linked
+        }
+        
+        // Add to array
+        editions.push(tokenId);
+    }
+
+    /**
+     * @notice Batch fix token-campaign links
+     * @param tokenIds Array of token IDs
+     * @param campaignId The campaign they belong to
+     */
+    function batchFixTokenCampaignLink(uint256[] calldata tokenIds, uint256 campaignId) external onlyOwner {
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            if (_ownerOf(tokenIds[i]) != address(0)) {
+                tokenToCampaign[tokenIds[i]] = campaignId;
+                
+                // Check if already in array
+                uint256[] storage editions = campaignEditions[campaignId];
+                bool found = false;
+                for (uint256 j = 0; j < editions.length; j++) {
+                    if (editions[j] == tokenIds[i]) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    editions.push(tokenIds[i]);
+                }
             }
         }
     }
