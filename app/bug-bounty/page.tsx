@@ -91,6 +91,9 @@ export default function BugBountyPage() {
     { id: 'critical', name: 'Critical Severity', description: 'Major security flaws, smart contract vulnerabilities', min_reward_usd: 50, max_reward_usd: 100, min_reward_bdag: 1000, max_reward_bdag: 2000, color: '#ef4444', icon: '🔴' },
   ]
 
+  // Format BDAG amount with commas
+  const formatBDAG = (amount: number) => amount.toLocaleString()
+
   const displayTiers = tiers.length > 0 ? tiers : defaultTiers
 
   return (
@@ -103,8 +106,12 @@ export default function BugBountyPage() {
           </h1>
           <p className="text-xl text-white/70 max-w-2xl mx-auto">
             Help us improve PatriotPledge by finding and reporting bugs. 
-            Earn rewards in USD or BDAG for valid security issues and bugs.
+            Earn rewards in <span className="text-yellow-400 font-semibold">BDAG tokens</span> for valid security issues and bugs.
           </p>
+          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+            <span className="text-yellow-400">💰</span>
+            <span className="text-yellow-300 text-sm font-medium">All bounty rewards are paid in BDAG cryptocurrency only</span>
+          </div>
         </div>
 
         {/* My Stats (if logged in) */}
@@ -155,13 +162,12 @@ export default function BugBountyPage() {
                 </div>
                 <p className="text-white/60 text-sm mb-4">{tier.description}</p>
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white/50">USD</span>
-                    <span className="text-green-400 font-medium">${tier.min_reward_usd} - ${tier.max_reward_usd}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/50 text-sm">Reward</span>
+                    <span className="text-yellow-400 font-bold text-lg">{tier.min_reward_bdag.toLocaleString()} - {tier.max_reward_bdag.toLocaleString()} BDAG</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white/50">BDAG</span>
-                    <span className="text-blue-400 font-medium">{tier.min_reward_bdag.toLocaleString()} - {tier.max_reward_bdag.toLocaleString()}</span>
+                  <div className="text-xs text-white/40 text-right">
+                    ≈ ${tier.min_reward_usd} - ${tier.max_reward_usd} USD value
                   </div>
                 </div>
               </div>

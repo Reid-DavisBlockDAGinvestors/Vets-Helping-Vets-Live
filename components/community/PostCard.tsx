@@ -246,20 +246,25 @@ export function PostCard({
           
           {showReactionPicker && (
             <div 
-              className="absolute bottom-full left-0 mb-2 flex gap-1 p-2 bg-gray-800 rounded-xl shadow-xl border border-white/10 z-50"
-              data-testid="reaction-picker"
+              className="absolute bottom-full left-0 mb-0 pb-2"
+              data-testid="reaction-picker-container"
             >
-              {Object.entries(REACTION_EMOJIS).map(([type, emoji]) => (
-                <button
-                  key={type}
-                  onClick={() => { onToggleLike(type); setShowReactionPicker(false) }}
-                  className="p-2 hover:bg-white/10 rounded-lg text-xl transition-transform hover:scale-125"
-                  title={type}
-                  data-testid={`reaction-${type}`}
-                >
-                  {emoji}
-                </button>
-              ))}
+              <div 
+                className="flex gap-1 p-2 bg-gray-800 rounded-xl shadow-xl border border-white/10"
+                data-testid="reaction-picker"
+              >
+                {Object.entries(REACTION_EMOJIS).map(([type, emoji]) => (
+                  <button
+                    key={type}
+                    onClick={() => { onToggleLike(type); setShowReactionPicker(false) }}
+                    className="p-2 hover:bg-white/10 rounded-lg text-xl transition-transform hover:scale-125"
+                    title={type}
+                    data-testid={`reaction-${type}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -371,19 +376,24 @@ export function PostCard({
                             
                             {showCommentReactionPicker === comment.id && (
                               <div 
-                                className="absolute bottom-full left-0 mb-1 flex gap-1 p-1.5 bg-gray-800 rounded-lg shadow-xl border border-white/10 z-50"
-                                data-testid={`comment-reaction-picker-${comment.id}`}
+                                className="absolute bottom-full left-0 mb-0 pb-1"
+                                data-testid={`comment-reaction-picker-container-${comment.id}`}
                               >
-                                {Object.entries(REACTION_EMOJIS).map(([type, emoji]) => (
-                                  <button
-                                    key={type}
-                                    onClick={() => handleCommentLike(comment.id, type)}
-                                    className="p-1 hover:bg-white/10 rounded text-sm transition-transform hover:scale-125"
-                                    title={type}
-                                  >
-                                    {emoji}
-                                  </button>
-                                ))}
+                                <div 
+                                  className="flex gap-1 p-1.5 bg-gray-800 rounded-lg shadow-xl border border-white/10"
+                                  data-testid={`comment-reaction-picker-${comment.id}`}
+                                >
+                                  {Object.entries(REACTION_EMOJIS).map(([type, emoji]) => (
+                                    <button
+                                      key={type}
+                                      onClick={() => handleCommentLike(comment.id, type)}
+                                      className="p-1 hover:bg-white/10 rounded text-sm transition-transform hover:scale-125"
+                                      title={type}
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>
