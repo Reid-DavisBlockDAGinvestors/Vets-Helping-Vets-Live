@@ -276,22 +276,35 @@ export default function PurchasePanelV2({
           ))}
         </div>
 
-        {/* Card Tab */}
+        {/* Card Tab - Coming Soon */}
         {activeTab === 'card' && (
-          <Elements stripe={stripePromise}>
-            <CardPaymentForm
-              totalAmount={config.totalAmount}
-              tokenId={tokenId}
-              email={email}
-              onEmailChange={setEmail}
-              isMonthly={isMonthly}
-              onMonthlyChange={setIsMonthly}
-              hasNftPrice={config.hasNftPrice}
-              quantity={quantity}
-              onSuccess={(r) => setCardResult(r)}
-              onError={() => {}}
-            />
-          </Elements>
+          <div className="relative">
+            {/* Coming Soon Overlay */}
+            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+              <div className="text-center">
+                <span className="text-3xl font-bold text-white/30 rotate-[-15deg] inline-block transform">
+                  🚧 Coming Soon
+                </span>
+                <p className="text-white/50 text-sm mt-2">Card payments launching soon!</p>
+              </div>
+            </div>
+            <div className="opacity-30 pointer-events-none">
+              <Elements stripe={stripePromise}>
+                <CardPaymentForm
+                  totalAmount={config.totalAmount}
+                  tokenId={tokenId}
+                  email={email}
+                  onEmailChange={setEmail}
+                  isMonthly={isMonthly}
+                  onMonthlyChange={setIsMonthly}
+                  hasNftPrice={config.hasNftPrice}
+                  quantity={quantity}
+                  onSuccess={(r) => setCardResult(r)}
+                  onError={() => {}}
+                />
+              </Elements>
+            </div>
+          </div>
         )}
 
         {/* Crypto Tab */}
@@ -362,37 +375,32 @@ export default function PurchasePanelV2({
           </div>
         )}
 
-        {/* Other Payment Tab */}
+        {/* Other Payment Tab - Coming Soon */}
         {activeTab === 'other' && (
-          <div className="space-y-3">
-            <p className="text-sm text-white/50 mb-4">Choose an alternative payment method:</p>
-            {[
-              { name: 'PayPal', color: 'from-blue-600 to-blue-700', endpoint: '/api/payments/paypal/create' },
-              { name: 'Cash App', color: 'from-green-600 to-green-700', endpoint: '/api/payments/cashapp' },
-              { name: 'Venmo', color: 'from-cyan-600 to-blue-600', endpoint: '/api/payments/venmo' },
-            ].map(method => (
-              <button key={method.name} disabled={otherLoading}
-                data-testid={`payment-${method.name.toLowerCase().replace(' ', '-')}-btn`}
-                onClick={async () => {
-                  try {
-                    setOtherLoading(true)
-                    const res = await fetch(method.endpoint, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ amount: Math.round(config.totalAmount * 100), tokenId, email })
-                    })
-                    const data = await res.json()
-                    if (!res.ok) throw new Error(data?.error)
-                    if (data.approvalUrl) window.open(data.approvalUrl, '_blank')
-                    if (data.deepLink) window.open(data.deepLink, '_blank')
-                  } catch (e: any) {
-                    alert(e?.message || `${method.name} failed`)
-                  } finally { setOtherLoading(false) }
-                }}
-                className={`w-full rounded-lg bg-gradient-to-r ${method.color} px-6 py-4 font-semibold text-white shadow-lg hover:opacity-90 disabled:opacity-50`}>
-                Pay with {method.name}
-              </button>
-            ))}
+          <div className="relative">
+            {/* Coming Soon Overlay */}
+            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+              <div className="text-center">
+                <span className="text-3xl font-bold text-white/30 rotate-[-15deg] inline-block transform">
+                  🚧 Coming Soon
+                </span>
+                <p className="text-white/50 text-sm mt-2">PayPal, Cash App & Venmo coming soon!</p>
+              </div>
+            </div>
+            <div className="opacity-30 pointer-events-none space-y-3">
+              <p className="text-sm text-white/50 mb-4">Choose an alternative payment method:</p>
+              {[
+                { name: 'PayPal', color: 'from-blue-600 to-blue-700', endpoint: '/api/payments/paypal/create' },
+                { name: 'Cash App', color: 'from-green-600 to-green-700', endpoint: '/api/payments/cashapp' },
+                { name: 'Venmo', color: 'from-cyan-600 to-blue-600', endpoint: '/api/payments/venmo' },
+              ].map(method => (
+                <button key={method.name} disabled
+                  data-testid={`payment-${method.name.toLowerCase().replace(' ', '-')}-btn`}
+                  className={`w-full rounded-lg bg-gradient-to-r ${method.color} px-6 py-4 font-semibold text-white shadow-lg`}>
+                  Pay with {method.name}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
