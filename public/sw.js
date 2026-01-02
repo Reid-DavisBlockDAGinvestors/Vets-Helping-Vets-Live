@@ -16,8 +16,8 @@ const PRECACHE_ASSETS = [
   '/marketplace',
   '/offline',
   '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
+  '/icons/icon-192x192.svg',
+  '/icons/icon-512x512.svg',
 ]
 
 // Install event - precache critical assets
