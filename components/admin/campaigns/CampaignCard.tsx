@@ -55,9 +55,15 @@ interface CampaignCardProps {
   onDelete: () => void
   onVerify?: () => void
   onFix?: () => void
+  onClose?: () => void
+  onDeactivate?: () => void
+  onReactivate?: () => void
   isApproving?: boolean
   isVerifying?: boolean
   isFixing?: boolean
+  isClosing?: boolean
+  isDeactivating?: boolean
+  isReactivating?: boolean
   onViewDocument?: (path: string) => void
 }
 
@@ -71,9 +77,15 @@ export function CampaignCard({
   onDelete,
   onVerify,
   onFix,
+  onClose,
+  onDeactivate,
+  onReactivate,
   isApproving,
   isVerifying,
   isFixing,
+  isClosing,
+  isDeactivating,
+  isReactivating,
   onViewDocument
 }: CampaignCardProps) {
   const [showUpdates, setShowUpdates] = useState(false)
@@ -359,6 +371,47 @@ export function CampaignCard({
               >
                 🔗 View TX
               </a>
+            )}
+
+            {/* Campaign Lifecycle Controls - only for minted campaigns */}
+            {campaign.status === 'minted' && campaign.campaign_id && (
+              <>
+                {onClose && (
+                  <button
+                    onClick={onClose}
+                    disabled={isClosing}
+                    className="px-4 py-2 rounded-lg bg-amber-500/20 text-amber-400 text-sm font-medium hover:bg-amber-500/30 disabled:opacity-50"
+                    data-testid="close-campaign-btn"
+                    title="Close campaign - stops new purchases, allows withdrawals"
+                  >
+                    {isClosing ? '⏳ Closing...' : '🔒 Close'}
+                  </button>
+                )}
+                {onDeactivate && (
+                  <button
+                    onClick={onDeactivate}
+                    disabled={isDeactivating}
+                    className="px-4 py-2 rounded-lg bg-orange-500/20 text-orange-400 text-sm font-medium hover:bg-orange-500/30 disabled:opacity-50"
+                    data-testid="deactivate-campaign-btn"
+                    title="Deactivate campaign - hide from marketplace"
+                  >
+                    {isDeactivating ? '⏳ Deactivating...' : '⏸️ Deactivate'}
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Reactivate for deactivated/closed campaigns */}
+            {(campaign.status === 'deactivated' || campaign.status === 'closed') && campaign.campaign_id && onReactivate && (
+              <button
+                onClick={onReactivate}
+                disabled={isReactivating}
+                className="px-4 py-2 rounded-lg bg-green-500/20 text-green-400 text-sm font-medium hover:bg-green-500/30 disabled:opacity-50"
+                data-testid="reactivate-campaign-btn"
+                title="Reactivate campaign - make visible again"
+              >
+                {isReactivating ? '⏳ Reactivating...' : '▶️ Reactivate'}
+              </button>
             )}
           </div>
         </div>

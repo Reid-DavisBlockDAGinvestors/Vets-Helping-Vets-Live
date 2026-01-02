@@ -3,7 +3,7 @@
  * Each interface is focused on a single responsibility
  */
 
-export type CampaignStatus = 'pending' | 'approved' | 'minted' | 'rejected' | 'pending_onchain'
+export type CampaignStatus = 'pending' | 'approved' | 'minted' | 'rejected' | 'pending_onchain' | 'closed' | 'deactivated'
 export type UpdateStatus = 'pending' | 'approved' | 'rejected'
 export type SortOption = 'recent' | 'updates' | 'pending' | 'goal'
 export type StatusFilter = 'all' | CampaignStatus

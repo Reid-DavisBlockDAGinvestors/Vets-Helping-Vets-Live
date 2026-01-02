@@ -12,6 +12,9 @@ interface UseCampaignActionsReturn {
   verifyingId: string | null
   fixingId: string | null
   savingId: string | null
+  closingId: string | null
+  deactivatingId: string | null
+  reactivatingId: string | null
   
   // Actions
   approveCampaign: (campaign: Campaign, formData: ApprovalFormData) => Promise<{ success: boolean; campaignId?: number; status?: string; error?: string }>
@@ -21,6 +24,9 @@ interface UseCampaignActionsReturn {
   verifyTransaction: (campaign: Campaign) => Promise<{ success: boolean; campaignId?: number; status?: string; error?: string }>
   fixCampaign: (campaign: Campaign) => Promise<{ success: boolean; newCampaignId?: number; error?: string }>
   changeStatus: (campaignId: string, newStatus: string) => Promise<{ success: boolean; error?: string }>
+  closeCampaign: (campaign: Campaign, reason?: string) => Promise<{ success: boolean; error?: string }>
+  deactivateCampaign: (campaign: Campaign, reason?: string) => Promise<{ success: boolean; error?: string }>
+  reactivateCampaign: (campaign: Campaign, reason?: string) => Promise<{ success: boolean; error?: string }>
 }
 
 /**
@@ -34,6 +40,9 @@ export function useCampaignActions(): UseCampaignActionsReturn {
   const [verifyingId, setVerifyingId] = useState<string | null>(null)
   const [fixingId, setFixingId] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [closingId, setClosingId] = useState<string | null>(null)
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null)
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null)
 
   const getToken = useCallback(async (): Promise<string | null> => {
     const { data: session } = await supabase.auth.getSession()
@@ -289,6 +298,108 @@ export function useCampaignActions(): UseCampaignActionsReturn {
     }
   }, [getToken])
 
+  const closeCampaign = useCallback(async (
+    campaign: Campaign,
+    reason?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    setClosingId(campaign.id)
+
+    try {
+      const token = await getToken()
+      if (!token) throw new Error('Not authenticated')
+
+      const res = await fetch('/api/admin/campaigns/lifecycle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          submissionId: campaign.id,
+          action: 'close',
+          reason
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Close failed')
+
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Close failed' }
+    } finally {
+      setClosingId(null)
+    }
+  }, [getToken])
+
+  const deactivateCampaign = useCallback(async (
+    campaign: Campaign,
+    reason?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    setDeactivatingId(campaign.id)
+
+    try {
+      const token = await getToken()
+      if (!token) throw new Error('Not authenticated')
+
+      const res = await fetch('/api/admin/campaigns/lifecycle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          submissionId: campaign.id,
+          action: 'deactivate',
+          reason
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Deactivate failed')
+
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Deactivate failed' }
+    } finally {
+      setDeactivatingId(null)
+    }
+  }, [getToken])
+
+  const reactivateCampaign = useCallback(async (
+    campaign: Campaign,
+    reason?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    setReactivatingId(campaign.id)
+
+    try {
+      const token = await getToken()
+      if (!token) throw new Error('Not authenticated')
+
+      const res = await fetch('/api/admin/campaigns/lifecycle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          submissionId: campaign.id,
+          action: 'reactivate',
+          reason
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Reactivate failed')
+
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Reactivate failed' }
+    } finally {
+      setReactivatingId(null)
+    }
+  }, [getToken])
+
   return {
     approvingId,
     rejectingId,
@@ -296,6 +407,9 @@ export function useCampaignActions(): UseCampaignActionsReturn {
     verifyingId,
     fixingId,
     savingId,
+    closingId,
+    deactivatingId,
+    reactivatingId,
     approveCampaign,
     rejectCampaign,
     deleteCampaign,
@@ -303,6 +417,9 @@ export function useCampaignActions(): UseCampaignActionsReturn {
     verifyTransaction,
     fixCampaign,
     changeStatus,
+    closeCampaign,
+    deactivateCampaign,
+    reactivateCampaign,
   }
 }
 
