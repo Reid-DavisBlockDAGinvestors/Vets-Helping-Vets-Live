@@ -192,7 +192,7 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
       const pricePerNftEth = hasNftPrice ? usdToEth(pricePerNft!) : ethAmount
       const pricePerNftWei = parseEther(pricePerNftEth.toFixed(18))
       const tipEthWei = ethTipAmount > 0 ? parseEther(ethTipAmount.toFixed(18)) : 0n
-      const gasLimit = 300000n // V7 is more gas efficient
+      const gasLimit = 450000n // V7 needs ~365k gas for mint
 
       // Debug logging
       logger.debug('[useEthPurchase] Transaction params:', {
