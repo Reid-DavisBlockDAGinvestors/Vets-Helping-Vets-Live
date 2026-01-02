@@ -13,12 +13,13 @@ import { withRetry, IRetryConfig } from '@/lib/retry'
 import { logger } from '@/lib/logger'
 import type { PurchaseResult, AuthState } from '../types'
 
-// V7 Contract ABI - supports immediate payout
-// IMPORTANT: getCampaign returns exactly 13 fields - active at index 10, closed at 11
+// V7 Contract ABI - using legacy mint functions for compatibility
+// Legacy functions don't have onlyThisChain modifier, so they work across chains
 const V7_MINT_ABI = [
-  'function mintWithImmediatePayout(uint256 campaignId) external payable returns (uint256)',
-  'function mintWithImmediatePayoutAndTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
-  // V7 getCampaign: 13 fields total - matches PatriotPledgeNFTV7.sol exactly
+  // Legacy mint functions (V5/V6 compatible, no onlyThisChain)
+  'function mintWithBDAG(uint256 campaignId) external payable returns (uint256)',
+  'function mintWithBDAGAndTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
+  // V7 getCampaign: 13 fields total - active at index 10, closed at 11
   'function getCampaign(uint256 campaignId) external view returns (string category, string baseURI, uint256 goal, uint256 grossRaised, uint256 netRaised, uint256 editionsMinted, uint256 maxEditions, uint256 pricePerEdition, address nonprofit, address submitter, bool active, bool closed, bool immediatePayoutEnabled)',
   'function totalCampaigns() external view returns (uint256)',
   'event EditionMinted(uint256 indexed campaignId, uint256 indexed tokenId, address indexed donor, uint256 editionNumber, uint256 amountPaid)',
@@ -204,15 +205,15 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
         let tx
         try {
           if (isLast && tipEthWei > 0n) {
-            // Last NFT includes tip
+            // Last NFT includes tip - use legacy mintWithBDAGAndTip
             const valueWithTip = pricePerNftWei + tipEthWei
-            tx = await contract.mintWithImmediatePayoutAndTip(BigInt(targetId), tipEthWei, {
+            tx = await contract.mintWithBDAGAndTip(BigInt(targetId), tipEthWei, {
               value: valueWithTip,
               gasLimit,
             })
           } else {
-            // Regular mint without tip
-            tx = await contract.mintWithImmediatePayout(BigInt(targetId), {
+            // Regular mint without tip - use legacy mintWithBDAG
+            tx = await contract.mintWithBDAG(BigInt(targetId), {
               value: pricePerNftWei,
               gasLimit,
             })
