@@ -347,6 +347,22 @@ export function CampaignCard({
               </button>
             )}
 
+            {/* Re-approve button for campaigns stuck without valid campaign_id */}
+            {(
+              (campaign.status === 'approved' && !campaign.campaign_id) ||
+              (campaign.status === 'minted' && !campaign.campaign_id) ||
+              (campaign.status === 'pending_onchain')
+            ) && (
+              <button
+                onClick={onApprove}
+                disabled={isApproving}
+                className="px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 disabled:opacity-50"
+                data-testid="reapprove-campaign-btn"
+              >
+                {isApproving ? 'Re-approving...' : '🔄 Re-approve (New Chain)'}
+              </button>
+            )}
+
             <button
               onClick={onEdit}
               className="px-4 py-2 rounded-lg bg-white/10 text-white text-sm font-medium hover:bg-white/20"
