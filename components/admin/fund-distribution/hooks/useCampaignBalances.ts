@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { supabase } from '@/lib/supabase'
 import type { CampaignBalance, BalanceFilters, NativeCurrency } from '../types'
 
 interface UseCampaignBalancesResult {
@@ -25,13 +26,24 @@ export function useCampaignBalances(filters?: BalanceFilters): UseCampaignBalanc
     setError(null)
 
     try {
+      // Get auth token from Supabase session
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData?.session?.access_token
+      if (!token) {
+        throw new Error('Not authenticated')
+      }
+
       const params = new URLSearchParams()
       if (filters?.chainId) params.set('chainId', filters.chainId.toString())
       if (filters?.isTestnet !== undefined) params.set('isTestnet', filters.isTestnet.toString())
       if (filters?.hasPendingFunds) params.set('hasPendingFunds', 'true')
       if (filters?.hasPendingTips) params.set('hasPendingTips', 'true')
 
-      const response = await fetch(`/api/admin/distributions/balances?${params}`)
+      const response = await fetch(`/api/admin/distributions/balances?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
       
       if (!response.ok) {
         throw new Error(`Failed to fetch balances: ${response.statusText}`)
