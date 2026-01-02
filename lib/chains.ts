@@ -89,7 +89,7 @@ export const CHAIN_CONFIGS: Record<ChainId, ChainConfig> = {
     chainId: 11155111,
     name: 'Sepolia Testnet',
     shortName: 'SEP',
-    rpcUrl: process.env.NEXT_PUBLIC_ETHEREUM_SEPOLIA_RPC || '',
+    rpcUrl: process.env.NEXT_PUBLIC_ETHEREUM_SEPOLIA_RPC || 'https://ethereum-sepolia-rpc.publicnode.com',
     explorerUrl: 'https://sepolia.etherscan.io',
     explorerApiUrl: 'https://api-sepolia.etherscan.io/api',
     nativeCurrency: {
@@ -98,7 +98,8 @@ export const CHAIN_CONFIGS: Record<ChainId, ChainConfig> = {
       decimals: 18
     },
     contracts: {
-      v7: process.env.NEXT_PUBLIC_V7_CONTRACT_SEPOLIA || ''
+      // V7 deployed Jan 1, 2026 - hardcoded as fallback since env vars may not load on client
+      v7: process.env.NEXT_PUBLIC_V7_CONTRACT_SEPOLIA || '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e'
     },
     gasEstimate: 'medium',
     avgBlockTime: 12,

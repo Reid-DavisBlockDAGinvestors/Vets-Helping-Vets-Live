@@ -26,7 +26,7 @@ import {
 } from './purchase-panel'
 import { useEthPurchase, usdToEth } from './purchase-panel/hooks/useEthPurchase'
 import { getEffectiveContractAddress, PRESET_AMOUNTS, TIP_OPTIONS } from './purchase-panel/constants'
-import { getTestnetWarning, isTestnetChain, type ChainId } from '@/lib/chains'
+import { getTestnetWarning, isTestnetChain, getContractAddress, type ChainId } from '@/lib/chains'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
 
@@ -61,8 +61,8 @@ export default function PurchasePanelV2({
   const auth = usePurchaseAuth()
   const config = usePurchaseConfig(pricePerNft, quantity, tipAmount, customAmount, remainingCopies)
   
-  // V7 Sepolia contract address
-  const sepoliaContractAddress = process.env.NEXT_PUBLIC_V7_CONTRACT_SEPOLIA || ''
+  // V7 Sepolia contract address - get from chains config (more reliable than process.env)
+  const sepoliaContractAddress = getContractAddress(11155111, 'v7') || process.env.NEXT_PUBLIC_V7_CONTRACT_SEPOLIA || ''
 
   // BDAG purchase hook (BlockDAG network)
   const bdagPurchase = useBdagPurchase({
