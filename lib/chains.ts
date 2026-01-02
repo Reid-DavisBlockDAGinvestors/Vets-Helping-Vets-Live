@@ -33,10 +33,10 @@ export interface ChainConfig {
 }
 
 export const CHAIN_CONFIGS: Record<ChainId, ChainConfig> = {
-  // BlockDAG Mainnet (Current Production)
+  // BlockDAG Testnet (Awakening Phase - uses test BDAG)
   1043: {
     chainId: 1043,
-    name: 'BlockDAG Mainnet',
+    name: 'BlockDAG Testnet',
     shortName: 'BDAG',
     rpcUrl: process.env.NEXT_PUBLIC_BLOCKDAG_RPC || 'https://bdag.nownodes.io',
     rpcUrlFallback: 'https://rpc.awakening.bdagscan.com',
@@ -48,14 +48,13 @@ export const CHAIN_CONFIGS: Record<ChainId, ChainConfig> = {
     },
     contracts: {
       v5: '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890',
-      // v6: 'TBD - Deploy when needed',
-      // v7: 'TBD - Deploy when needed'
+      v6: '0xaE54e4E8A75a81780361570c17b8660CEaD27053',
     },
     gasEstimate: 'low',
     avgBlockTime: 10,
     confirmations: 1,
     immediatePayoutSupported: false, // V5 doesn't support
-    isTestnet: false,
+    isTestnet: true, // IMPORTANT: Awakening is testnet phase
     isActive: true,
     iconUrl: '/images/chains/bdag.png'
   },
@@ -286,6 +285,66 @@ export function estimateGasCostUSD(chainId: ChainId, gasUnits: number): { low: n
     mid: (gasUnits * prices.mid * tokenPrice) / 1e9,
     high: (gasUnits * prices.high * tokenPrice) / 1e9
   }
+}
+
+// ============ Testnet/Mainnet Helpers ============
+
+/**
+ * Check if a chain is a testnet
+ */
+export function isTestnetChain(chainId: ChainId): boolean {
+  return CHAIN_CONFIGS[chainId]?.isTestnet ?? true
+}
+
+/**
+ * Get all active testnet chains
+ */
+export function getTestnetChains(): ChainConfig[] {
+  return Object.values(CHAIN_CONFIGS).filter(c => c.isTestnet && c.isActive)
+}
+
+/**
+ * Get all active mainnet chains
+ */
+export function getMainnetChains(): ChainConfig[] {
+  return Object.values(CHAIN_CONFIGS).filter(c => !c.isTestnet && c.isActive)
+}
+
+/**
+ * Validate if a purchase can be made on a campaign
+ * Campaigns must be purchased on the same network they were created on
+ */
+export function canPurchaseWith(campaignChainId: ChainId, paymentChainId: ChainId): boolean {
+  return campaignChainId === paymentChainId
+}
+
+/**
+ * Get network type label for display
+ */
+export function getNetworkTypeLabel(chainId: ChainId): 'Testnet' | 'Mainnet' {
+  return isTestnetChain(chainId) ? 'Testnet' : 'Mainnet'
+}
+
+/**
+ * Get testnet warning message for a chain
+ */
+export function getTestnetWarning(chainId: ChainId): string | null {
+  const config = CHAIN_CONFIGS[chainId]
+  if (!config?.isTestnet) return null
+  
+  return `⚠️ ${config.name} is a testnet - uses test ${config.nativeCurrency.symbol} only`
+}
+
+/**
+ * Get available networks for a campaign based on its type
+ */
+export function getCompatiblePaymentNetworks(campaignChainId: ChainId): ChainConfig[] {
+  const campaignConfig = CHAIN_CONFIGS[campaignChainId]
+  if (!campaignConfig) return []
+  
+  // For now, only the exact same network is compatible
+  // This ensures testnet campaigns can only be purchased with testnet tokens
+  return [campaignConfig]
 }
 
 // ============ Default Export ============

@@ -104,6 +104,16 @@ export interface CampaignFilters {
 }
 
 /**
+ * Target network configuration for campaign deployment
+ */
+export interface TargetNetwork {
+  chainId: number
+  chainName: string
+  contractVersion: string
+  isTestnet: boolean
+}
+
+/**
  * Approval form data
  */
 export interface ApprovalFormData {
@@ -112,6 +122,7 @@ export interface ApprovalFormData {
   nft_price: number
   creator_wallet: string
   benchmarks: string
+  targetNetwork?: TargetNetwork
 }
 
 /**

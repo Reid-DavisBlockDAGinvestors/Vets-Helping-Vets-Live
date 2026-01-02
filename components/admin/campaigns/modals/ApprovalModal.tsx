@@ -1,7 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { ApprovalModalProps, ApprovalFormData } from '../types'
+import type { ApprovalModalProps, ApprovalFormData, TargetNetwork } from '../types'
+
+// Available networks for campaign deployment
+const AVAILABLE_NETWORKS: TargetNetwork[] = [
+  { chainId: 1043, chainName: 'BlockDAG Testnet', contractVersion: 'v6', isTestnet: true },
+  { chainId: 11155111, chainName: 'Sepolia (ETH Testnet)', contractVersion: 'v7', isTestnet: true },
+  { chainId: 1, chainName: 'Ethereum Mainnet', contractVersion: 'v7', isTestnet: false },
+]
 
 /**
  * Campaign approval modal with form for NFT settings
@@ -18,7 +25,8 @@ export function ApprovalModal({
     nft_editions: 100,
     nft_price: 1,
     creator_wallet: '',
-    benchmarks: ''
+    benchmarks: '',
+    targetNetwork: AVAILABLE_NETWORKS[0] // Default to BlockDAG testnet
   })
 
   // Reset form when campaign changes
@@ -33,7 +41,8 @@ export function ApprovalModal({
             : 1
         ),
         creator_wallet: campaign.creator_wallet || '',
-        benchmarks: ''
+        benchmarks: '',
+        targetNetwork: AVAILABLE_NETWORKS[0] // Default to BlockDAG testnet
       })
     }
   }, [campaign])
@@ -66,8 +75,43 @@ export function ApprovalModal({
               <strong>{campaign.title}</strong>
             </p>
             <p className="text-xs text-blue-300/70 mt-1">
-              This will create the campaign on the BlockDAG blockchain.
+              Select the network where this campaign will be deployed.
             </p>
+          </div>
+
+          {/* Network Selection */}
+          <div className="mb-4">
+            <label className="block text-sm text-white/70 mb-2">Deploy to Network</label>
+            <select
+              value={form.targetNetwork?.chainId || 1043}
+              onChange={(e) => {
+                const network = AVAILABLE_NETWORKS.find(n => n.chainId === Number(e.target.value))
+                if (network) setForm(f => ({ ...f, targetNetwork: network }))
+              }}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white"
+              data-testid="network-select"
+            >
+              {AVAILABLE_NETWORKS.map(network => (
+                <option key={network.chainId} value={network.chainId} className="bg-slate-800">
+                  {network.isTestnet ? '🧪' : '💰'} {network.chainName} ({network.contractVersion})
+                </option>
+              ))}
+            </select>
+            
+            {/* Network Warning */}
+            {form.targetNetwork?.isTestnet ? (
+              <div className="mt-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/30">
+                <p className="text-xs text-yellow-400">
+                  ⚠️ <strong>TESTNET</strong> - This campaign will use test tokens only. No real money involved.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-2 p-2 rounded bg-green-500/10 border border-green-500/30">
+                <p className="text-xs text-green-400">
+                  💰 <strong>MAINNET</strong> - This campaign will raise REAL FUNDS. Purchases require real {form.targetNetwork?.chainName === 'Ethereum Mainnet' ? 'ETH' : 'tokens'}.
+                </p>
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

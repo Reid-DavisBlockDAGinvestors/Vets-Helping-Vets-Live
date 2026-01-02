@@ -58,6 +58,10 @@ export function useCampaignActions(): UseCampaignActionsReturn {
         },
         body: JSON.stringify({
           id: campaign.id,
+          // Network selection for multi-chain support
+          targetChainId: formData.targetNetwork?.chainId || 1043,
+          targetContractVersion: formData.targetNetwork?.contractVersion || 'v6',
+          isTestnet: formData.targetNetwork?.isTestnet ?? true,
           updates: {
             goal: formData.goal,
             num_copies: formData.nft_editions,
@@ -65,7 +69,12 @@ export function useCampaignActions(): UseCampaignActionsReturn {
             creator_wallet: formData.creator_wallet || campaign.creator_wallet,
             benchmarks: formData.benchmarks?.trim()
               ? formData.benchmarks.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-              : null
+              : null,
+            // Store network info in submission
+            chain_id: formData.targetNetwork?.chainId || 1043,
+            chain_name: formData.targetNetwork?.chainName || 'BlockDAG Testnet',
+            contract_version: formData.targetNetwork?.contractVersion || 'v6',
+            is_testnet: formData.targetNetwork?.isTestnet ?? true
           }
         })
       })

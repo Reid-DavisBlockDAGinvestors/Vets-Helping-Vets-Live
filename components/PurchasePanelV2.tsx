@@ -26,6 +26,7 @@ import {
 } from './purchase-panel'
 import { useEthPurchase, usdToEth } from './purchase-panel/hooks/useEthPurchase'
 import { getEffectiveContractAddress, PRESET_AMOUNTS, TIP_OPTIONS } from './purchase-panel/constants'
+import { getTestnetWarning, isTestnetChain, type ChainId } from '@/lib/chains'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
 
@@ -295,9 +296,12 @@ export default function PurchasePanelV2({
                   <span>🧪</span> Sepolia (ETH)
                 </button>
               </div>
-              {selectedNetwork === 'sepolia' && (
-                <p className="text-xs text-yellow-400/80 mt-2">⚠️ Sepolia is a testnet - uses test ETH only</p>
-              )}
+              {/* Testnet Warning - shown for ALL testnet networks */}
+              <p className="text-xs text-yellow-400/80 mt-2">
+                {selectedNetwork === 'sepolia' 
+                  ? '⚠️ Sepolia is a testnet - uses test ETH only'
+                  : '⚠️ BlockDAG Awakening is a testnet - uses test BDAG only'}
+              </p>
             </div>
 
             {/* Price Display */}
