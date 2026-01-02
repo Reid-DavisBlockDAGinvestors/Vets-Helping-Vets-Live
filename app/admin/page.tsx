@@ -8,9 +8,11 @@ import AdminSubmitters from '@/components/AdminSubmitters'
 import AdminBugReports from '@/components/AdminBugReports'
 import AdminSettings from '@/components/AdminSettings'
 import { FundDistributionPanel } from '@/components/admin/fund-distribution'
+import { TokenManagementPanel } from '@/components/admin/tokens'
+import { SecurityPanel } from '@/components/admin/security'
 import { supabase } from '@/lib/supabase'
 
-type AdminTab = 'campaigns' | 'users' | 'submitters' | 'governance' | 'bugs' | 'settings' | 'distributions'
+type AdminTab = 'campaigns' | 'users' | 'submitters' | 'governance' | 'bugs' | 'settings' | 'distributions' | 'tokens' | 'security'
 
 export default function AdminPage() {
   const [email, setEmail] = useState('')
@@ -453,6 +455,28 @@ export default function AdminPage() {
             >
               💰 <span className="hidden xs:inline">Distributions</span><span className="xs:hidden">Dist</span>
             </button>
+            <button
+              onClick={() => setActiveTab('tokens')}
+              className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap ${
+                activeTab === 'tokens' 
+                  ? 'bg-indigo-600 text-white' 
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              }`}
+              data-testid="token-management-tab"
+            >
+              🎫 <span className="hidden xs:inline">Tokens</span><span className="xs:hidden">Tok</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('security')}
+              className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap ${
+                activeTab === 'security' 
+                  ? 'bg-rose-600 text-white' 
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              }`}
+              data-testid="security-tab"
+            >
+              🔒 <span className="hidden xs:inline">Security</span><span className="xs:hidden">Sec</span>
+            </button>
           </div>
         </div>
 
@@ -474,6 +498,16 @@ export default function AdminPage() {
         {activeTab === 'distributions' && (
           <div className="rounded-xl bg-white/5 border border-white/10 p-6">
             <FundDistributionPanel />
+          </div>
+        )}
+        {activeTab === 'tokens' && (
+          <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+            <TokenManagementPanel />
+          </div>
+        )}
+        {activeTab === 'security' && (
+          <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+            <SecurityPanel />
           </div>
         )}
       </div>
