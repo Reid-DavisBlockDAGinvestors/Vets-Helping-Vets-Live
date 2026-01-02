@@ -6,13 +6,37 @@ import { useWallet } from '@/hooks/useWallet'
 import { withRetry, IRetryConfig } from '@/lib/retry'
 import { logger } from '@/lib/logger'
 
-const MINT_EDITION_ABI = [
+// V5/V6 ABI - active at index 8, closed at index 9
+const V6_ABI = [
   'function mintWithBDAG(uint256 campaignId) external payable returns (uint256)',
   'function mintWithBDAGAndTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
   'function getCampaign(uint256 campaignId) external view returns (string category, string baseURI, uint256 goal, uint256 grossRaised, uint256 netRaised, uint256 editionsMinted, uint256 maxEditions, uint256 pricePerEdition, bool active, bool closed)',
   'function totalCampaigns() external view returns (uint256)',
   'event EditionMinted(uint256 indexed campaignId, uint256 indexed tokenId, address indexed buyer, uint256 editionNumber, uint256 amount)',
 ]
+
+// V7 ABI - active at index 10, closed at index 11 (has nonprofit/submitter addresses)
+const V7_ABI = [
+  'function mintEdition(uint256 campaignId) external payable returns (uint256)',
+  'function mintEditionWithTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
+  'function getCampaign(uint256 campaignId) external view returns (string category, string baseURI, uint256 goal, uint256 grossRaised, uint256 netRaised, uint256 editionsMinted, uint256 maxEditions, uint256 pricePerEdition, address nonprofit, address submitter, bool active, bool closed, bool immediatePayoutEnabled)',
+  'function totalCampaigns() external view returns (uint256)',
+  'event EditionMinted(uint256 indexed campaignId, uint256 indexed tokenId, address indexed buyer, uint256 editionNumber, uint256 amount)',
+]
+
+function getAbiForVersion(version?: string) {
+  if (version && (version === 'v7' || parseInt(version.replace('v', '')) >= 7)) {
+    return V7_ABI
+  }
+  return V6_ABI
+}
+
+function getCampaignActiveIndex(version?: string): { activeIdx: number, closedIdx: number } {
+  if (version && (version === 'v7' || parseInt(version.replace('v', '')) >= 7)) {
+    return { activeIdx: 10, closedIdx: 11 } // V7: after nonprofit, submitter addresses
+  }
+  return { activeIdx: 8, closedIdx: 9 } // V5/V6
+}
 
 interface UseCryptoPaymentOptions {
   campaignId: string
@@ -103,7 +127,7 @@ export function useCryptoPayment({
 
       const provider = new BrowserProvider(ethereum)
       const signer = await provider.getSigner()
-      const contract = new Contract(contractAddress, MINT_EDITION_ABI, signer)
+      const contract = new Contract(contractAddress, getAbiForVersion(contractVersion), signer)
 
       // Verify campaign exists on-chain with retry logic
       const verifyConfig: Partial<IRetryConfig> = {
@@ -141,13 +165,14 @@ export function useCryptoPayment({
       }
 
       const { campaign } = verifyResult.data!
+      const { activeIdx, closedIdx } = getCampaignActiveIndex(contractVersion)
 
-      if (!campaign[8]) {
+      if (!campaign[activeIdx]) {
         onMessage(`Campaign #${campaignId} is not active.`)
         return { success: false }
       }
 
-      if (campaign[9]) {
+      if (campaign[closedIdx]) {
         onMessage(`Campaign #${campaignId} is closed.`)
         return { success: false }
       }

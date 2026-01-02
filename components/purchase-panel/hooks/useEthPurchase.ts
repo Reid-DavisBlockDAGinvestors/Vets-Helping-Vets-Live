@@ -171,13 +171,13 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
       }
 
       const { campaign } = verifyResult.data!
-      // V7 campaign structure: active is at index 11, closed at index 12
-      if (!campaign[11]) {
+      // V7 campaign structure: active is at index 10, closed at index 11
+      if (!campaign[10]) {
         setCryptoMsg(`Campaign #${targetId} is not active.`)
         setLoading(false)
         return
       }
-      if (campaign[12]) {
+      if (campaign[11]) {
         setCryptoMsg(`Campaign #${targetId} is closed.`)
         setLoading(false)
         return
