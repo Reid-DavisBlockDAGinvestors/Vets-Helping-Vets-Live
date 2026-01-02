@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { formatNativeAmount, formatCurrency, shortenAddress, formatDate } from '../utils/formatters'
+import type { NativeCurrency } from '../types'
 
 // Chain explorer URLs for tx links
 const CHAIN_EXPLORERS: Record<number, string> = {
@@ -30,7 +31,7 @@ interface Distribution {
   initiated_at: string
   confirmed_at: string | null
   error_message: string | null
-  native_currency: string
+  native_currency: NativeCurrency
 }
 
 interface DistributionHistoryProps {

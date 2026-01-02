@@ -65,8 +65,8 @@ export function EditModal({
           country: ''
         },
         verification_status: campaign.verification_status || 'pending',
-        nft_price: campaign.price_per_copy || 0,
-        nft_editions: campaign.num_copies || 100
+        nft_price: campaign.nft_price || 0,
+        nft_editions: campaign.nft_editions || campaign.num_copies || 100
       })
     }
   }, [campaign])
