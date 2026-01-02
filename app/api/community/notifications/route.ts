@@ -53,6 +53,11 @@ export async function GET(req: NextRequest) {
     const { data: notifications, error } = await query
 
     if (error) {
+      // Gracefully handle if table doesn't exist yet
+      if (error.code === '42P01' || error.message?.includes('does not exist')) {
+        logger.debug('[notifications] Table not yet created, returning empty')
+        return NextResponse.json({ notifications: [], unreadCount: 0, hasMore: false })
+      }
       logger.error('[notifications] Fetch error:', error)
       return NextResponse.json({ error: 'FETCH_FAILED' }, { status: 500 })
     }
