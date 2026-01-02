@@ -27,6 +27,13 @@ export const metadata: Metadata = {
   title: 'PatriotPledge - Support Veterans & First Responders',
   description: 'The world\'s greatest NFT-powered fundraising platform for veterans and first responders. Make a difference today.',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192x192.svg', sizes: '192x192', type: 'image/svg+xml' },
+    ],
+    apple: '/icons/icon-192x192.svg',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
