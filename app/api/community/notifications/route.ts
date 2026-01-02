@@ -17,8 +17,9 @@ export async function GET(req: NextRequest) {
     const authHeader = req.headers.get('authorization') || ''
     const token = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7) : ''
     
+    // Return empty notifications if not authenticated (guest users)
     if (!token) {
-      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
+      return NextResponse.json({ notifications: [], unreadCount: 0, hasMore: false })
     }
 
     const { data: userData, error: authErr } = await supabaseAdmin.auth.getUser(token)

@@ -194,6 +194,15 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
       const tipEthWei = ethTipAmount > 0 ? parseEther(ethTipAmount.toFixed(18)) : 0n
       const gasLimit = 300000n // V7 is more gas efficient
 
+      // Debug logging
+      logger.debug('[useEthPurchase] Transaction params:', {
+        contractAddress,
+        targetId,
+        pricePerNftEth,
+        pricePerNftWei: pricePerNftWei.toString(),
+        gasLimit: gasLimit.toString(),
+      })
+
       const txHashes: string[] = []
       const mintedTokenIds: number[] = []
 
@@ -204,22 +213,34 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
 
         let tx
         try {
+          // Log the exact call being made
+          const campaignIdBigInt = BigInt(targetId)
+          logger.debug('[useEthPurchase] Calling mintWithBDAG:', {
+            campaignId: campaignIdBigInt.toString(),
+            value: pricePerNftWei.toString(),
+          })
+
           if (isLast && tipEthWei > 0n) {
             // Last NFT includes tip - use legacy mintWithBDAGAndTip
             const valueWithTip = pricePerNftWei + tipEthWei
-            tx = await contract.mintWithBDAGAndTip(BigInt(targetId), tipEthWei, {
+            logger.debug('[useEthPurchase] Using mintWithBDAGAndTip with tip:', tipEthWei.toString())
+            tx = await contract.mintWithBDAGAndTip(campaignIdBigInt, tipEthWei, {
               value: valueWithTip,
               gasLimit,
             })
           } else {
             // Regular mint without tip - use legacy mintWithBDAG
-            tx = await contract.mintWithBDAG(BigInt(targetId), {
+            tx = await contract.mintWithBDAG(campaignIdBigInt, {
               value: pricePerNftWei,
               gasLimit,
             })
           }
+          logger.debug('[useEthPurchase] Transaction submitted:', tx.hash)
         } catch (mintErr: any) {
+          logger.error('[useEthPurchase] Mint error:', mintErr)
           let errorMsg = mintErr?.reason || mintErr?.message || 'Transaction failed'
+          if (mintErr?.code) errorMsg += ` (code: ${mintErr.code})`
+          if (mintErr?.data) errorMsg += ` (data: ${JSON.stringify(mintErr.data)})`
           if (errorMsg.includes('user rejected')) errorMsg = 'Transaction cancelled'
           else if (errorMsg.includes('insufficient funds')) errorMsg = 'Insufficient ETH balance'
           setCryptoMsg(`❌ ${errorMsg}`)
