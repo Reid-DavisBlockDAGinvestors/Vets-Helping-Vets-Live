@@ -141,3 +141,69 @@ CREATE POLICY contract_cache_admin_modify ON contract_settings_cache
       AND profiles.role IN ('super_admin', 'admin')
     )
   );
+
+-- ============================================
+-- 6. Pending Settings Changes (Financial-Grade Security)
+-- ============================================
+CREATE TABLE IF NOT EXISTS pending_settings_changes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chain_id INTEGER NOT NULL,
+  contract_version VARCHAR(20) NOT NULL,
+  contract_address VARCHAR(42) NOT NULL,
+  change_type VARCHAR(50) NOT NULL, -- 'fee', 'treasury', 'royalty', 'payout'
+  current_value TEXT NOT NULL,
+  new_value TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  requested_by UUID REFERENCES auth.users(id),
+  requested_by_email VARCHAR(255),
+  status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'executed', 'cancelled', 'expired', 'failed'
+  requires_multi_sig BOOLEAN DEFAULT false,
+  approvals UUID[] DEFAULT '{}',
+  required_approvals INTEGER DEFAULT 1,
+  executed_by UUID REFERENCES auth.users(id),
+  executed_at TIMESTAMP WITH TIME ZONE,
+  cancelled_by UUID REFERENCES auth.users(id),
+  cancelled_at TIMESTAMP WITH TIME ZONE,
+  expires_at TIMESTAMP WITH TIME ZONE,
+  tx_hash VARCHAR(66),
+  error_message TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_changes_chain ON pending_settings_changes(chain_id);
+CREATE INDEX IF NOT EXISTS idx_pending_changes_status ON pending_settings_changes(status);
+CREATE INDEX IF NOT EXISTS idx_pending_changes_requested_by ON pending_settings_changes(requested_by);
+
+-- RLS for pending settings changes: Only admins
+ALTER TABLE pending_settings_changes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY pending_changes_admin_all ON pending_settings_changes
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles 
+      WHERE profiles.id = auth.uid() 
+      AND profiles.role IN ('super_admin', 'admin')
+    )
+  );
+
+-- ============================================
+-- 7. Auto-expire pending changes (function + trigger)
+-- ============================================
+CREATE OR REPLACE FUNCTION expire_old_pending_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE pending_settings_changes 
+  SET status = 'expired', updated_at = NOW()
+  WHERE status = 'pending' 
+  AND expires_at < NOW();
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Run expiry check on each insert/update (lightweight)
+DROP TRIGGER IF EXISTS trigger_expire_pending_changes ON pending_settings_changes;
+CREATE TRIGGER trigger_expire_pending_changes
+  AFTER INSERT OR UPDATE ON pending_settings_changes
+  EXECUTE FUNCTION expire_old_pending_changes();
