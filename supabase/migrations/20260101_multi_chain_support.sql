@@ -80,14 +80,14 @@ VALUES
    '{"batch_mint": true, "royalties": true}'::jsonb)
 ON CONFLICT (version) DO NOTHING;
 
--- Insert V7 placeholders for Ethereum networks
+-- Insert V7 contracts for Ethereum networks
 INSERT INTO public.contracts (version, address, name, chain_id, is_active, is_mintable, features)
 VALUES 
-  ('v7-sepolia', '0x0000000000000000000000000000000000000000', 'PatriotPledgeNFTV7 (Sepolia)', 11155111, true, true,
+  ('v7-sepolia', '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e', 'PatriotPledgeNFTV7 (Sepolia)', 11155111, true, true,
    '{"batch_mint": true, "immediate_payout": true}'::jsonb),
   ('v7-ethereum', '0x0000000000000000000000000000000000000000', 'PatriotPledgeNFTV7 (Ethereum)', 1, false, false,
    '{"batch_mint": true, "immediate_payout": true}'::jsonb)
-ON CONFLICT (version) DO NOTHING;
+ON CONFLICT (version) DO UPDATE SET address = EXCLUDED.address, is_active = EXCLUDED.is_active;
 
 -- ============================================
 -- 5. Chain configuration reference table
