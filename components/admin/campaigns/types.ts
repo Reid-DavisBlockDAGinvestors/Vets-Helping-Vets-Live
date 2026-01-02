@@ -129,6 +129,8 @@ export interface ApprovalFormData {
   title?: string
   story?: string
   category?: string
+  // Media
+  video_url?: string // YouTube video URL for campaign story
 }
 
 /**

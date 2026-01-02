@@ -136,6 +136,7 @@ export async function POST(req: NextRequest) {
       benchmarks: merged.benchmarks || null,
       num_copies: merged.num_copies || null,
       price_per_copy: merged.price_per_copy || null,
+      video_url: merged.video_url || null, // YouTube video URL from admin
       // Track the wallet used and whether it's the platform wallet
       creator_wallet: creatorWallet,
       uses_platform_wallet: usingPlatformWallet

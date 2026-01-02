@@ -90,7 +90,9 @@ export function useCampaignActions(): UseCampaignActionsReturn {
             contract_version: formData.targetNetwork?.contractVersion || 'v6',
             is_testnet: formData.targetNetwork?.isTestnet ?? true,
             // V7 feature: immediate payout
-            immediate_payout_enabled: formData.immediatePayoutEnabled ?? false
+            immediate_payout_enabled: formData.immediatePayoutEnabled ?? false,
+            // Media
+            video_url: formData.video_url || null
           }
         })
       })
