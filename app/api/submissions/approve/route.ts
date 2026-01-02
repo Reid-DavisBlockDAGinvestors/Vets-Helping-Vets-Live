@@ -302,16 +302,39 @@ export async function POST(req: NextRequest) {
           const gasPrice = (baseGasPrice * multiplier) / 100n
           
           logger.debug(`[createCampaign] Attempt ${attempt + 1}: nonce=${nonce}, gasPrice=${gasPrice}`)
-          const tx = await contract.createCampaign(
-            category,
-            uri,
-            goalWei,
-            maxEditions,
-            priceWei,
-            feeRateBps,
-            creatorWallet,
-            { nonce, gasPrice }
-          )
+          
+          // V7 has different createCampaign signature than V6
+          // V6: createCampaign(category, uri, goal, maxEditions, price, feeRate, submitter)
+          // V7: createCampaign(category, uri, goal, maxEditions, price, nonprofit, submitter, immediatePayoutEnabled)
+          let tx: any
+          if (contractVersion === 'v7' || parseInt(contractVersion.slice(1)) >= 7) {
+            // V7+ signature - nonprofit can be same as submitter for now
+            const immediatePayoutEnabled = body.updates?.immediate_payout_enabled ?? false
+            logger.debug(`[createCampaign] Using V7 signature: nonprofit=${creatorWallet}, submitter=${creatorWallet}, immediatePayout=${immediatePayoutEnabled}`)
+            tx = await contract.createCampaign(
+              category,
+              uri,
+              goalWei,
+              maxEditions,
+              priceWei,
+              creatorWallet,  // nonprofit address
+              creatorWallet,  // submitter address
+              immediatePayoutEnabled,
+              { nonce, gasPrice }
+            )
+          } else {
+            // V6 and earlier signature
+            tx = await contract.createCampaign(
+              category,
+              uri,
+              goalWei,
+              maxEditions,
+              priceWei,
+              feeRateBps,
+              creatorWallet,
+              { nonce, gasPrice }
+            )
+          }
           
           logger.debug(`[createCampaign] Tx submitted: ${tx.hash}`)
           

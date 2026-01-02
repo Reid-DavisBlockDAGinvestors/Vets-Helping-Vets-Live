@@ -84,6 +84,76 @@ export const V5_ABI = [
   'function withdraw(address to, uint256 amount) external'
 ]
 
+// V7 ABI - Different createCampaign signature with immediate payout
+export const V7_ABI = [
+  // V7 Campaign management - DIFFERENT SIGNATURE than V5/V6
+  'function createCampaign(string category, string baseURI, uint256 goal, uint256 maxEditions, uint256 pricePerEdition, address nonprofit, address submitter, bool immediatePayoutEnabled) external returns (uint256)',
+  'function totalCampaigns() view returns (uint256)',
+  'function getCampaign(uint256 campaignId) view returns (string category, string baseURI, uint256 goal, uint256 grossRaised, uint256 netRaised, uint256 editionsMinted, uint256 maxEditions, uint256 pricePerEdition, bool active, bool closed)',
+  'function campaigns(uint256 campaignId) view returns (string category, string baseURI, uint256 goal, uint256 grossRaised, uint256 netRaised, uint256 tipsReceived, uint256 editionsMinted, uint256 maxEditions, uint256 pricePerEdition, address nonprofit, address submitter, bool active, bool closed, bool refunded, bool immediatePayoutEnabled)',
+  
+  // Edition minting - uses ETH on Sepolia/Mainnet
+  'function mintEdition(uint256 campaignId) external payable returns (uint256)',
+  'function mintEditionWithTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
+  'function mintBatchEditions(uint256 campaignId, uint256 quantity) external payable returns (uint256[])',
+  
+  // Living NFT - metadata updates
+  'function updateCampaignMetadata(uint256 campaignId, string newBaseURI) external',
+  
+  // Campaign lifecycle
+  'function deactivateCampaign(uint256 campaignId) external',
+  'function reactivateCampaign(uint256 campaignId) external',
+  'function closeCampaign(uint256 campaignId) external',
+  
+  // Edition info
+  'function getEditionInfo(uint256 tokenId) view returns (uint256 campaignId, uint256 editionNumber, uint256 totalEditions)',
+  'function getCampaignEditions(uint256 campaignId) view returns (uint256[])',
+  'function tokenToCampaign(uint256 tokenId) view returns (uint256)',
+  'function tokenEditionNumber(uint256 tokenId) view returns (uint256)',
+  
+  // Standard ERC721 + Enumerable
+  'function totalSupply() view returns (uint256)',
+  'function tokenByIndex(uint256 index) view returns (uint256)',
+  'function ownerOf(uint256 tokenId) view returns (address)',
+  'function tokenURI(uint256 tokenId) view returns (string)',
+  'function balanceOf(address owner) view returns (uint256)',
+  'function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)',
+  
+  // Admin token URI fix
+  'function setTokenURI(uint256 tokenId, string uri) external',
+  
+  // Token freezing
+  'function freezeToken(uint256 tokenId) external',
+  'function unfreezeToken(uint256 tokenId) external',
+  'function isTokenFrozen(uint256 tokenId) view returns (bool)',
+  
+  // Blacklist
+  'function blacklistAddress(address account) external',
+  'function unblacklistAddress(address account) external',
+  'function isBlacklisted(address account) view returns (bool)',
+  
+  // Soulbound
+  'function setSoulbound(uint256 tokenId, bool isSoulbound) external',
+  'function isTokenSoulbound(uint256 tokenId) view returns (bool)',
+  
+  // Burn
+  'function burn(uint256 tokenId) external',
+  'function adminBurn(uint256 tokenId) external',
+  
+  // Pausable
+  'function pause() external',
+  'function unpause() external',
+  'function paused() view returns (bool)',
+  
+  // Treasury and owner
+  'function platformTreasury() view returns (address)',
+  'function owner() view returns (address)',
+  
+  // Royalties (EIP-2981)
+  'function royaltyInfo(uint256 tokenId, uint256 salePrice) view returns (address receiver, uint256 royaltyAmount)',
+  'function setDefaultRoyalty(address receiver, uint96 feeNumerator) external',
+]
+
 // V6 ABI - Extended with new features
 export const V6_ABI = [
   ...V5_ABI,
@@ -260,7 +330,7 @@ function initializeRegistry(): void {
     isActive: true,
     isMintable: true,
     features: { ...DEFAULT_FEATURES, immediatePayout: true },
-    abi: V6_ABI // V7 extends V6 ABI
+    abi: V7_ABI // V7 has different createCampaign signature
   })
 
   // Auto-load any additional contracts from environment (V8+)
