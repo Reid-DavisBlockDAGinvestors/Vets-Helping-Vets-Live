@@ -28,8 +28,10 @@ import {
   ApprovalModal,
   RejectModal,
   DeleteModal,
+  EditModal,
   type Campaign,
-  type ApprovalFormData
+  type ApprovalFormData,
+  type EditFormData
 } from './admin/campaigns'
 
 export default function AdminCampaignHubV2() {
@@ -66,6 +68,8 @@ export default function AdminCampaignHubV2() {
   const [approvalTarget, setApprovalTarget] = useState<Campaign | null>(null)
   const [rejectTarget, setRejectTarget] = useState<Campaign | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Campaign | null>(null)
+  const [editTarget, setEditTarget] = useState<Campaign | null>(null)
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
 
   // Toggle expand
   const toggleExpand = useCallback((id: string) => {
@@ -174,6 +178,52 @@ export default function AdminCampaignHubV2() {
     }
   }, [fixCampaign, updateCampaignLocally])
 
+  // Handle edit campaign
+  const handleEdit = useCallback(async (formData: EditFormData) => {
+    if (!editTarget) return
+    setIsSavingEdit(true)
+    
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) throw new Error('Not authenticated')
+
+      const res = await fetch('/api/submissions/update', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id: editTarget.id,
+          updates: formData
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Update failed')
+
+      // Update local state
+      updateCampaignLocally(editTarget.id, {
+        title: formData.title,
+        story: formData.story,
+        category: formData.category,
+        goal: formData.goal,
+        status: formData.status as any,
+        creator_name: formData.creator_name,
+        creator_email: formData.creator_email,
+        creator_wallet: formData.creator_wallet,
+        price_per_copy: formData.nft_price,
+        num_copies: formData.nft_editions
+      })
+      setEditTarget(null)
+    } catch (e: any) {
+      alert(e?.message || 'Update failed')
+    } finally {
+      setIsSavingEdit(false)
+    }
+  }, [editTarget, updateCampaignLocally])
+
   // Loading state
   if (isLoading) {
     return (
@@ -208,7 +258,7 @@ export default function AdminCampaignHubV2() {
         onToggleExpand={toggleExpand}
         onApprove={setApprovalTarget}
         onReject={setRejectTarget}
-        onEdit={() => {}} // TODO: Implement edit modal
+        onEdit={setEditTarget}
         onDelete={setDeleteTarget}
         onVerify={handleVerify}
         onFix={handleFix}
@@ -241,6 +291,14 @@ export default function AdminCampaignHubV2() {
         onClose={() => setDeleteTarget(null)}
         onDelete={handleDelete}
         isDeleting={!!deletingId}
+      />
+
+      <EditModal
+        campaign={editTarget}
+        isOpen={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        onSave={handleEdit}
+        isSaving={isSavingEdit}
       />
     </div>
   )

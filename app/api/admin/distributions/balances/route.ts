@@ -25,14 +25,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Check admin status
+    // Check admin status - profiles uses 'role' column, not 'is_admin'
     const { data: profile } = await supabase
       .from('profiles')
-      .select('is_admin')
+      .select('role')
       .eq('id', user.id)
       .single()
 
-    if (!profile?.is_admin) {
+    if (!profile || !['super_admin', 'admin'].includes(profile.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 

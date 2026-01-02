@@ -2,8 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getRelayerSigner } from '@/lib/onchain'
 import { sendCampaignApproved } from '@/lib/mailer'
-import { getActiveContractVersion, getContractByVersion, getContractAddress } from '@/lib/contracts'
+import { getActiveContractVersion, getContractByVersion, getContractAddress, getContractInfo } from '@/lib/contracts'
 import { logger } from '@/lib/logger'
+
+// Chain info mapping for multi-chain support
+const CHAIN_INFO: Record<number, { name: string; isTestnet: boolean }> = {
+  1043: { name: 'BlockDAG Testnet', isTestnet: true },
+  1: { name: 'Ethereum Mainnet', isTestnet: false },
+  11155111: { name: 'Sepolia Testnet', isTestnet: true },
+  137: { name: 'Polygon Mainnet', isTestnet: false },
+  80001: { name: 'Polygon Mumbai', isTestnet: true },
+  8453: { name: 'Base Mainnet', isTestnet: false },
+  84531: { name: 'Base Goerli', isTestnet: true },
+}
 
 // Force dynamic rendering (no caching)
 export const dynamic = 'force-dynamic'
@@ -391,6 +402,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Get chain info from contract version for multi-chain support
+    const contractInfo = getContractInfo(contractVersion)
+    const chainId = contractInfo?.chainId || 1043
+    const chainInfo = CHAIN_INFO[chainId] || { name: 'BlockDAG Testnet', isTestnet: true }
+
     // Update submission with verified or pending status
     const { error: updateError } = await supabaseAdmin
       .from('submissions')
@@ -400,6 +416,10 @@ export async function POST(req: NextRequest) {
         tx_hash: txHash, 
         contract_address: contractAddress,
         contract_version: contractVersion,
+        // Multi-chain support - store chain info for explorer links
+        chain_id: chainId,
+        chain_name: chainInfo.name,
+        is_testnet: chainInfo.isTestnet,
         visible_on_marketplace: true,
         // Save NFT settings that were used for on-chain campaign
         num_copies: copiesNum || null,

@@ -26,3 +26,4 @@ export { CampaignList } from './CampaignList'
 
 // Modals
 export { ApprovalModal, RejectModal, DeleteModal } from './modals'
+export { EditModal } from './EditModal'

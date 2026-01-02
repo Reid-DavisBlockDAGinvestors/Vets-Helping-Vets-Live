@@ -201,16 +201,20 @@ export function loadContractFromEnv(versionNumber: number): ContractInfo | null 
   
   const nameKey = `CONTRACT_NAME_V${versionNumber}`
   const activeKey = `CONTRACT_ACTIVE_V${versionNumber}`
+  const chainIdKey = `CONTRACT_CHAIN_ID_V${versionNumber}`
   
   // Determine which ABI to use based on version
   const abi = versionNumber >= 6 ? V6_ABI : V5_ABI
   const features = versionNumber >= 6 ? { ...DEFAULT_FEATURES } : { ...EMPTY_FEATURES }
   
+  // Support multi-chain: read chain_id from env, default to 1043 (BlockDAG)
+  const chainId = parseInt(process.env[chainIdKey] || '1043', 10)
+  
   return {
     version,
     address,
     name: process.env[nameKey] || `PatriotPledgeNFTV${versionNumber}`,
-    chainId: 1043,
+    chainId,
     isActive: process.env[activeKey] === 'true',
     isMintable: true,
     features,
