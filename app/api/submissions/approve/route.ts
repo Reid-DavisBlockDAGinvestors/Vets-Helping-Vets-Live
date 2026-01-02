@@ -57,6 +57,13 @@ export async function POST(req: NextRequest) {
     if (!body?.id) return NextResponse.json({ error: 'MISSING_ID' }, { status: 400 })
     const id: string = body.id
     const updates = body.updates || {}
+    
+    // Target network selection from admin UI
+    const targetChainId = body.targetChainId || updates.chain_id || 1043  // Default: BlockDAG
+    const targetContractVersion = body.targetContractVersion || updates.contract_version || 'v6'
+    const isTestnet = body.isTestnet ?? updates.is_testnet ?? true
+    
+    logger.info(`[approve] Target network: chainId=${targetChainId}, contract=${targetContractVersion}, testnet=${isTestnet}`)
 
     // Load existing submission
     const { data: sub, error: fetchErr } = await supabaseAdmin.from('submissions').select('*').eq('id', id).single()
@@ -136,14 +143,46 @@ export async function POST(req: NextRequest) {
     
     // Email will be sent after campaign is created on-chain with campaignId
 
-    const signer = getRelayerSigner()
+    // Get signer for the target network
+    // For Sepolia (11155111), use ETH_DEPLOYER_KEY with Sepolia RPC
+    // For BlockDAG (1043), use BDAG_RELAYER_KEY with BlockDAG RPC
+    let signer: any
+    const { ethers } = await import('ethers')
     
-    // Use the active contract version for new campaigns
-    const contractVersion = getActiveContractVersion()
+    if (targetChainId === 11155111) {
+      // Sepolia network
+      const sepoliaRpc = process.env.ETHEREUM_SEPOLIA_RPC || process.env.NEXT_PUBLIC_ETHEREUM_SEPOLIA_RPC || 'https://ethereum-sepolia-rpc.publicnode.com'
+      const sepoliaKey = process.env.ETH_DEPLOYER_KEY || process.env.SEPOLIA_DEPLOYER_KEY
+      
+      if (!sepoliaKey) {
+        return NextResponse.json({ 
+          error: 'MISSING_SEPOLIA_KEY', 
+          details: 'ETH_DEPLOYER_KEY not configured for Sepolia deployment' 
+        }, { status: 500 })
+      }
+      
+      const provider = new ethers.JsonRpcProvider(sepoliaRpc)
+      signer = new ethers.Wallet(sepoliaKey, provider)
+      logger.info(`[approve] Using Sepolia signer: ${signer.address}`)
+    } else {
+      // BlockDAG network (default)
+      signer = getRelayerSigner()
+      logger.info(`[approve] Using BlockDAG signer`)
+    }
+    
+    // Use the TARGET contract version, not the default active one
+    const contractVersion = targetContractVersion as any
     const contractAddress = getContractAddress(contractVersion)
     const contract = getContractByVersion(contractVersion, signer)
     
-    logger.debug(`[approve] Using contract ${contractVersion} at ${contractAddress}`)
+    if (!contractAddress) {
+      return NextResponse.json({ 
+        error: 'CONTRACT_NOT_FOUND', 
+        details: `Contract ${contractVersion} not registered` 
+      }, { status: 400 })
+    }
+    
+    logger.info(`[approve] Using contract ${contractVersion} at ${contractAddress} on chain ${targetChainId}`)
     
     // IDEMPOTENCY CHECK: Search on-chain for existing campaign with same metadata URI
     // This prevents duplicate campaigns from RPC retries
@@ -211,21 +250,34 @@ export async function POST(req: NextRequest) {
       ? Number(merged.price_per_copy || merged.nft_price)
       : (goalUSD > 0 && copiesNum > 0 ? goalUSD / copiesNum : 0.01)
     
-    // Convert USD to BDAG for on-chain storage
-    // BDAG_USD_RATE = 0.05 means 1 BDAG = $0.05, so 1 USD = 20 BDAG
-    const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
-    const USD_TO_BDAG = 1 / BDAG_USD_RATE  // 20 BDAG per 1 USD at current rate
+    // Convert USD to native currency for on-chain storage
+    // For Sepolia/Ethereum: use ETH (assume ~$2300/ETH for testnet)
+    // For BlockDAG: use BDAG ($0.05/BDAG)
+    let goalWei: bigint
+    let priceWei: bigint
     
-    const goalBDAG = goalUSD * USD_TO_BDAG
-    const priceBDAG = priceUSD * USD_TO_BDAG
-    
-    // Convert to wei (18 decimals) - on-chain values are in BDAG
-    const goalWei = BigInt(Math.floor(goalBDAG * 1e18))
-    const priceWei = BigInt(Math.floor(priceBDAG * 1e18))
+    if (targetChainId === 11155111 || targetChainId === 1) {
+      // Ethereum / Sepolia - use ETH
+      const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '2300')  // 1 ETH = $2300
+      const goalETH = goalUSD / ETH_USD_RATE
+      const priceETH = priceUSD / ETH_USD_RATE
+      goalWei = BigInt(Math.floor(goalETH * 1e18))
+      priceWei = BigInt(Math.floor(priceETH * 1e18))
+      logger.debug(`[approve] ETH pricing: goal=$${goalUSD} = ${goalETH} ETH, price=$${priceUSD} = ${priceETH} ETH`)
+    } else {
+      // BlockDAG - use BDAG
+      const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
+      const USD_TO_BDAG = 1 / BDAG_USD_RATE  // 20 BDAG per 1 USD
+      const goalBDAG = goalUSD * USD_TO_BDAG
+      const priceBDAG = priceUSD * USD_TO_BDAG
+      goalWei = BigInt(Math.floor(goalBDAG * 1e18))
+      priceWei = BigInt(Math.floor(priceBDAG * 1e18))
+      logger.debug(`[approve] BDAG pricing: goal=$${goalUSD} = ${goalBDAG} BDAG, price=$${priceUSD} = ${priceBDAG} BDAG`)
+    }
     const maxEditions = BigInt(copiesNum)
     const feeRateBps = 100n // 1% nonprofit fee
     
-    logger.debug(`[approve] Creating campaign: goal=$${goalUSD} USD = ${goalBDAG} BDAG (${goalWei} wei), copies=${copiesNum}, price=$${priceUSD} USD = ${priceBDAG} BDAG (${priceWei} wei)`)
+    logger.debug(`[approve] Creating campaign: goal=$${goalUSD} USD (${goalWei} wei), copies=${copiesNum}, price=$${priceUSD} USD (${priceWei} wei)`)
     logger.debug(`[approve] Creator wallet: ${creatorWallet}, metadata: ${uri.slice(0, 50)}...`)
 
     let campaignId: number | null = null
