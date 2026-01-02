@@ -338,8 +338,12 @@ export async function POST(req: NextRequest) {
           logger.debug(`[createCampaign] Tx confirmed in block ${receipt.blockNumber}`)
           
           // Parse CampaignCreated event from receipt logs
+          // Support both V6 and V7 event signatures
           const iface = new (await import('ethers')).Interface([
-            'event CampaignCreated(uint256 indexed campaignId, address indexed nonprofit, string category, uint256 goal, uint256 maxEditions, uint256 pricePerEdition)'
+            // V6 signature
+            'event CampaignCreated(uint256 indexed campaignId, address indexed nonprofit, string category, uint256 goal, uint256 maxEditions, uint256 pricePerEdition)',
+            // V7 signature (has submitter and immediatePayoutEnabled)
+            'event CampaignCreated(uint256 indexed campaignId, address indexed nonprofit, address indexed submitter, string category, uint256 goal, uint256 maxEditions, uint256 pricePerEdition, bool immediatePayoutEnabled)'
           ])
           
           let actualCampaignId: number | null = null
