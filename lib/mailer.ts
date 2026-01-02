@@ -512,18 +512,23 @@ export type CreatorPurchaseNotificationData = {
   donorWallet: string
   donorName?: string        // Display name of donor (optional)
   donorNote?: string        // Personal message from donor (optional)
-  amountBDAG: number
+  amountCrypto?: number     // Multi-chain: generic crypto amount
   amountUSD?: number
   tokenId?: number
   editionNumber?: number
   totalRaised?: number
   goalAmount?: number
   txHash: string
+  chainId?: number          // Multi-chain: which network was used
+  /** @deprecated Use amountCrypto instead */
+  amountBDAG?: number
 }
 
 export async function sendCreatorPurchaseNotification(data: CreatorPurchaseNotificationData) {
+  const chain = getChainConfig(data.chainId)
   const storyUrl = `${SITE_URL}/story/${data.campaignId}`
-  const explorerTxUrl = `${EXPLORER_URL}/tx/${data.txHash}`
+  const explorerTxUrl = `${chain.explorerUrl}/tx/${data.txHash}`
+  const cryptoAmount = data.amountCrypto ?? data.amountBDAG ?? 0
   const progressPercent = data.goalAmount && data.totalRaised 
     ? Math.min(100, Math.round((data.totalRaised / data.goalAmount) * 100))
     : null
@@ -532,12 +537,12 @@ export async function sendCreatorPurchaseNotification(data: CreatorPurchaseNotif
     <h1 style="color: #fff; font-size: 24px; margin: 0 0 20px 0;">🎉 You Just Received a Donation!</h1>
     
     <p style="color: #94a3b8; font-size: 16px; line-height: 1.6;">
-      ${data.creatorName ? `Great news ${data.creatorName}!` : 'Great news!'} Someone just purchased an NFT from your campaign!
+      ${data.creatorName ? `Great news ${data.creatorName}!` : 'Great news!'} Someone just purchased an NFT from your campaign on <strong style="color: #fff;">${chain.name}</strong>!
     </p>
     
     <div style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0;">
       <h2 style="color: #22c55e; font-size: 28px; margin: 0 0 10px 0; text-align: center;">
-        +${data.amountBDAG.toFixed(2)} BDAG
+        +${cryptoAmount.toFixed(cryptoAmount < 1 ? 6 : 2)} ${chain.symbol}
       </h2>
       ${data.amountUSD ? `<p style="color: #94a3b8; font-size: 16px; margin: 0; text-align: center;">≈ $${data.amountUSD.toFixed(2)} USD</p>` : ''}
     </div>
@@ -587,7 +592,7 @@ export async function sendCreatorPurchaseNotification(data: CreatorPurchaseNotif
   
   return sendEmail({
     to: data.creatorEmail,
-    subject: `🎉 New Donation! +${data.amountBDAG.toFixed(2)} BDAG for ${data.campaignTitle}`,
+    subject: `🎉 New Donation! +${cryptoAmount.toFixed(cryptoAmount < 1 ? 6 : 2)} ${chain.symbol} for ${data.campaignTitle}`,
     html: wrapEmail(content)
   })
 }

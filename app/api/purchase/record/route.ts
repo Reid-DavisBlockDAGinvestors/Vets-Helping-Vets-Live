@@ -190,15 +190,17 @@ export async function POST(req: NextRequest) {
           donorWallet: walletAddress || 'Anonymous',
           donorName: donorName || undefined,
           donorNote: donorNote || undefined,
-          amountBDAG: amountBDAG || 0,
+          amountCrypto: effectiveCryptoAmount,
+          amountBDAG: amountBDAG || 0, // Legacy support
           amountUSD: amountUSD,
           tokenId: emailTokenId,
           editionNumber: typeof editionMinted === 'number' ? editionMinted : newSoldCount,
           totalRaised: totalRaised,
           goalAmount: sub.goal || undefined,
-          txHash
+          txHash,
+          chainId: chainId || 1043 // Default to BlockDAG
         })
-        logger.debug(`[purchase/record] Sent creator notification to ${sub.creator_email}`)
+        logger.debug(`[purchase/record] Sent creator notification to ${sub.creator_email}, chainId=${chainId}`)
       } catch (creatorEmailErr) {
         logger.error('[purchase/record] Failed to send creator notification:', creatorEmailErr)
       }
