@@ -123,6 +123,7 @@ export interface ApprovalFormData {
   creator_wallet: string
   benchmarks: string
   targetNetwork?: TargetNetwork
+  immediatePayoutEnabled?: boolean // V7 feature: funds go directly to submitter on mint
 }
 
 /**

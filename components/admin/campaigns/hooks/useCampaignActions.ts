@@ -74,7 +74,9 @@ export function useCampaignActions(): UseCampaignActionsReturn {
             chain_id: formData.targetNetwork?.chainId || 1043,
             chain_name: formData.targetNetwork?.chainName || 'BlockDAG Testnet',
             contract_version: formData.targetNetwork?.contractVersion || 'v6',
-            is_testnet: formData.targetNetwork?.isTestnet ?? true
+            is_testnet: formData.targetNetwork?.isTestnet ?? true,
+            // V7 feature: immediate payout
+            immediate_payout_enabled: formData.immediatePayoutEnabled ?? false
           }
         })
       })

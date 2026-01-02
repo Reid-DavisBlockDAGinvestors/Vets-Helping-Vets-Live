@@ -26,7 +26,8 @@ export function ApprovalModal({
     nft_price: 1,
     creator_wallet: '',
     benchmarks: '',
-    targetNetwork: AVAILABLE_NETWORKS[0] // Default to BlockDAG testnet
+    targetNetwork: AVAILABLE_NETWORKS[0], // Default to BlockDAG testnet
+    immediatePayoutEnabled: false // V7 feature
   })
 
   // Reset form when campaign changes
@@ -42,7 +43,8 @@ export function ApprovalModal({
         ),
         creator_wallet: campaign.creator_wallet || '',
         benchmarks: '',
-        targetNetwork: AVAILABLE_NETWORKS[0] // Default to BlockDAG testnet
+        targetNetwork: AVAILABLE_NETWORKS[0], // Default to BlockDAG testnet
+        immediatePayoutEnabled: false // V7 feature
       })
     }
   }, [campaign])
@@ -171,6 +173,56 @@ export function ApprovalModal({
                   : '💼 No wallet? Funds held on platform until creator adds one'}
               </p>
             </div>
+
+            {/* Immediate Payout Option - V7 Feature */}
+            {form.targetNetwork?.contractVersion === 'v7' && (
+              <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.immediatePayoutEnabled || false}
+                    onChange={(e) => setForm(f => ({ ...f, immediatePayoutEnabled: e.target.checked }))}
+                    className="mt-1 w-5 h-5 rounded border-white/20 bg-white/5 text-purple-500 focus:ring-purple-500"
+                    data-testid="immediate-payout-checkbox"
+                  />
+                  <div>
+                    <span className="text-white font-medium">⚡ Enable Immediate Payout</span>
+                    <p className="text-xs text-white/60 mt-1">
+                      When enabled, funds are transferred directly to the campaign submitter's wallet 
+                      <strong> immediately </strong> as each NFT is minted by donors.
+                    </p>
+                    {form.immediatePayoutEnabled && (
+                      <p className="text-xs text-green-400 mt-2">
+                        ✓ Submitter receives funds instantly on each purchase (minus platform fees)
+                      </p>
+                    )}
+                    {!form.immediatePayoutEnabled && (
+                      <p className="text-xs text-yellow-400/70 mt-2">
+                        Without this, funds are held in the contract until manually distributed
+                      </p>
+                    )}
+                  </div>
+                </label>
+                {form.immediatePayoutEnabled && !form.creator_wallet && (
+                  <div className="mt-3 p-2 rounded bg-red-500/20 border border-red-500/40">
+                    <p className="text-xs text-red-400">
+                      ⚠️ <strong>Creator wallet required</strong> for immediate payout. 
+                      Please add a wallet address above.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* V6 Notice */}
+            {form.targetNetwork?.contractVersion === 'v6' && (
+              <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                <p className="text-xs text-white/50">
+                  ℹ️ V6 contracts do not support immediate payout. 
+                  Funds are held until manually distributed.
+                </p>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm text-white/70 mb-1">

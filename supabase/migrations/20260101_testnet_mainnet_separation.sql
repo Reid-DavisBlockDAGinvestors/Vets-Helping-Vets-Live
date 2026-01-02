@@ -17,7 +17,11 @@ ADD COLUMN IF NOT EXISTS target_chain_id INTEGER;
 ALTER TABLE submissions 
 ADD COLUMN IF NOT EXISTS target_contract_version VARCHAR(20);
 
+ALTER TABLE submissions 
+ADD COLUMN IF NOT EXISTS immediate_payout_enabled BOOLEAN DEFAULT false;
+
 COMMENT ON COLUMN submissions.is_testnet IS 'True if this campaign uses testnet tokens (not real money)';
+COMMENT ON COLUMN submissions.immediate_payout_enabled IS 'V7 feature: funds transfer immediately to submitter on each NFT mint';
 COMMENT ON COLUMN submissions.target_chain_id IS 'The blockchain network this campaign is deployed to';
 COMMENT ON COLUMN submissions.target_contract_version IS 'The contract version to mint NFTs on';
 
