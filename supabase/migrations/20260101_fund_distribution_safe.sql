@@ -4,13 +4,10 @@
 -- This version handles existing objects gracefully
 -- ============================================
 
--- Drop existing objects if they exist (for clean re-run)
+-- Drop view and functions first (safe - they don't require tables to exist)
 DROP VIEW IF EXISTS campaign_fund_status CASCADE;
-DROP TRIGGER IF EXISTS trigger_update_distribution_totals ON distributions;
 DROP FUNCTION IF EXISTS update_submission_distribution_totals CASCADE;
 DROP FUNCTION IF EXISTS get_or_create_tip_split CASCADE;
-DROP POLICY IF EXISTS admin_distributions_all ON distributions;
-DROP POLICY IF EXISTS admin_tip_split_all ON tip_split_configs;
 
 -- 1. Distributions Table - Track all fund distributions
 CREATE TABLE IF NOT EXISTS public.distributions (
@@ -165,6 +162,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to update totals when distribution is confirmed
+DROP TRIGGER IF EXISTS trigger_update_distribution_totals ON distributions;
 CREATE TRIGGER trigger_update_distribution_totals
   AFTER UPDATE OF status ON distributions
   FOR EACH ROW
@@ -174,6 +172,8 @@ CREATE TRIGGER trigger_update_distribution_totals
 -- 7. RLS Policies for distributions table
 ALTER TABLE distributions ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policy if it exists (safe now that table exists)
+DROP POLICY IF EXISTS admin_distributions_all ON distributions;
 CREATE POLICY admin_distributions_all ON distributions
   FOR ALL
   TO authenticated
@@ -187,6 +187,8 @@ CREATE POLICY admin_distributions_all ON distributions
 -- 8. RLS Policies for tip_split_configs table
 ALTER TABLE tip_split_configs ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policy if it exists (safe now that table exists)
+DROP POLICY IF EXISTS admin_tip_split_all ON tip_split_configs;
 CREATE POLICY admin_tip_split_all ON tip_split_configs
   FOR ALL
   TO authenticated
