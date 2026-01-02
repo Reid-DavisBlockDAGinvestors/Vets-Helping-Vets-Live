@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
+import { PatriotPledgeV5ABI } from '@/lib/onchain'
+import { getProviderForChain, getContractAddress, type ChainId } from '@/lib/chains'
+import { getContractByVersion } from '@/lib/contracts'
 import { ethers } from 'ethers'
 import { logger } from '@/lib/logger'
 
@@ -49,14 +51,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Submission has no metadata_uri' }, { status: 400 })
     }
 
-    // Get contract
-    const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
+    // Get contract for the submission's chain
+    const chainId = (sub.chain_id || 1043) as ChainId
+    const contractVersion = sub.contract_version || 'v6'
+    
+    let provider: ethers.JsonRpcProvider
+    let contractAddress: string | undefined
+    
+    try {
+      provider = getProviderForChain(chainId)
+      contractAddress = getContractAddress(chainId, contractVersion as any)
+    } catch (e: any) {
+      return NextResponse.json({ 
+        error: 'Failed to get provider for chain', 
+        details: e?.message,
+        chainId,
+        contractVersion
+      }, { status: 500 })
+    }
+    
     if (!contractAddress) {
-      return NextResponse.json({ error: 'No contract address configured' }, { status: 500 })
+      return NextResponse.json({ 
+        error: 'No contract address configured', 
+        chainId,
+        contractVersion 
+      }, { status: 500 })
     }
 
-    const provider = getProvider()
     const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
+    logger.debug(`[fix-campaign] Using chain ${chainId}, contract ${contractVersion} at ${contractAddress}`)
 
     // Get total campaigns
     let totalCampaigns: number
@@ -190,10 +213,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
     }
 
-    // Get all minted submissions
+    // Get all minted submissions with chain info
     const { data: submissions, error: subErr } = await supabaseAdmin
       .from('submissions')
-      .select('id, title, campaign_id, metadata_uri, status')
+      .select('id, title, campaign_id, metadata_uri, status, chain_id, contract_version')
       .eq('status', 'minted')
       .not('campaign_id', 'is', null)
 
@@ -201,15 +224,32 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch submissions', details: subErr.message }, { status: 500 })
     }
 
-    // Get contract
-    const contractAddress = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
-    const provider = getProvider()
-    const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
-
     const results: any[] = []
 
     for (const sub of submissions || []) {
       try {
+        // Get provider and contract for this submission's chain
+        const chainId = (sub.chain_id || 1043) as ChainId
+        const contractVersion = sub.contract_version || 'v6'
+        
+        const provider = getProviderForChain(chainId)
+        const contractAddr = getContractAddress(chainId, contractVersion as any)
+        
+        if (!contractAddr) {
+          results.push({
+            submissionId: sub.id,
+            title: sub.title,
+            storedCampaignId: sub.campaign_id,
+            chainId,
+            contractVersion,
+            error: 'No contract address for chain/version',
+            needsFix: true
+          })
+          continue
+        }
+        
+        const contract = new ethers.Contract(contractAddr, PatriotPledgeV5ABI, provider)
+        
         // Check if campaign exists and is active at the stored campaign_id
         const camp = await contract.getCampaign(BigInt(sub.campaign_id))
         const baseURI = camp.baseURI ?? camp[1]
@@ -221,6 +261,8 @@ export async function GET(req: NextRequest) {
           submissionId: sub.id,
           title: sub.title,
           storedCampaignId: sub.campaign_id,
+          chainId,
+          contractVersion,
           onChainActive: active,
           uriMatches,
           needsFix: !active || !uriMatches,
@@ -232,7 +274,8 @@ export async function GET(req: NextRequest) {
           submissionId: sub.id,
           title: sub.title,
           storedCampaignId: sub.campaign_id,
-          error: 'Campaign not found on-chain',
+          chainId: sub.chain_id,
+          error: `Campaign not found on-chain: ${e?.message?.slice(0, 50)}`,
           needsFix: true
         })
       }

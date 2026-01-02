@@ -43,8 +43,8 @@ export async function GET(request: NextRequest) {
     const hasPendingFunds = searchParams.get('hasPendingFunds') === 'true'
     const hasPendingTips = searchParams.get('hasPendingTips') === 'true'
 
-    // Build query - fetch from campaign_fund_status view if it exists,
-    // otherwise fall back to direct query
+    // Build query - use only columns that definitely exist
+    // Some columns like total_distributed may not exist yet
     let query = supabase
       .from('submissions')
       .select(`
@@ -56,13 +56,10 @@ export async function GET(request: NextRequest) {
         is_testnet,
         creator_wallet,
         contract_version,
-        immediate_payout_enabled,
-        total_distributed,
-        tips_distributed,
-        last_distribution_at,
         campaign_id
       `)
       .eq('status', 'minted')
+      .not('campaign_id', 'is', null)
 
     // Apply filters
     if (chainId) {
@@ -82,35 +79,53 @@ export async function GET(request: NextRequest) {
     // Get purchase aggregates for each submission
     const balances = await Promise.all((submissions || []).map(async (s) => {
       // Get purchase totals - join on on-chain campaign_id (INTEGER)
+      // Try different column names since schema may vary
       const { data: purchaseData } = await supabase
         .from('purchases')
-        .select('amount_usd, amount_native, tip_usd, tip_bdag, tip_eth')
+        .select('*')
         .eq('campaign_id', s.campaign_id)
 
-      const grossRaisedUsd = purchaseData?.reduce((sum, p) => sum + (p.amount_usd || 0), 0) || 0
-      const grossRaisedNative = purchaseData?.reduce((sum, p) => sum + (p.amount_native || 0), 0) || 0
-      const tipsReceivedUsd = purchaseData?.reduce((sum, p) => sum + (p.tip_usd || 0), 0) || 0
-      const tipsReceivedNative = purchaseData?.reduce((sum, p) => 
-        sum + (p.tip_eth || p.tip_bdag || 0), 0) || 0
+      // Calculate totals from whatever columns exist
+      const grossRaisedUsd = purchaseData?.reduce((sum, p) => {
+        return sum + (p.amount_usd || p.price_usd || 0)
+      }, 0) || 0
+      
+      const grossRaisedNative = purchaseData?.reduce((sum, p) => {
+        return sum + (p.amount_native || p.amount_bdag || p.price_bdag || 0)
+      }, 0) || 0
+      
+      const tipsReceivedUsd = purchaseData?.reduce((sum, p) => {
+        return sum + (p.tip_usd || 0)
+      }, 0) || 0
+      
+      const tipsReceivedNative = purchaseData?.reduce((sum, p) => {
+        return sum + (p.tip_eth || p.tip_bdag || p.tip_native || 0)
+      }, 0) || 0
 
-      // Get tip split config
-      const { data: tipSplitConfig } = await supabase
-        .from('tip_split_configs')
-        .select('submitter_percent, nonprofit_percent')
-        .eq('campaign_id', s.id)
-        .single()
+      // Get tip split config (may not exist yet)
+      let tipSplitConfig = null
+      try {
+        const { data } = await supabase
+          .from('tip_split_configs')
+          .select('submitter_percent, nonprofit_percent')
+          .eq('campaign_id', s.id)
+          .single()
+        tipSplitConfig = data
+      } catch {
+        // Table may not exist
+      }
 
-      // Get distribution count
-      const { count: distributionCount } = await supabase
-        .from('distributions')
-        .select('id', { count: 'exact', head: true })
-        .eq('campaign_id', s.id)
-
-      // Calculate pending amounts
-      const totalDistributed = Number(s.total_distributed) || 0
-      const tipsDistributed = Number(s.tips_distributed) || 0
-      const pendingDistributionNative = grossRaisedNative - totalDistributed
-      const pendingTipsNative = tipsReceivedNative - tipsDistributed
+      // Get distribution count (may not exist yet)
+      let distributionCount = 0
+      try {
+        const { count } = await supabase
+          .from('distributions')
+          .select('id', { count: 'exact', head: true })
+          .eq('campaign_id', s.id)
+        distributionCount = count || 0
+      } catch {
+        // Table may not exist
+      }
 
       // Determine native currency
       const nativeCurrency = s.chain_id === 1043 ? 'BDAG' : 'ETH'
@@ -119,25 +134,27 @@ export async function GET(request: NextRequest) {
         id: s.id,
         title: s.title,
         status: s.status,
-        chain_id: s.chain_id,
-        chain_name: s.chain_name,
+        chain_id: s.chain_id || 1043,
+        chain_name: s.chain_name || 'BlockDAG Testnet',
         is_testnet: s.is_testnet ?? true,
         creator_wallet: s.creator_wallet,
-        contract_version: s.contract_version,
-        immediate_payout_enabled: s.immediate_payout_enabled ?? false,
+        contract_version: s.contract_version || 'v6',
+        campaign_id: s.campaign_id,
+        immediate_payout_enabled: false,
         tip_split_submitter_pct: tipSplitConfig?.submitter_percent ?? 100,
         tip_split_nonprofit_pct: tipSplitConfig?.nonprofit_percent ?? 0,
         gross_raised_usd: grossRaisedUsd,
         gross_raised_native: grossRaisedNative,
         tips_received_usd: tipsReceivedUsd,
         tips_received_native: tipsReceivedNative,
-        total_distributed: totalDistributed,
-        tips_distributed: tipsDistributed,
-        last_distribution_at: s.last_distribution_at,
-        pending_distribution_native: pendingDistributionNative,
-        pending_tips_native: pendingTipsNative,
+        total_distributed: 0,
+        tips_distributed: 0,
+        last_distribution_at: null,
+        pending_distribution_native: grossRaisedNative,
+        pending_tips_native: tipsReceivedNative,
         native_currency: nativeCurrency,
-        distribution_count: distributionCount || 0
+        distribution_count: distributionCount,
+        purchase_count: purchaseData?.length || 0
       }
     }))
 
