@@ -39,6 +39,7 @@ export interface ContractFeatures {
   freezable: boolean
   blacklist: boolean
   soulbound: boolean
+  immediatePayout?: boolean  // V7+ feature: funds sent directly to submitter on mint
 }
 
 // V5 ABI - Edition-based fundraiser NFTs
@@ -238,7 +239,7 @@ function initializeRegistry(): void {
     abi: V5_ABI
   })
 
-  // V6 - Current active contract
+  // V6 - Current active contract (BlockDAG)
   registerContract({
     version: 'v6',
     address: process.env.CONTRACT_ADDRESS_V6 || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V6 || '0xaE54e4E8A75a81780361570c17b8660CEaD27053',
@@ -250,8 +251,20 @@ function initializeRegistry(): void {
     abi: V6_ABI
   })
 
-  // Auto-load any additional contracts from environment (V7+)
-  for (let i = 7; i <= 100; i++) {
+  // V7 - Sepolia testnet (deployed Jan 1, 2026)
+  registerContract({
+    version: 'v7',
+    address: process.env.CONTRACT_ADDRESS_V7 || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V7 || '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e',
+    name: 'PatriotPledgeNFTV7',
+    chainId: 11155111, // Sepolia
+    isActive: true,
+    isMintable: true,
+    features: { ...DEFAULT_FEATURES, immediatePayout: true },
+    abi: V6_ABI // V7 extends V6 ABI
+  })
+
+  // Auto-load any additional contracts from environment (V8+)
+  for (let i = 8; i <= 100; i++) {
     const contract = loadContractFromEnv(i)
     if (contract) {
       registerContract(contract)
