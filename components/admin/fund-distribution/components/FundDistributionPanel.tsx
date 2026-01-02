@@ -3,7 +3,8 @@
 import { useState, useCallback } from 'react'
 import { useCampaignBalances } from '../hooks/useCampaignBalances'
 import { CampaignBalanceCard } from './CampaignBalanceCard'
-import type { BalanceFilters } from '../types'
+import { TipSplitModal } from './TipSplitModal'
+import type { BalanceFilters, CampaignBalance } from '../types'
 
 /**
  * FundDistributionPanel - Main orchestrator for fund distribution UI
@@ -174,19 +175,27 @@ export function FundDistributionPanel() {
         ))}
       </div>
 
-      {/* TODO: Add modals for distribution, history, and tip split editing */}
-      {/* These will be implemented in Phase 3-4 */}
-      {activeModal && selectedCampaign && (
+      {/* Tip Split Modal */}
+      {activeModal === 'tipSplit' && selectedCampaign && (
+        <TipSplitModal
+          isOpen={true}
+          balance={balances.find(b => b.campaignId === selectedCampaign) as CampaignBalance}
+          onClose={closeModal}
+          onSaved={refresh}
+        />
+      )}
+
+      {/* Placeholder modals for distribution and history (Phase 3-4) */}
+      {activeModal && activeModal !== 'tipSplit' && selectedCampaign && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-2xl max-w-lg w-full p-6 border border-white/10">
             <h3 className="text-lg font-bold text-white mb-4">
               {activeModal === 'funds' && '💸 Distribute Funds'}
               {activeModal === 'tips' && '💜 Distribute Tips'}
               {activeModal === 'history' && '📜 Distribution History'}
-              {activeModal === 'tipSplit' && '⚙️ Edit Tip Split'}
             </h3>
             <p className="text-white/60 mb-4">
-              This feature will be implemented in Phase {activeModal === 'tipSplit' ? '3' : '4'}.
+              This feature will be implemented in Phase {activeModal === 'history' ? '4' : '3'}.
             </p>
             <button
               onClick={closeModal}
