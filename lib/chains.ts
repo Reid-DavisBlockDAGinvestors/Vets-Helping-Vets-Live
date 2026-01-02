@@ -5,6 +5,8 @@
  * Supports BlockDAG (current), Ethereum Mainnet, Polygon, and Base.
  */
 
+import { ethers } from 'ethers'
+
 export type ChainId = 1043 | 1 | 11155111 | 137 | 8453
 
 export type ContractVersion = 'v5' | 'v6' | 'v7'
@@ -346,6 +348,154 @@ export function getCompatiblePaymentNetworks(campaignChainId: ChainId): ChainCon
   // For now, only the exact same network is compatible
   // This ensures testnet campaigns can only be purchased with testnet tokens
   return [campaignConfig]
+}
+
+// ============ Provider & Signer Functions ============
+
+// Cache providers to avoid recreating on every call
+const providerCache = new Map<ChainId, ethers.JsonRpcProvider>()
+
+/**
+ * Get a provider for a specific chain
+ * Uses cached providers when possible
+ */
+export function getProviderForChain(chainId: ChainId): ethers.JsonRpcProvider {
+  // Check cache first
+  if (providerCache.has(chainId)) {
+    return providerCache.get(chainId)!
+  }
+  
+  const config = CHAIN_CONFIGS[chainId]
+  if (!config) {
+    throw new Error(`Unsupported chain ID: ${chainId}`)
+  }
+  
+  if (!config.rpcUrl) {
+    throw new Error(`No RPC URL configured for chain ${config.name} (${chainId})`)
+  }
+  
+  // Special handling for NowNodes (BlockDAG) - requires API key header
+  let provider: ethers.JsonRpcProvider
+  
+  if (chainId === 1043 && config.rpcUrl.includes('nownodes.io')) {
+    const nowNodesKey = process.env.NOWNODES_API_KEY
+    if (nowNodesKey) {
+      const fetchReq = new ethers.FetchRequest(config.rpcUrl)
+      fetchReq.setHeader('api-key', nowNodesKey)
+      provider = new ethers.JsonRpcProvider(fetchReq, undefined, { staticNetwork: true })
+    } else {
+      // Fall back to public RPC
+      provider = new ethers.JsonRpcProvider(
+        config.rpcUrlFallback || config.rpcUrl, 
+        undefined, 
+        { staticNetwork: true }
+      )
+    }
+  } else {
+    provider = new ethers.JsonRpcProvider(config.rpcUrl, undefined, { staticNetwork: true })
+  }
+  
+  // Cache the provider
+  providerCache.set(chainId, provider)
+  
+  return provider
+}
+
+/**
+ * Get environment variable name for a chain's signer key
+ */
+function getSignerKeyEnvVar(chainId: ChainId): string {
+  switch (chainId) {
+    case 1043:
+      return 'BDAG_RELAYER_KEY'
+    case 1:
+      return 'ETH_MAINNET_KEY'
+    case 11155111:
+      return 'ETH_DEPLOYER_KEY'
+    case 137:
+      return 'POLYGON_KEY'
+    case 8453:
+      return 'BASE_KEY'
+    default:
+      throw new Error(`No signer key env var for chain ${chainId}`)
+  }
+}
+
+/**
+ * Get a signer for a specific chain
+ * Uses the appropriate private key from environment variables
+ */
+export function getSignerForChain(chainId: ChainId): ethers.Wallet {
+  const envVar = getSignerKeyEnvVar(chainId)
+  const privateKey = process.env[envVar]
+  
+  if (!privateKey) {
+    throw new Error(`Missing private key: ${envVar} not set for chain ${chainId}`)
+  }
+  
+  const provider = getProviderForChain(chainId)
+  return new ethers.Wallet(privateKey, provider)
+}
+
+/**
+ * Get a contract instance for a specific chain and version
+ * Requires an ABI to be provided
+ */
+export function getContractForChain(
+  chainId: ChainId, 
+  version: ContractVersion, 
+  abi: ethers.InterfaceAbi,
+  signerOrProvider?: ethers.Signer | ethers.Provider
+): ethers.Contract {
+  const address = getContractAddress(chainId, version)
+  
+  if (!address) {
+    throw new Error(`No contract ${version} deployed on chain ${chainId}`)
+  }
+  
+  const provider = signerOrProvider || getProviderForChain(chainId)
+  return new ethers.Contract(address, abi, provider)
+}
+
+/**
+ * Test if a chain's RPC is working
+ * Useful for health checks
+ */
+export async function testChainConnection(chainId: ChainId): Promise<{ ok: boolean; blockNumber?: number; error?: string }> {
+  try {
+    const provider = getProviderForChain(chainId)
+    const blockNumber = await provider.getBlockNumber()
+    return { ok: true, blockNumber }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || String(e) }
+  }
+}
+
+/**
+ * Get USD to native currency conversion rate
+ * Used for pricing NFTs
+ */
+export function getUsdToNativeRate(chainId: ChainId): number {
+  const rates: Record<string, number> = {
+    BDAG: Number(process.env.BDAG_USD_RATE || '0.05'),
+    ETH: Number(process.env.ETH_USD_RATE || '2300'),
+    MATIC: Number(process.env.MATIC_USD_RATE || '0.80'),
+  }
+  
+  const symbol = CHAIN_CONFIGS[chainId]?.nativeCurrency.symbol
+  const tokenPrice = rates[symbol] || 1
+  
+  // Return how many native tokens equal 1 USD
+  return 1 / tokenPrice
+}
+
+/**
+ * Convert USD amount to native currency wei
+ */
+export function usdToNativeWei(chainId: ChainId, usdAmount: number): bigint {
+  const rate = getUsdToNativeRate(chainId)
+  const nativeAmount = usdAmount * rate
+  return BigInt(Math.floor(nativeAmount * 1e18))
 }
 
 // ============ Default Export ============
