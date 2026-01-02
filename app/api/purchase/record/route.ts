@@ -27,19 +27,26 @@ export async function POST(req: NextRequest) {
       txHash, 
       amountUSD, 
       tipUSD, 
-      amountBDAG, 
+      amountBDAG,
+      amountCrypto, // Multi-chain: generic crypto amount
       tipBDAG, 
+      tipCrypto, // Multi-chain: generic tip amount
       walletAddress,
       quantity,
       editionMinted, // Token ID of the minted edition (or true for legacy)
       mintedTokenIds, // Array of all token IDs if multiple minted
       buyerEmail, // Email for receipt
       userId, // Logged-in user ID if available
-      paymentMethod, // crypto_bdag, stripe, etc.
+      paymentMethod, // crypto_bdag, crypto_eth, stripe, etc.
+      chainId, // Multi-chain: which network was used (1043=BDAG, 11155111=Sepolia, 1=ETH)
       referrer, // How user found the campaign
       donorNote, // Optional personal message to campaign creator
       donorName // Optional display name (can stay anonymous)
     } = body
+    
+    // Multi-chain support: use amountCrypto if provided, fallback to amountBDAG
+    const effectiveCryptoAmount = amountCrypto ?? amountBDAG ?? 0
+    const effectiveTipAmount = tipCrypto ?? tipBDAG ?? 0
 
     // Get request metadata for fraud prevention
     const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || null
@@ -153,13 +160,15 @@ export async function POST(req: NextRequest) {
           campaignId: sub.campaign_id || effectiveId,
           tokenId: emailTokenId,
           editionNumber: typeof editionMinted === 'number' ? editionMinted : undefined,
-          amountBDAG: amountBDAG || 0,
+          amountCrypto: effectiveCryptoAmount,
+          amountBDAG: amountBDAG || 0, // Legacy support
           amountUSD: amountUSD,
           txHash,
           walletAddress: walletAddress || '',
-          imageUrl: toHttpUrl(sub.image_uri) || undefined
+          imageUrl: toHttpUrl(sub.image_uri) || undefined,
+          chainId: chainId || 1043 // Default to BlockDAG if not specified
         })
-        logger.debug(`[purchase/record] Sent receipt email to ${buyerEmail} with tokenId=${emailTokenId}`)
+        logger.debug(`[purchase/record] Sent receipt email to ${buyerEmail} with tokenId=${emailTokenId}, chainId=${chainId}`)
       } catch (emailErr) {
         logger.error('[purchase/record] Failed to send receipt email:', emailErr)
       }

@@ -45,6 +45,7 @@ export default function PurchasePanelV2({
   // UI State
   const [quantity, setQuantity] = useState(1)
   const [tipAmount, setTipAmount] = useState(0)
+  const [customTipAmount, setCustomTipAmount] = useState('')
   const [customAmount, setCustomAmount] = useState(pricePerNft && pricePerNft > 0 ? pricePerNft : 25)
   const [email, setEmail] = useState('')
   const [activeTab, setActiveTab] = useState<PaymentTab>('card')
@@ -154,14 +155,41 @@ export default function PurchasePanelV2({
           {/* Tip Selector */}
           <div>
             <label className="block text-sm font-medium text-white/80 mb-2">Add a tip (optional)</label>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {[0, 5, 10, 25, 50].map(tip => (
-                <button key={tip} onClick={() => setTipAmount(tip)}
+                <button key={tip} onClick={() => { setTipAmount(tip); setCustomTipAmount(''); }}
+                  data-testid={`tip-${tip}-btn`}
                   className={`rounded-lg py-2 text-sm font-medium transition-all ${
-                    tipAmount === tip ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                    tipAmount === tip && !customTipAmount ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
                   }`}>{tip === 0 ? 'None' : `$${tip}`}</button>
               ))}
+              <button
+                onClick={() => setCustomTipAmount(customTipAmount || '0')}
+                data-testid="tip-custom-btn"
+                className={`rounded-lg py-2 text-sm font-medium transition-all ${
+                  customTipAmount !== '' ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                }`}
+              >Custom</button>
             </div>
+            {customTipAmount !== '' && (
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-white/70">$</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={1000}
+                  value={customTipAmount}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCustomTipAmount(val);
+                    setTipAmount(parseFloat(val) || 0);
+                  }}
+                  placeholder="Enter amount"
+                  data-testid="custom-tip-input"
+                  className="w-24 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-white text-sm"
+                />
+              </div>
+            )}
           </div>
 
           {/* Total */}

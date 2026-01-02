@@ -10,6 +10,46 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://patriotpledgenfts.
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
 const EXPLORER_URL = 'https://awakening.bdagscan.com'
 
+// Multi-chain configuration
+const CHAIN_CONFIG: Record<number, {
+  name: string
+  symbol: string
+  explorerUrl: string
+  explorerName: string
+  contractAddress: string
+  isTestnet: boolean
+}> = {
+  1043: {
+    name: 'BlockDAG',
+    symbol: 'BDAG',
+    explorerUrl: 'https://awakening.bdagscan.com',
+    explorerName: 'BDAGScan',
+    contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890',
+    isTestnet: true,
+  },
+  11155111: {
+    name: 'Sepolia',
+    symbol: 'ETH',
+    explorerUrl: 'https://sepolia.etherscan.io',
+    explorerName: 'Etherscan',
+    contractAddress: process.env.NEXT_PUBLIC_V7_CONTRACT_SEPOLIA || '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e',
+    isTestnet: true,
+  },
+  1: {
+    name: 'Ethereum',
+    symbol: 'ETH',
+    explorerUrl: 'https://etherscan.io',
+    explorerName: 'Etherscan',
+    contractAddress: '',
+    isTestnet: false,
+  },
+}
+
+function getChainConfig(chainId?: number) {
+  if (!chainId || !CHAIN_CONFIG[chainId]) return CHAIN_CONFIG[1043]
+  return CHAIN_CONFIG[chainId]
+}
+
 export async function sendEmail(payload: EmailPayload) {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.FROM_EMAIL || 'patriotpledgenfts@vetshelpingvets.life'
@@ -99,23 +139,28 @@ export type PurchaseReceiptData = {
   campaignId: number
   tokenId?: number
   editionNumber?: number
-  amountBDAG: number
+  amountCrypto?: number
   amountUSD?: number
   txHash: string
   walletAddress: string
   imageUrl?: string
+  chainId?: number
+  /** @deprecated Use amountCrypto instead */
+  amountBDAG?: number
 }
 
 export async function sendPurchaseReceipt(data: PurchaseReceiptData) {
-  const explorerTxUrl = `${EXPLORER_URL}/tx/${data.txHash}`
-  const explorerTokenUrl = data.tokenId ? `${EXPLORER_URL}/token/${CONTRACT_ADDRESS}?a=${data.tokenId}` : null
+  const chain = getChainConfig(data.chainId)
+  const explorerTxUrl = `${chain.explorerUrl}/tx/${data.txHash}`
   const storyUrl = `${SITE_URL}/story/${data.campaignId}`
+  const cryptoAmount = data.amountCrypto ?? data.amountBDAG ?? 0
+  const testnetBadge = chain.isTestnet ? ' <span style="background: #f59e0b; color: #000; font-size: 10px; padding: 2px 6px; border-radius: 4px;">(Testnet)</span>' : ''
   
   const content = `
     <h1 style="color: #fff; font-size: 24px; margin: 0 0 20px 0;">🎉 Thank You for Your Purchase!</h1>
     
     <p style="color: #94a3b8; font-size: 16px; line-height: 1.6;">
-      Your NFT purchase has been confirmed on the BlockDAG blockchain.
+      Your NFT purchase has been confirmed on the <strong style="color: #fff;">${chain.name}</strong> blockchain.${testnetBadge}
     </p>
     
     ${data.imageUrl ? `
@@ -130,14 +175,15 @@ export async function sendPurchaseReceipt(data: PurchaseReceiptData) {
         <tr><td style="padding: 8px 0;">Campaign ID:</td><td style="text-align: right; color: #fff;">#${data.campaignId}</td></tr>
         ${data.tokenId ? `<tr><td style="padding: 8px 0;">Token ID:</td><td style="text-align: right; color: #fff;">#${data.tokenId}</td></tr>` : ''}
         ${data.editionNumber ? `<tr><td style="padding: 8px 0;">Edition:</td><td style="text-align: right; color: #fff;">#${data.editionNumber}</td></tr>` : ''}
-        <tr><td style="padding: 8px 0;">Amount Paid:</td><td style="text-align: right; color: #22c55e; font-weight: bold;">${data.amountBDAG} BDAG${data.amountUSD ? ` (~$${data.amountUSD.toFixed(2)})` : ''}</td></tr>
+        <tr><td style="padding: 8px 0;">Network:</td><td style="text-align: right; color: #fff;">${chain.name}${chain.isTestnet ? ' (Testnet)' : ''}</td></tr>
+        <tr><td style="padding: 8px 0;">Amount Paid:</td><td style="text-align: right; color: #22c55e; font-weight: bold;">${cryptoAmount} ${chain.symbol}${data.amountUSD ? ` (~$${data.amountUSD.toFixed(2)})` : ''}</td></tr>
       </table>
     </div>
     
     <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 20px; margin: 20px 0;">
       <h3 style="color: #3b82f6; font-size: 16px; margin: 0 0 15px 0;">📋 Your NFT Details</h3>
-      <p style="color: #94a3b8; font-size: 14px; margin: 0 0 10px 0;"><strong style="color: #fff;">Contract Address:</strong></p>
-      <code style="display: block; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; color: #3b82f6; font-size: 12px; word-break: break-all;">${CONTRACT_ADDRESS}</code>
+      <p style="color: #94a3b8; font-size: 14px; margin: 0 0 10px 0;"><strong style="color: #fff;">Contract Address (${chain.name}):</strong></p>
+      <code style="display: block; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; color: #3b82f6; font-size: 12px; word-break: break-all;">${chain.contractAddress}</code>
       
       ${data.tokenId ? `
       <p style="color: #94a3b8; font-size: 14px; margin: 15px 0 10px 0;"><strong style="color: #fff;">Token ID:</strong></p>
@@ -164,17 +210,7 @@ export async function sendPurchaseReceipt(data: PurchaseReceiptData) {
       
       <p style="color: #fff; font-size: 14px; margin: 0 0 10px 0;"><strong>Step-by-Step Instructions:</strong></p>
       <ol style="color: #94a3b8; font-size: 13px; line-height: 1.8; margin: 0; padding-left: 20px;">
-        <li><strong style="color: #fff;">Add BlockDAG Network</strong> (if not already added):
-          <ul style="margin: 5px 0 10px 0; padding-left: 15px;">
-            <li>Open MetaMask → Click network dropdown → "Add Network"</li>
-            <li>Network Name: <code style="color: #a855f7;">BlockDAG</code></li>
-            <li>RPC URL: <code style="color: #a855f7;">https://rpc.awakening.bdagscan.com</code></li>
-            <li>Chain ID: <code style="color: #a855f7;">1043</code></li>
-            <li>Symbol: <code style="color: #a855f7;">BDAG</code></li>
-            <li>Explorer: <code style="color: #a855f7;">https://awakening.bdagscan.com</code></li>
-          </ul>
-        </li>
-        <li><strong style="color: #fff;">Switch to BlockDAG network</strong> in MetaMask</li>
+        <li><strong style="color: #fff;">Switch to ${chain.name} network</strong> in MetaMask</li>
         <li>Go to the <strong style="color: #fff;">NFTs</strong> tab at the bottom</li>
         <li>Tap <strong style="color: #fff;">"Import NFT"</strong> (or "+" button)</li>
         <li>Paste the <strong style="color: #fff;">Contract Address</strong> shown above</li>
@@ -186,7 +222,7 @@ export async function sendPurchaseReceipt(data: PurchaseReceiptData) {
     </div>
     
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${explorerTxUrl}" style="display: inline-block; background: #3b82f6; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 5px;">View Transaction</a>
+      <a href="${explorerTxUrl}" style="display: inline-block; background: #3b82f6; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 5px;">View on ${chain.explorerName}</a>
       <a href="${storyUrl}" style="display: inline-block; background: rgba(255,255,255,0.1); color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 5px;">View Campaign</a>
     </div>
   `

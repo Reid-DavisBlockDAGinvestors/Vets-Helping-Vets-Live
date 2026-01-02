@@ -281,10 +281,10 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
             txHash: txHashes[txHashes.length - 1],
             amountUSD: totalAmountUsd,
             tipUSD: tipAmountUsd,
-            amountBDAG: 0, // Not BDAG
-            amountETH: ethAmount + ethTipAmount,
+            amountCrypto: ethAmount + ethTipAmount, // Multi-chain: generic crypto amount
+            tipCrypto: ethTipAmount,
+            amountBDAG: 0, // Legacy field
             tipBDAG: 0,
-            tipETH: ethTipAmount,
             walletAddress: wallet.address,
             mintedTokenIds,
             quantity,

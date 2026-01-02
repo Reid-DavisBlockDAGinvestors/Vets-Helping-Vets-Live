@@ -15,11 +15,14 @@ export interface PurchaseReceiptData {
   campaignId: number
   tokenId?: number
   editionNumber?: number
-  amountBDAG: number
+  amountCrypto: number
   amountUSD?: number
   txHash: string
   walletAddress: string
   imageUrl?: string
+  chainId?: number
+  /** @deprecated Use amountCrypto instead */
+  amountBDAG?: number
 }
 
 export interface SubmissionConfirmData {
