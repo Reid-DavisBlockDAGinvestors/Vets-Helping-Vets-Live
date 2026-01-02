@@ -17,9 +17,9 @@
 | Multi-chain Infrastructure | ✅ Complete | lib/chains.ts |
 | Admin Campaign Management | ✅ Complete | Approve, edit, verify |
 | Admin Fund Distribution | ⚠️ Partial | Needs execution flow |
-| Admin Token Management | ❌ Missing | Freeze, soulbound, burn |
-| Admin Security Controls | ❌ Missing | Blacklist, pause |
-| Admin Settings Panel | ❌ Missing | Fees, treasury |
+| Admin Token Management | ✅ Complete | Freeze, soulbound, burn |
+| Admin Security Controls | ✅ Complete | Blacklist, pause, emergency |
+| Admin Settings Panel | ✅ Complete | Fees, treasury, royalties |
 | V8 Contract | 📋 Planned | Native tip splitting |
 
 ---
@@ -37,12 +37,12 @@
 - `app/api/admin/tokens/soulbound/route.ts`
 
 **Features:**
-- [ ] View all tokens with campaign info
-- [ ] Freeze/unfreeze individual tokens
-- [ ] Batch freeze tokens
-- [ ] Make tokens soulbound
-- [ ] Admin burn tokens
-- [ ] Fix token URI
+- [x] View all tokens with campaign info
+- [x] Freeze/unfreeze individual tokens
+- [x] Batch freeze tokens
+- [x] Make tokens soulbound
+- [x] Admin burn tokens
+- [x] Fix token URI
 
 ### 1.2 Security Controls Panel
 **Priority:** 🔴 Critical  
@@ -54,11 +54,11 @@
 - `app/api/admin/security/pause/route.ts`
 
 **Features:**
-- [ ] Blacklist address management
-- [ ] View blacklisted addresses
-- [ ] Pause/unpause contract (emergency)
-- [ ] Emergency withdraw capability
-- [ ] Contract status indicator
+- [x] Blacklist address management
+- [x] View blacklisted addresses
+- [x] Pause/unpause contract (emergency)
+- [x] Emergency withdraw capability
+- [x] Contract status indicator
 
 ### 1.3 Settings Panel
 **Priority:** 🟠 High  
@@ -70,11 +70,11 @@
 - `app/api/admin/settings/treasury/route.ts`
 
 **Features:**
-- [ ] View current fee configuration
-- [ ] Update platform fee percentage
-- [ ] Update platform treasury address
-- [ ] Update default royalty
-- [ ] Global immediate payout toggle
+- [x] View current fee configuration
+- [x] Update platform fee percentage (with timelock)
+- [x] Update platform treasury address (multi-sig + 48h timelock)
+- [x] Update default royalty (with timelock)
+- [x] Global immediate payout toggle
 
 ### 1.4 Campaign Lifecycle Controls
 **Priority:** 🟠 High  
@@ -85,10 +85,10 @@
 - `app/api/admin/campaigns/reactivate/route.ts`
 
 **Features:**
-- [ ] Close campaign (no more minting)
-- [ ] Deactivate campaign (hide from marketplace)
-- [ ] Reactivate campaign
-- [ ] Campaign status lifecycle display
+- [x] Close campaign (no more minting)
+- [x] Deactivate campaign (hide from marketplace)
+- [x] Reactivate campaign
+- [x] Campaign status lifecycle display
 
 ---
 
