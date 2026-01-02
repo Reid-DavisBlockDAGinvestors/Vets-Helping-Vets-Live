@@ -96,7 +96,13 @@ export function useCampaignActions(): UseCampaignActionsReturn {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || data?.details || 'Approval failed')
+      if (!res.ok) {
+        // Show both error code and details for better debugging
+        const errorMsg = data?.details 
+          ? `${data.error}: ${data.details}`
+          : data?.error || 'Approval failed'
+        throw new Error(errorMsg)
+      }
 
       // Return the actual status from API (minted or pending_onchain)
       return { success: true, campaignId: data.campaignId, status: data.status || 'minted' }
