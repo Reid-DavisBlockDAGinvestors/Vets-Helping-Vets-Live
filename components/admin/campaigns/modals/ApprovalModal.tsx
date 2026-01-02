@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { ipfsToHttp } from '@/lib/ipfs'
 import type { ApprovalModalProps, ApprovalFormData, TargetNetwork } from '../types'
 
 // Available networks for campaign deployment
@@ -87,9 +88,13 @@ export function ApprovalModal({
             <div className="md:col-span-1">
               {campaign.image_uri && (
                 <img 
-                  src={campaign.image_uri} 
+                  src={ipfsToHttp(campaign.image_uri)} 
                   alt={campaign.title}
                   className="w-full h-48 object-cover rounded-lg border border-white/10"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.src = '/placeholder-campaign.png'
+                  }}
                 />
               )}
               <div className="mt-2 text-xs text-white/50">
