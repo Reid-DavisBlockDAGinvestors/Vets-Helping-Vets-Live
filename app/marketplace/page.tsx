@@ -58,6 +58,10 @@ export default function MarketplacePage() {
           hasRecentUpdate: f.hasRecentUpdate || false,
           // Multi-contract support
           contractAddress: f.contract_address || null,
+          // Chain info for testnet distinction
+          chainId: f.chain_id || 1043,
+          chainName: f.chain_name || 'BlockDAG',
+          isTestnet: f.is_testnet ?? true,
         }
       })
       // De-duplicate by id when appending

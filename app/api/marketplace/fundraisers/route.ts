@@ -220,6 +220,11 @@ export async function GET(req: NextRequest) {
         updateCount,
         lastUpdated,
         hasRecentUpdate: lastUpdated ? (Date.now() - new Date(lastUpdated).getTime()) < 7 * 24 * 60 * 60 * 1000 : false, // Updated within 7 days
+        // Chain info for testnet/mainnet distinction
+        chain_id: sub.chain_id || 1043,
+        chain_name: sub.chain_name || 'BlockDAG',
+        is_testnet: sub.is_testnet ?? true, // Default true for safety
+        contract_version: sub.contract_version || 'v6',
       }
     }))
 

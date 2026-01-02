@@ -33,6 +33,11 @@ export type NFTItem = {
   hasRecentUpdate?: boolean
   // Multi-contract support
   contractAddress?: string
+  // Chain info
+  chainId?: number
+  chainName?: string
+  isTestnet?: boolean
+  priceDisplay?: string // e.g., "$10" or "0.004 ETH"
 }
 
 export default function NFTCard({ item }: { item: NFTItem }) {
@@ -113,10 +118,19 @@ export default function NFTCard({ item }: { item: NFTItem }) {
               )}
             </div>
             
-            {/* Category Badge - Right Side */}
-            <span className={`rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm bg-${getCategoryById(item.causeType)?.color || 'blue'}-500/30 text-${getCategoryById(item.causeType)?.color || 'blue'}-200 border border-${getCategoryById(item.causeType)?.color || 'blue'}-500/30`}>
-              {getCategoryById(item.causeType)?.emoji} {getCategoryById(item.causeType)?.label || item.causeType}
-            </span>
+            {/* Right Side Badges */}
+            <div className="flex flex-col gap-1.5 items-end">
+              {/* Testnet Badge */}
+              {item.isTestnet && (
+                <span className="rounded-full px-2.5 py-1 text-xs font-semibold backdrop-blur-sm bg-yellow-500/40 text-yellow-200 border border-yellow-500/40">
+                  🧪 {item.chainName || 'Testnet'}
+                </span>
+              )}
+              {/* Category Badge */}
+              <span className={`rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm bg-${getCategoryById(item.causeType)?.color || 'blue'}-500/30 text-${getCategoryById(item.causeType)?.color || 'blue'}-200 border border-${getCategoryById(item.causeType)?.color || 'blue'}-500/30`}>
+                {getCategoryById(item.causeType)?.emoji} {getCategoryById(item.causeType)?.label || item.causeType}
+              </span>
+            </div>
           </div>
 
           {/* Progress Overlay */}
