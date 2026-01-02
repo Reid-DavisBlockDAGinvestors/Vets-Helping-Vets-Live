@@ -9,11 +9,28 @@
 
 import { formatBalance } from './types'
 
+// Network configurations for display
+const NETWORK_INFO: Record<number, { name: string; symbol: string; color: string; isTestnet: boolean }> = {
+  1043: { name: 'BlockDAG', symbol: 'BDAG', color: 'green', isTestnet: false },
+  11155111: { name: 'Sepolia', symbol: 'ETH', color: 'purple', isTestnet: true },
+  1: { name: 'Ethereum', symbol: 'ETH', color: 'blue', isTestnet: false },
+  137: { name: 'Polygon', symbol: 'MATIC', color: 'purple', isTestnet: false },
+  8453: { name: 'Base', symbol: 'ETH', color: 'blue', isTestnet: false },
+}
+
+function getNetworkInfo(chainId: number | null) {
+  if (!chainId) return null
+  return NETWORK_INFO[chainId] || { name: `Chain ${chainId}`, symbol: '?', color: 'gray', isTestnet: false }
+}
+
 interface WalletButtonProps {
   address: string | null
+  chainId: number | null
   isConnected: boolean
   isConnecting: boolean
   isOnBlockDAG: boolean
+  isOnSepolia?: boolean
+  isOnSupportedChain?: boolean
   balance: string | null
   error: string | null
   walletDropdownOpen: boolean
@@ -21,14 +38,18 @@ interface WalletButtonProps {
   onToggleDropdown: () => void
   onConnect: () => void
   onDisconnect: () => void
-  onSwitchNetwork: () => void
+  onSwitchToBlockDAG: () => void
+  onSwitchToSepolia: () => void
 }
 
 export default function WalletButton({
   address,
+  chainId,
   isConnected,
   isConnecting,
   isOnBlockDAG,
+  isOnSepolia,
+  isOnSupportedChain,
   balance,
   error,
   walletDropdownOpen,
@@ -36,8 +57,11 @@ export default function WalletButton({
   onToggleDropdown,
   onConnect,
   onDisconnect,
-  onSwitchNetwork
+  onSwitchToBlockDAG,
+  onSwitchToSepolia,
 }: WalletButtonProps) {
+  const networkInfo = getNetworkInfo(chainId)
+  const isSupported = isOnBlockDAG || isOnSepolia || isOnSupportedChain
   return (
     <div className="relative" ref={walletDropdownRef}>
       {isConnected && address ? (
@@ -47,12 +71,15 @@ export default function WalletButton({
             data-testid="wallet-connected-btn"
             aria-label="Wallet options"
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              isOnBlockDAG 
-                ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30' 
-                : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30'
+              isSupported
+                ? `bg-${networkInfo?.color || 'green'}-500/20 text-${networkInfo?.color || 'green'}-400 border border-${networkInfo?.color || 'green'}-500/30 hover:bg-${networkInfo?.color || 'green'}-500/30`
+                : 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
             }`}
           >
-            <span className="hidden sm:inline">{formatBalance(balance)} BDAG</span>
+            {/* Network indicator */}
+            <span className={`w-2 h-2 rounded-full ${isSupported ? 'bg-green-400' : 'bg-red-400 animate-pulse'}`}></span>
+            <span className="hidden sm:inline text-xs opacity-75">{networkInfo?.name || 'Unknown'}</span>
+            <span className="hidden sm:inline">{formatBalance(balance)} {networkInfo?.symbol || 'ETH'}</span>
             <span className="font-mono">{address.slice(0, 4)}...{address.slice(-4)}</span>
             <svg className={`w-4 h-4 transition-transform ${walletDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -73,16 +100,54 @@ export default function WalletButton({
               </div>
 
               <div className="p-4 border-b border-white/10">
-                <div className="text-xs text-white/50 mb-1">Network</div>
-                <div className={`flex items-center gap-2 ${isOnBlockDAG ? 'text-green-400' : 'text-yellow-400'}`}>
-                  <span className={`w-2 h-2 rounded-full ${isOnBlockDAG ? 'bg-green-400' : 'bg-yellow-400'}`}></span>
-                  {isOnBlockDAG ? 'BlockDAG Mainnet' : 'Wrong Network'}
+                <div className="text-xs text-white/50 mb-1">Current Network</div>
+                <div className={`flex items-center gap-2 ${isSupported ? 'text-green-400' : 'text-red-400'}`}>
+                  <span className={`w-2 h-2 rounded-full ${isSupported ? 'bg-green-400' : 'bg-red-400 animate-pulse'}`}></span>
+                  {networkInfo?.name || 'Unknown Network'}
+                  {networkInfo?.isTestnet && <span className="text-xs bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">Testnet</span>}
                 </div>
-                {!isOnBlockDAG && (
-                  <button onClick={onSwitchNetwork} data-testid="switch-network-btn"
-                    className="mt-2 w-full px-3 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg text-sm font-medium transition-colors">
-                    Switch to BlockDAG
-                  </button>
+                
+                {/* Network Switch Buttons */}
+                <div className="mt-3 space-y-2">
+                  <div className="text-xs text-white/50 mb-1">Switch Network</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={onSwitchToBlockDAG} 
+                      data-testid="switch-to-blockdag-btn"
+                      disabled={isOnBlockDAG}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        isOnBlockDAG 
+                          ? 'bg-green-500/30 text-green-400 cursor-default' 
+                          : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
+                      }`}
+                    >
+                      {isOnBlockDAG && '✓ '}BlockDAG
+                    </button>
+                    <button 
+                      onClick={onSwitchToSepolia} 
+                      data-testid="switch-to-sepolia-btn"
+                      disabled={isOnSepolia}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        isOnSepolia 
+                          ? 'bg-purple-500/30 text-purple-400 cursor-default' 
+                          : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
+                      }`}
+                    >
+                      {isOnSepolia && '✓ '}Sepolia 🧪
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Warning if on unsupported network */}
+                {!isSupported && (
+                  <div className="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded-lg">
+                    <div className="text-xs text-red-400 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      Unsupported network. Please switch.
+                    </div>
+                  </div>
                 )}
               </div>
 
