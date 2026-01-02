@@ -221,7 +221,7 @@ CREATE POLICY admin_distributions_all ON distributions
   USING (
     EXISTS (
       SELECT 1 FROM profiles p
-      WHERE p.id = auth.uid() AND p.is_admin = true
+      WHERE p.id = auth.uid() AND p.role IN ('super_admin', 'admin')
     )
   );
 
@@ -235,7 +235,7 @@ CREATE POLICY admin_tip_split_all ON tip_split_configs
   USING (
     EXISTS (
       SELECT 1 FROM profiles p
-      WHERE p.id = auth.uid() AND p.is_admin = true
+      WHERE p.id = auth.uid() AND p.role IN ('super_admin', 'admin')
     )
   );
 
