@@ -24,22 +24,7 @@
       "purpose": "any"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshots/home.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Home page showing featured campaigns"
-    },
-    {
-      "src": "/screenshots/marketplace.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Marketplace with all campaigns"
-    }
-  ],
+  "screenshots": [],
   "shortcuts": [
     {
       "name": "Browse Campaigns",
