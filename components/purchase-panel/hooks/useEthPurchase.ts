@@ -14,10 +14,12 @@ import { logger } from '@/lib/logger'
 import type { PurchaseResult, AuthState } from '../types'
 
 // V7 Contract ABI - supports immediate payout
+// IMPORTANT: getCampaign returns exactly 13 fields - active at index 10, closed at 11
 const V7_MINT_ABI = [
   'function mintWithImmediatePayout(uint256 campaignId) external payable returns (uint256)',
   'function mintWithImmediatePayoutAndTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
-  'function getCampaign(uint256 campaignId) external view returns (string category, string baseURI, uint256 goal, uint256 grossRaised, uint256 netRaised, uint256 tipsReceived, uint256 editionsMinted, uint256 maxEditions, uint256 pricePerEdition, address nonprofit, address submitter, bool active, bool closed, bool refunded, bool immediatePayoutEnabled)',
+  // V7 getCampaign: 13 fields total - matches PatriotPledgeNFTV7.sol exactly
+  'function getCampaign(uint256 campaignId) external view returns (string category, string baseURI, uint256 goal, uint256 grossRaised, uint256 netRaised, uint256 editionsMinted, uint256 maxEditions, uint256 pricePerEdition, address nonprofit, address submitter, bool active, bool closed, bool immediatePayoutEnabled)',
   'function totalCampaigns() external view returns (uint256)',
   'event EditionMinted(uint256 indexed campaignId, uint256 indexed tokenId, address indexed donor, uint256 editionNumber, uint256 amountPaid)',
 ]
