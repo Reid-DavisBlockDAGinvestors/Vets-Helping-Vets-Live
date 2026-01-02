@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { useCampaignBalances } from '../hooks/useCampaignBalances'
 import { CampaignBalanceCard } from './CampaignBalanceCard'
 import { TipSplitModal } from './TipSplitModal'
+import { DistributionHistory } from './DistributionHistory'
 import type { BalanceFilters, CampaignBalance } from '../types'
 
 /**
@@ -185,17 +186,26 @@ export function FundDistributionPanel() {
         />
       )}
 
-      {/* Placeholder modals for distribution and history (Phase 3-4) */}
-      {activeModal && activeModal !== 'tipSplit' && selectedCampaign && (
+      {/* Distribution History Modal */}
+      {activeModal === 'history' && selectedCampaign && (
+        <DistributionHistory
+          campaignId={selectedCampaign}
+          campaignTitle={balances.find(b => b.campaignId === selectedCampaign)?.title || ''}
+          isOpen={true}
+          onClose={closeModal}
+        />
+      )}
+
+      {/* Placeholder modals for distribution (Phase 3) */}
+      {activeModal && ['funds', 'tips'].includes(activeModal) && selectedCampaign && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-2xl max-w-lg w-full p-6 border border-white/10">
             <h3 className="text-lg font-bold text-white mb-4">
               {activeModal === 'funds' && '💸 Distribute Funds'}
               {activeModal === 'tips' && '💜 Distribute Tips'}
-              {activeModal === 'history' && '📜 Distribution History'}
             </h3>
             <p className="text-white/60 mb-4">
-              This feature will be implemented in Phase {activeModal === 'history' ? '4' : '3'}.
+              Distribution execution will be available after V8 contract deployment.
             </p>
             <button
               onClick={closeModal}

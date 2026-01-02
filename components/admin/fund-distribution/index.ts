@@ -18,6 +18,7 @@ export { TipSplitSlider } from './components/TipSplitSlider'
 export { TipSplitModal } from './components/TipSplitModal'
 export { DistributionForm } from './components/DistributionForm'
 export { DistributionConfirmModal } from './components/DistributionConfirmModal'
+export { DistributionHistory } from './components/DistributionHistory'
 
 // Utils
 export * from './utils/formatters'
