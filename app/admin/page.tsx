@@ -7,9 +7,10 @@ import AdminUsers from '@/components/AdminUsersV2'
 import AdminSubmitters from '@/components/AdminSubmitters'
 import AdminBugReports from '@/components/AdminBugReports'
 import AdminSettings from '@/components/AdminSettings'
+import { FundDistributionPanel } from '@/components/admin/fund-distribution'
 import { supabase } from '@/lib/supabase'
 
-type AdminTab = 'campaigns' | 'users' | 'submitters' | 'governance' | 'bugs' | 'settings'
+type AdminTab = 'campaigns' | 'users' | 'submitters' | 'governance' | 'bugs' | 'settings' | 'distributions'
 
 export default function AdminPage() {
   const [email, setEmail] = useState('')
@@ -441,6 +442,17 @@ export default function AdminPage() {
             >
               ⚙️ <span className="hidden xs:inline">Settings</span><span className="xs:hidden">Set</span>
             </button>
+            <button
+              onClick={() => setActiveTab('distributions')}
+              className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap ${
+                activeTab === 'distributions' 
+                  ? 'bg-amber-600 text-white' 
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+              }`}
+              data-testid="fund-distribution-tab"
+            >
+              💰 <span className="hidden xs:inline">Distributions</span><span className="xs:hidden">Dist</span>
+            </button>
           </div>
         </div>
 
@@ -459,6 +471,11 @@ export default function AdminPage() {
           </div>
         )}
         {activeTab === 'settings' && <AdminSettings />}
+        {activeTab === 'distributions' && (
+          <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+            <FundDistributionPanel />
+          </div>
+        )}
       </div>
 
       {/* Milestone Modal */}
