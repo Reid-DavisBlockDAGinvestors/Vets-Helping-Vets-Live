@@ -59,7 +59,8 @@ export async function GET(request: NextRequest) {
         immediate_payout_enabled,
         total_distributed,
         tips_distributed,
-        last_distribution_at
+        last_distribution_at,
+        campaign_id
       `)
       .eq('status', 'minted')
 
@@ -80,11 +81,11 @@ export async function GET(request: NextRequest) {
 
     // Get purchase aggregates for each submission
     const balances = await Promise.all((submissions || []).map(async (s) => {
-      // Get purchase totals
+      // Get purchase totals - join on on-chain campaign_id (INTEGER)
       const { data: purchaseData } = await supabase
         .from('purchases')
         .select('amount_usd, amount_native, tip_usd, tip_bdag, tip_eth')
-        .eq('submission_id', s.id)
+        .eq('campaign_id', s.campaign_id)
 
       const grossRaisedUsd = purchaseData?.reduce((sum, p) => sum + (p.amount_usd || 0), 0) || 0
       const grossRaisedNative = purchaseData?.reduce((sum, p) => sum + (p.amount_native || 0), 0) || 0

@@ -154,7 +154,7 @@ SELECT
   (SELECT COUNT(*) FROM distributions d WHERE d.campaign_id = s.id) as distribution_count
 
 FROM submissions s
-LEFT JOIN purchases p ON s.id = p.submission_id
+LEFT JOIN purchases p ON s.campaign_id = p.campaign_id
 LEFT JOIN tip_split_configs tsc ON s.id = tsc.campaign_id
 WHERE s.status = 'minted'
 GROUP BY 

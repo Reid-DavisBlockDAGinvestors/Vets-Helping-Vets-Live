@@ -15,3 +15,4 @@ export { CampaignBalanceCard } from './components/CampaignBalanceCard'
 
 // Utils
 export * from './utils/formatters'
+export * from './utils/validators'
