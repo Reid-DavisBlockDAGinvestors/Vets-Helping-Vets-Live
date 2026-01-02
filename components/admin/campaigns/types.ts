@@ -114,9 +114,10 @@ export interface TargetNetwork {
 }
 
 /**
- * Approval form data
+ * Approval form data - includes editable campaign fields
  */
 export interface ApprovalFormData {
+  // NFT settings
   goal: number
   nft_editions: number
   nft_price: number
@@ -124,6 +125,10 @@ export interface ApprovalFormData {
   benchmarks: string
   targetNetwork?: TargetNetwork
   immediatePayoutEnabled?: boolean // V7 feature: funds go directly to submitter on mint
+  // Editable campaign content
+  title?: string
+  story?: string
+  category?: string
 }
 
 /**

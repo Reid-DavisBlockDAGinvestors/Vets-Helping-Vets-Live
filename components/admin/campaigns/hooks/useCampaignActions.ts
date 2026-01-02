@@ -63,6 +63,11 @@ export function useCampaignActions(): UseCampaignActionsReturn {
           targetContractVersion: formData.targetNetwork?.contractVersion || 'v6',
           isTestnet: formData.targetNetwork?.isTestnet ?? true,
           updates: {
+            // Editable campaign content
+            title: formData.title || campaign.title,
+            story: formData.story || campaign.story,
+            category: formData.category || campaign.category,
+            // NFT settings
             goal: formData.goal,
             num_copies: formData.nft_editions,
             price_per_copy: formData.nft_price,

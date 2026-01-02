@@ -27,8 +27,13 @@ export function ApprovalModal({
     creator_wallet: '',
     benchmarks: '',
     targetNetwork: AVAILABLE_NETWORKS[0], // Default to BlockDAG testnet
-    immediatePayoutEnabled: false // V7 feature
+    immediatePayoutEnabled: false, // V7 feature
+    title: '',
+    story: '',
+    category: ''
   })
+  
+  const [showFullStory, setShowFullStory] = useState(false)
 
   // Reset form when campaign changes
   useEffect(() => {
@@ -44,8 +49,12 @@ export function ApprovalModal({
         creator_wallet: campaign.creator_wallet || '',
         benchmarks: '',
         targetNetwork: AVAILABLE_NETWORKS[0], // Default to BlockDAG testnet
-        immediatePayoutEnabled: false // V7 feature
+        immediatePayoutEnabled: false, // V7 feature
+        title: campaign.title || '',
+        story: campaign.story || '',
+        category: campaign.category || ''
       })
+      setShowFullStory(false)
     }
   }, [campaign])
 
@@ -58,7 +67,7 @@ export function ApprovalModal({
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-white/10">
+      <div className="bg-slate-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-white/10">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-white">
@@ -72,14 +81,93 @@ export function ApprovalModal({
             </button>
           </div>
 
-          <div className="mb-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-            <p className="text-sm text-blue-300">
-              <strong>{campaign.title}</strong>
-            </p>
-            <p className="text-xs text-blue-300/70 mt-1">
-              Select the network where this campaign will be deployed.
-            </p>
+          {/* Campaign Preview Section */}
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Image Preview */}
+            <div className="md:col-span-1">
+              {campaign.image_uri && (
+                <img 
+                  src={campaign.image_uri} 
+                  alt={campaign.title}
+                  className="w-full h-48 object-cover rounded-lg border border-white/10"
+                />
+              )}
+              <div className="mt-2 text-xs text-white/50">
+                <p><strong>ID:</strong> {campaign.id}</p>
+                <p><strong>Created:</strong> {new Date(campaign.created_at).toLocaleDateString()}</p>
+                <p><strong>Status:</strong> {campaign.status}</p>
+              </div>
+            </div>
+            
+            {/* Editable Title & Category */}
+            <div className="md:col-span-2 space-y-3">
+              <div>
+                <label className="block text-sm text-white/70 mb-1">Campaign Title</label>
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                  data-testid="campaign-title-input"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm text-white/70 mb-1">Category</label>
+                <select
+                  value={form.category}
+                  onChange={(e) => setForm(f => ({ ...f, category: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                  data-testid="campaign-category-select"
+                >
+                  <option value="" className="bg-slate-800">Select category...</option>
+                  <option value="Veteran / Military" className="bg-slate-800">🎖️ Veteran / Military</option>
+                  <option value="First Responder" className="bg-slate-800">🚒 First Responder</option>
+                  <option value="Medical / Health" className="bg-slate-800">🏥 Medical / Health</option>
+                  <option value="Education" className="bg-slate-800">📚 Education</option>
+                  <option value="Community" className="bg-slate-800">🏘️ Community</option>
+                  <option value="Disaster Relief" className="bg-slate-800">🆘 Disaster Relief</option>
+                  <option value="Other" className="bg-slate-800">📦 Other</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm text-white/70 mb-1">Creator Email</label>
+                <p className="text-sm text-white/80">{campaign.creator_email || 'Not provided'}</p>
+              </div>
+            </div>
           </div>
+          
+          {/* Full Story - Expandable */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm text-white/70">Campaign Story</label>
+              <button
+                type="button"
+                onClick={() => setShowFullStory(!showFullStory)}
+                className="text-xs text-blue-400 hover:text-blue-300"
+              >
+                {showFullStory ? '▼ Collapse' : '▶ Expand to edit'}
+              </button>
+            </div>
+            {showFullStory ? (
+              <textarea
+                value={form.story}
+                onChange={(e) => setForm(f => ({ ...f, story: e.target.value }))}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm"
+                rows={8}
+                data-testid="campaign-story-textarea"
+              />
+            ) : (
+              <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white/70 text-sm max-h-24 overflow-hidden relative">
+                {form.story?.slice(0, 300) || 'No story provided'}
+                {(form.story?.length || 0) > 300 && '...'}
+                <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-slate-800 to-transparent" />
+              </div>
+            )}
+          </div>
+          
+          <hr className="border-white/10 mb-6" />
 
           {/* Network Selection */}
           <div className="mb-4">
