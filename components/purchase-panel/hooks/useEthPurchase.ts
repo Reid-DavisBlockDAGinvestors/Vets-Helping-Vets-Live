@@ -157,16 +157,31 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
       const signer = await provider.getSigner()
       const signerAddress = await signer.getAddress()
       
-      // Debug: Log which wallet is being used for the transaction
-      logger.debug('[useEthPurchase] Transaction wallet:', {
+      // Get signer's balance and check if sufficient
+      const signerBalance = await provider.getBalance(signerAddress)
+      const requiredAmount = parseEther('0.005') // ~$15 worth of ETH for payment + gas
+      
+      logger.debug('[useEthPurchase] Wallet check:', {
         signerAddress,
         expectedWalletAddress: wallet.address,
+        signerBalanceEth: Number(signerBalance) / 1e18,
         addressMatch: signerAddress.toLowerCase() === wallet.address?.toLowerCase(),
       })
       
-      // Warn if wallet mismatch detected
+      // Check for wallet mismatch
       if (wallet.address && signerAddress.toLowerCase() !== wallet.address.toLowerCase()) {
-        logger.warn('[useEthPurchase] WALLET MISMATCH! Signer:', signerAddress, 'Expected:', wallet.address)
+        logger.warn('[useEthPurchase] WALLET MISMATCH detected!')
+        setCryptoMsg(`⚠️ Wallet mismatch! Expected ${wallet.address?.slice(0,6)}...${wallet.address?.slice(-4)} but transaction will use ${signerAddress.slice(0,6)}...${signerAddress.slice(-4)}. Please check MetaMask account selection.`)
+        setLoading(false)
+        return
+      }
+      
+      // Check for sufficient balance
+      if (signerBalance < requiredAmount) {
+        const balanceEth = (Number(signerBalance) / 1e18).toFixed(4)
+        setCryptoMsg(`⚠️ Insufficient balance! Your wallet (${signerAddress.slice(0,6)}...${signerAddress.slice(-4)}) has ${balanceEth} ETH. Need ~0.005 ETH for payment + gas.`)
+        setLoading(false)
+        return
       }
       
       const contract = new Contract(contractAddress, V7_MINT_ABI, signer)
