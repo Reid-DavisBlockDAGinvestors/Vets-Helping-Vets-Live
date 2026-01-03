@@ -52,10 +52,13 @@ function getBaseUrl() {
   return 'http://localhost:3000'
 }
 
-async function loadOnchainToken(id: string): Promise<OnchainItem | null> {
+async function loadOnchainToken(id: string, contractAddress?: string): Promise<OnchainItem | null> {
   try {
     const baseUrl = getBaseUrl()
-    const res = await fetch(`${baseUrl}/api/onchain/token/${id}`, { cache: 'no-store' })
+    const url = contractAddress 
+      ? `${baseUrl}/api/onchain/token/${id}?contract=${contractAddress}`
+      : `${baseUrl}/api/onchain/token/${id}`
+    const res = await fetch(url, { cache: 'no-store' })
     if (!res.ok) return null
     const data = await res.json().catch(() => ({}))
     return data || null
@@ -146,16 +149,17 @@ export default async function StoryViewer({ params }: { params: { id: string } }
   // First load the submission to get the campaign_id
   let submission = await loadSubmissionByToken(id)
   
-  // Determine the on-chain campaign ID
-  // If accessed via UUID submission ID, use submission.campaign_id
+  // Determine the on-chain campaign ID and contract address
+  // If accessed via UUID submission ID, use submission.campaign_id and contract_address
   // If accessed via numeric campaign ID, use it directly
   const isNumericId = /^\d+$/.test(id)
   const onchainId = submission?.campaign_id != null 
     ? String(submission.campaign_id) 
     : (isNumericId ? id : null)
+  const contractAddress = submission?.contract_address || undefined
   
-  // Load on-chain data using the campaign_id (not submission UUID)
-  let onchain = onchainId ? await loadOnchainToken(onchainId) : null
+  // Load on-chain data using the campaign_id AND contract address (to query correct chain)
+  let onchain = onchainId ? await loadOnchainToken(onchainId, contractAddress) : null
   
   // Case 1: On-chain data failed to load but submission exists with pending status
   // Try to verify and fix the campaign_id on the blockchain
@@ -167,8 +171,8 @@ export default async function StoryViewer({ params }: { params: { id: string } }
     
     if (verification.verified && verification.campaignId !== null) {
       logger.debug(`[StoryPage] Campaign verified! ID: ${verification.campaignId}`)
-      // Reload on-chain data with the correct campaign ID
-      onchain = await loadOnchainToken(String(verification.campaignId))
+      // Reload on-chain data with the correct campaign ID and contract
+      onchain = await loadOnchainToken(String(verification.campaignId), contractAddress)
       // Reload submission to get updated status
       submission = await loadSubmissionByToken(String(verification.campaignId))
     }
