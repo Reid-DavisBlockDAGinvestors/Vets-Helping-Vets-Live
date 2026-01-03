@@ -338,5 +338,90 @@ For V8, we will:
 - Remove the problematic `onlyThisChain` modifier
 - Simplify the immediate payout logic
 - Add safer fund distribution with fallbacks
+- **USD-denominated pricing with on-chain oracle** (see below)
 
 This ensures a clean, reliable contract for real-money transactions on Ethereum mainnet.
+
+---
+
+## V8 CRITICAL: USD-Denominated Pricing with Live Oracle
+
+### The Problem with V7
+
+V7 stores `pricePerEdition` in **native currency (ETH/BDAG wei)**. This creates issues:
+
+| Scenario | On-Chain Price | Live ETH Rate | User Pays | Result |
+|----------|---------------|---------------|-----------|--------|
+| ETH rises | 0.00322 ETH ($10 @ $3100) | $3200/ETH | 0.00312 ETH | ❌ FAILS - below minimum |
+| ETH drops | 0.00322 ETH ($10 @ $3100) | $3000/ETH | 0.00333 ETH | ✅ Works but overpays |
+
+**Root cause:** Price is locked in ETH at campaign creation time, but USD is the source of truth.
+
+### V8 Solution: USD Storage + Chainlink Oracle
+
+```solidity
+// V8 Campaign Structure
+struct Campaign {
+    uint256 priceUsdCents;      // e.g., 1000 = $10.00 USD
+    uint256 goalUsdCents;       // Goal in USD cents
+    // ... other fields
+}
+
+// Chainlink Price Feed Interface
+AggregatorV3Interface internal priceFeed;
+
+function mint(uint256 campaignId) external payable {
+    Campaign storage c = campaigns[campaignId];
+    
+    // Get live ETH/USD price from Chainlink
+    uint256 ethUsdPrice = getLatestPrice(); // e.g., 310000000000 ($3100 with 8 decimals)
+    
+    // Calculate required ETH: priceUsd / ethUsdPrice
+    uint256 requiredWei = (c.priceUsdCents * 1e18 * 1e8) / (ethUsdPrice * 100);
+    
+    // Allow 1% slippage tolerance
+    require(msg.value >= requiredWei * 99 / 100, "Insufficient payment");
+    
+    // Mint NFT...
+}
+
+function getLatestPrice() public view returns (uint256) {
+    (, int256 price, , , ) = priceFeed.latestRoundData();
+    return uint256(price); // ETH/USD with 8 decimals
+}
+```
+
+### Chainlink Price Feed Addresses
+
+| Chain | Address | Pair |
+|-------|---------|------|
+| Ethereum Mainnet | `0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419` | ETH/USD |
+| Sepolia Testnet | `0x694AA1769357215DE4FAC081bf1f309aDC325306` | ETH/USD |
+| Polygon | `0xAB594600376Ec9fD91F8e885dADF0CE036862dE0` | MATIC/USD |
+| Base | `0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70` | ETH/USD |
+
+### V8 Benefits
+
+1. **Price Stability** - $10 NFT always costs ~$10 worth of ETH
+2. **No Admin Updates** - Price converts automatically at mint time
+3. **Multi-chain Ready** - Each chain uses its native Chainlink feed
+4. **Transparency** - Users see exact USD equivalent in UI
+5. **Decentralized** - No reliance on backend price APIs
+
+### V8 Implementation Checklist
+
+- [ ] Add Chainlink AggregatorV3Interface import
+- [ ] Store `priceUsdCents` instead of `pricePerEdition`
+- [ ] Implement `getLatestPrice()` for each chain
+- [ ] Add slippage tolerance (1%)
+- [ ] Fallback to stored price if oracle fails
+- [ ] Update frontend to pass USD price at campaign creation
+- [ ] Update `mint()` to calculate ETH from USD
+- [ ] Test on Sepolia with Chainlink testnet feed
+- [ ] Deploy to mainnet with production Chainlink feed
+
+### Migration Path
+
+1. **V7 (current):** Frontend adds 1% buffer to live-calculated price
+2. **V8 (future):** Contract calculates price on-chain using Chainlink
+3. **Existing campaigns:** Can remain on V7, new campaigns use V8
