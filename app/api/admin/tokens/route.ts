@@ -49,6 +49,8 @@ export async function GET(req: NextRequest) {
     const filterOwner = searchParams.get('owner')?.toLowerCase()
     const filterCampaignId = searchParams.get('campaignId')
 
+    logger.info(`[admin/tokens] Filters: chainId=${filterChainId}, frozen=${filterFrozen}, soulbound=${filterSoulbound}, owner=${filterOwner}, campaignId=${filterCampaignId}`)
+
     // Build query for tokens table (database cache)
     let tokensQuery = supabaseAdmin
       .from('tokens')
@@ -57,7 +59,9 @@ export async function GET(req: NextRequest) {
 
     // Apply filters
     if (filterChainId) {
-      tokensQuery = tokensQuery.eq('chain_id', parseInt(filterChainId))
+      const chainIdNum = parseInt(filterChainId)
+      logger.info(`[admin/tokens] Filtering by chain_id=${chainIdNum}`)
+      tokensQuery = tokensQuery.eq('chain_id', chainIdNum)
     }
     if (filterCampaignId) {
       tokensQuery = tokensQuery.eq('campaign_id', parseInt(filterCampaignId))
@@ -92,6 +96,18 @@ export async function GET(req: NextRequest) {
         .from('tokens')
         .select('*', { count: 'exact', head: true })
       logger.info(`[admin/tokens] Direct count: ${count}, error: ${countError?.message || 'none'}`)
+      
+      // Extra debug: check for Sepolia tokens specifically
+      if (filterChainId === '11155111') {
+        const { data: sepoliaTokens, error: sepoliaError } = await supabaseAdmin
+          .from('tokens')
+          .select('*')
+          .eq('chain_id', 11155111)
+        logger.info(`[admin/tokens] Sepolia debug: found ${sepoliaTokens?.length || 0} tokens, error: ${sepoliaError?.message || 'none'}`)
+        if (sepoliaTokens && sepoliaTokens.length > 0) {
+          logger.info(`[admin/tokens] Sepolia token sample: ${JSON.stringify(sepoliaTokens[0])}`)
+        }
+      }
     }
 
     // Get campaign titles for display
