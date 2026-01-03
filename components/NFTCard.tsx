@@ -6,7 +6,22 @@ import { ipfsToHttp } from '@/lib/ipfs'
 import { getCategoryById, CategoryId } from '@/lib/categories'
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
-const EXPLORER_URL = 'https://awakening.bdagscan.com'
+
+// Chain-aware explorer URLs
+const CHAIN_EXPLORERS: Record<number, string> = {
+  1043: 'https://awakening.bdagscan.com',
+  1: 'https://etherscan.io',
+  11155111: 'https://sepolia.etherscan.io',
+  137: 'https://polygonscan.com',
+  8453: 'https://basescan.org',
+}
+
+function getExplorerUrl(chainId?: number): string {
+  if (chainId && CHAIN_EXPLORERS[chainId]) {
+    return CHAIN_EXPLORERS[chainId]
+  }
+  return CHAIN_EXPLORERS[1043] // Default to BlockDAG
+}
 
 export type NFTItem = {
   id: string
@@ -55,8 +70,12 @@ export default function NFTCard({ item }: { item: NFTItem }) {
   const communityKey = item.slug || item.short_code || String(item.campaignId ?? item.id)
   const communityHref = `/community?prefill=${encodeURIComponent(`@[${communityKey}] `)}`
 
+  // Use submission UUID for story links to avoid cross-chain campaign_id conflicts
+  // UUID is globally unique, while campaign_id (0, 1, 2...) can repeat across chains
+  const storyId = item.id
+  
   return (
-    <Link href={`/story/${item.campaignId ?? item.id}`} className="group block">
+    <Link href={`/story/${storyId}`} className="group block">
       <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm overflow-hidden transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:shadow-xl hover:shadow-blue-900/20 hover:-translate-y-1">
         {/* Image Container */}
         <div className="relative h-52 overflow-hidden">
@@ -183,12 +202,12 @@ export default function NFTCard({ item }: { item: NFTItem }) {
             </div>
             <div className="flex items-center gap-2">
               <a
-                href={`${EXPLORER_URL}/address/${item.contractAddress || CONTRACT_ADDRESS}`}
+                href={`${getExplorerUrl(item.chainId)}/address/${item.contractAddress || CONTRACT_ADDRESS}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 className="p-1.5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors border border-emerald-500/30"
-                title="View on blockchain"
+                title={`View on ${item.chainName || 'blockchain'}`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

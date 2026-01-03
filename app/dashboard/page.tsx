@@ -10,7 +10,22 @@ import ContractStatus from '@/components/ContractStatus'
 import CampaignUpdateForm from '@/components/CampaignUpdateForm'
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
-const EXPLORER_URL = 'https://awakening.bdagscan.com'
+
+// Chain-aware explorer URLs
+const CHAIN_EXPLORERS: Record<number, string> = {
+  1043: 'https://awakening.bdagscan.com',
+  1: 'https://etherscan.io',
+  11155111: 'https://sepolia.etherscan.io',
+  137: 'https://polygonscan.com',
+  8453: 'https://basescan.org',
+}
+
+function getExplorerUrl(chainId?: number): string {
+  if (chainId && CHAIN_EXPLORERS[chainId]) {
+    return CHAIN_EXPLORERS[chainId]
+  }
+  return CHAIN_EXPLORERS[1043] // Default to BlockDAG
+}
 
 type OwnedNFT = {
   tokenId: number
@@ -20,6 +35,8 @@ type OwnedNFT = {
   editionsMinted: number
   contractAddress: string
   contractVersion: string
+  chainId?: number
+  chainName?: string
   title: string
   image: string
   category: string
@@ -49,6 +66,8 @@ type CreatedCampaign = {
   latestUpdate: any | null
   contractAddress?: string
   contractVersion?: string
+  chainId?: number
+  chainName?: string
 }
 
 export default function DashboardPage() {
@@ -264,12 +283,12 @@ export default function DashboardPage() {
                           <div className="flex items-center gap-2">
                             <span className="text-white/50">Token #{nft.tokenId}</span>
                             <a
-                              href={`${EXPLORER_URL}/address/${nft.contractAddress || CONTRACT_ADDRESS}`}
+                              href={`${getExplorerUrl(nft.chainId)}/address/${nft.contractAddress || CONTRACT_ADDRESS}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
                               className="p-1 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
-                              title={`View on blockchain (${nft.contractVersion || 'v5'})`}
+                              title={`View on ${nft.chainName || 'blockchain'} (${nft.contractVersion || 'v5'})`}
                             >
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -375,11 +394,11 @@ export default function DashboardPage() {
                                   <div className="flex items-center gap-2">
                                     <span className="text-white/40">Campaign #{campaign.campaignId}</span>
                                     <a
-                                      href={`${EXPLORER_URL}/address/${campaign.contractAddress || CONTRACT_ADDRESS}`}
+                                      href={`${getExplorerUrl(campaign.chainId)}/address/${campaign.contractAddress || CONTRACT_ADDRESS}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="p-1 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
-                                      title={`View on blockchain (${campaign.contractVersion || 'v5'})`}
+                                      title={`View on ${campaign.chainName || 'blockchain'} (${campaign.contractVersion || 'v5'})`}
                                     >
                                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

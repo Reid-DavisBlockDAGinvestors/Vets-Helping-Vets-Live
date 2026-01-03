@@ -1,9 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
+// Check if string is a valid UUID format
+function isUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  return uuidRegex.test(str)
+}
+
 export async function GET(req: NextRequest, context: { params: { id: string } }) {
   try {
-    const id = Number(context.params.id)
+    const idParam = context.params.id
+    
+    // Case 1: UUID - direct lookup by submission ID (preferred, avoids cross-chain conflicts)
+    if (isUUID(idParam)) {
+      const { data, error } = await supabaseAdmin
+        .from('submissions')
+        .select('*')
+        .eq('id', idParam)
+        .single()
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+        return NextResponse.json({ error: 'SUBMISSION_LOOKUP_FAILED', details: error.message }, { status: 500 })
+      }
+      
+      if (!data) {
+        return NextResponse.json({ error: 'SUBMISSION_NOT_FOUND' }, { status: 404 })
+      }
+      
+      return NextResponse.json({ item: data })
+    }
+    
+    // Case 2: Numeric ID - look up by campaign_id or token_id (legacy, may have cross-chain conflicts)
+    const id = Number(idParam)
     if (!Number.isFinite(id) || id < 0) {
       return NextResponse.json({ error: 'INVALID_ID' }, { status: 400 })
     }
