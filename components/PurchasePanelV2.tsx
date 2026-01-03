@@ -44,10 +44,9 @@ export default function PurchasePanelV2({
   const targetId = campaignId || tokenId || '0'
   const effectiveContractAddress = getEffectiveContractAddress(contractAddress, contractVersion as 'v5' | 'v6')
   
-  // Determine network type based on chainId
+  // Determine network type based on chainId (for default network selection)
   const isEthereumMainnet = propChainId === 1
   const isSepoliaTestnet = propChainId === 11155111
-  const isEthNetwork = isEthereumMainnet || isSepoliaTestnet
 
   // UI State
   const [quantity, setQuantity] = useState(1)
