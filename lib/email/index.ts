@@ -38,4 +38,6 @@ export {
   sendProposalVotingOpen,
   sendVoteConfirmation,
   sendProposalSubmitted,
+  sendDistributionNotification,
+  sendDistributionNotifications,
 } from './templates'

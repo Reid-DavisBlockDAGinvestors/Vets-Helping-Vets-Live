@@ -4,6 +4,7 @@ import { ethers } from 'ethers'
 import { getSignerForChain, getContractAddress, CHAIN_CONFIGS, type ChainId } from '@/lib/chains'
 import { V5_ABI, V6_ABI, V7_ABI } from '@/lib/contracts'
 import { logger } from '@/lib/logger'
+import { sendDistributionNotifications } from '@/lib/email'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -199,6 +200,51 @@ export async function POST(request: NextRequest) {
             tips_distributed: (Number(campaign.tips_distributed) || 0) + totalAmount 
           })
           .eq('id', campaignId)
+      }
+
+      // Send email notifications to submitter and nonprofit (if applicable)
+      try {
+        // Get submitter profile for email
+        const { data: submitterProfile } = await supabase
+          .from('profiles')
+          .select('email, display_name')
+          .eq('wallet_address', campaign.creator_wallet)
+          .single()
+
+        // Get nonprofit info if tip split includes nonprofit
+        let nonprofitProfile = null
+        if (type === 'tips' && nonprofitAmount > 0 && campaign.nonprofit_wallet) {
+          const { data: np } = await supabase
+            .from('profiles')
+            .select('email, display_name')
+            .eq('wallet_address', campaign.nonprofit_wallet)
+            .single()
+          nonprofitProfile = np
+        }
+
+        const emailResults = await sendDistributionNotifications({
+          campaignTitle: campaign.title,
+          campaignId: campaign.campaign_id || campaignId,
+          distributionType: type,
+          chainId: chainId,
+          txHash: tx.hash,
+          submitterEmail: submitterProfile?.email || campaign.email,
+          submitterName: submitterProfile?.display_name || campaign.name,
+          submitterWallet: recipientWallet,
+          submitterAmount: submitterAmount,
+          nonprofitEmail: nonprofitProfile?.email,
+          nonprofitName: nonprofitProfile?.display_name,
+          nonprofitWallet: campaign.nonprofit_wallet,
+          nonprofitAmount: nonprofitAmount,
+          totalAmount: totalAmount,
+          submitterPercent: submitterPct,
+          nonprofitPercent: nonprofitPct,
+        })
+
+        logger.info(`[Distribution] Email notifications sent:`, emailResults)
+      } catch (emailError) {
+        // Don't fail the distribution if email fails
+        logger.error(`[Distribution] Failed to send email notifications:`, emailError)
       }
 
       return NextResponse.json({
