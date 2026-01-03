@@ -103,10 +103,11 @@ export function useAccountAuth() {
     setLoading(true)
     setMessage('')
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: formState.email,
         password: formState.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             first_name: formState.firstName,
             last_name: formState.lastName,
@@ -114,6 +115,14 @@ export function useAccountAuth() {
             full_name: `${formState.firstName} ${formState.lastName}`.trim()
           }
         }
+      })
+      
+      // Log signup attempt for debugging
+      logger.info('[signup] Signup attempt:', { 
+        email: formState.email, 
+        hasError: !!error,
+        userId: data?.user?.id,
+        emailConfirmed: data?.user?.email_confirmed_at
       })
       if (error) {
         setMessage(error.message)
