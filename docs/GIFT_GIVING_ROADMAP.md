@@ -6,6 +6,29 @@ This roadmap outlines the implementation of a flexible gift giving system that a
 
 ---
 
+## 📌 Current Status (Updated Jan 3, 2026)
+
+| Item | Status | Notes |
+|------|--------|-------|
+| **Phase 1: UI Rename** | ✅ COMPLETE | Tips → Gifts in all UI components |
+| **V8 Contract** | ✅ VERIFIED | [Etherscan](https://etherscan.io/address/0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e#code) |
+| **V9 Contract** | 📝 DRAFT | `contracts/PatriotPledgeNFTV9.sol` - NOT DEPLOYED |
+| **Tooling** | ✅ UPGRADED | Solidity 0.8.28, OpenZeppelin 5.1.0 |
+
+### ⚠️ Important Notes
+
+1. **V9 is a DRAFT** - The V9 contract exists in the codebase but is NOT deployed. We are still running on V8 for production.
+
+2. **V9 may change** - Additional features may be added before deployment. The contract may be modified or replaced entirely based on requirements.
+
+3. **Current Flow** - The purchase flow still uses V8's `mintWithTip()` function. The UI displays "Gift" but the underlying contract uses "tip" terminology.
+
+4. **V9 Deployment Trigger** - Will deploy V9 when ready for the next fundraiser that needs the new gift distribution features.
+
+5. **Admin Gift Distribution UI** - Will be built when V9 is deployed. Currently not needed since V8 sends tips immediately to submitter.
+
+---
+
 ## 🎁 Current State vs. Desired State
 
 ### Current Behavior (V8 Contract)
@@ -30,15 +53,18 @@ This roadmap outlines the implementation of a flexible gift giving system that a
 
 ## 📋 Implementation Phases
 
-### Phase 1: Rename Tips to Gifts (Quick Win)
-**Effort:** Low | **Impact:** Medium | **Timeline:** 1 day
+### Phase 1: Rename Tips to Gifts (Quick Win) ✅ COMPLETE
+**Effort:** Low | **Impact:** Medium | **Timeline:** 1 day | **Completed:** Jan 3, 2026
 
 #### UI Changes Required
-- [ ] `components/PurchasePanelV2.tsx` - Rename "Tip" to "Gift"
-- [ ] `components/CryptoPaymentSection.tsx` - Update labels
-- [ ] `app/story/[id]/page.tsx` - Update copy
-- [ ] `app/api/purchase/record/route.ts` - Update database fields
-- [ ] Admin dashboard - Update distribution UI labels
+- [x] `components/PurchasePanelV2.tsx` - Renamed "Tip" to "Gift"
+- [x] `components/purchase/TipSelector.tsx` - Renamed to GiftSelector
+- [x] `components/purchase-panel/hooks/usePurchaseConfig.ts` - tipAmount → giftAmount
+- [x] `components/purchase-panel/hooks/useBdagPurchase.ts` - tipAmount → giftAmount
+- [x] `components/purchase-panel/hooks/useEthPurchase.ts` - tipAmountUsd → giftAmountUsd
+- [x] `components/purchase-panel/types.ts` - Updated all type definitions
+- [x] `components/purchase/types.ts` - TipSelectorProps → GiftSelectorProps
+- [ ] Admin dashboard - Update distribution UI labels (DEFERRED to V9 deployment)
 
 #### Copy Changes
 ```

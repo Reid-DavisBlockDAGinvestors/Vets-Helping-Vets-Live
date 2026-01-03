@@ -1,7 +1,9 @@
 require('dotenv').config({ path: '.env.local' });
 require("@nomicfoundation/hardhat-toolbox");
 // Foundry integration - uncomment after installing Foundry CLI
-// Install: curl -L https://foundry.paradigm.xyz | bash && foundryup
+// Windows: Download installer from https://github.com/foundry-rs/foundry/releases
+//          Or use: winget install foundry
+// Mac/Linux: curl -L https://foundry.paradigm.xyz | bash && foundryup
 // require("@nomicfoundation/hardhat-foundry");
 
 // Secure key retrieval - never log keys
