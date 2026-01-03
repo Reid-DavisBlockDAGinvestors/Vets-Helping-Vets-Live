@@ -250,7 +250,7 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
       const onChainPriceWei = BigInt(campaign[7].toString())
       
       const tipEthWei = tipAmountUsd > 0 ? parseEther(usdToEth(tipAmountUsd, liveEthPrice).toFixed(18)) : 0n
-      const gasLimit = 450000n // V7 needs ~365k gas for mint
+      const gasLimit = 800000n // V7 needs higher gas for mint + immediate payout distribution
 
       // Debug logging
       logger.debug('[useEthPurchase] Transaction params (LIVE PRICE):', {
