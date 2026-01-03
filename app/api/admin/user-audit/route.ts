@@ -20,14 +20,30 @@ export async function GET(request: NextRequest) {
   )
   
   try {
-    // Get all users to find the target
-    const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+    // Find user by email - paginate through all users if needed
+    let user = null
+    let page = 1
+    const perPage = 1000
     
-    if (listError) {
-      return NextResponse.json({ error: listError.message }, { status: 500 })
+    while (!user) {
+      const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage
+      })
+      
+      if (listError) {
+        return NextResponse.json({ error: listError.message }, { status: 500 })
+      }
+      
+      user = authUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+      
+      // If no more users to check, break
+      if (authUsers.users.length < perPage) break
+      page++
+      
+      // Safety limit
+      if (page > 100) break
     }
-    
-    const user = authUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
     
     if (!user) {
       return NextResponse.json({
@@ -168,14 +184,27 @@ export async function POST(request: NextRequest) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
     
-    // Find the user
-    const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+    // Find user by email - paginate through all users if needed
+    let user = null
+    let page = 1
+    const perPage = 1000
     
-    if (listError) {
-      return NextResponse.json({ error: listError.message }, { status: 500 })
+    while (!user) {
+      const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage
+      })
+      
+      if (listError) {
+        return NextResponse.json({ error: listError.message }, { status: 500 })
+      }
+      
+      user = authUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+      
+      if (authUsers.users.length < perPage) break
+      page++
+      if (page > 100) break
     }
-    
-    const user = authUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
