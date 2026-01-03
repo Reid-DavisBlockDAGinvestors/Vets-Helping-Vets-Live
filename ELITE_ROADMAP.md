@@ -624,5 +624,20 @@ const CONTRACT_REGISTRY: Record<string, ContractConfig> = {
 
 ---
 
+## 🚨 Pre-Production Checklist
+
+### Security Settings to Restore Before Go-Live
+- [ ] **Supabase Auth Rate Limits** - Currently increased for development (Jan 3, 2026)
+  - Restore email sending rate limit to 4/hour
+  - Restore sign-in attempts to default
+  - Restore token refresh rate to default
+  - Location: Supabase Dashboard → Authentication → Settings → Rate Limits
+
+- [ ] **Review all debug endpoints** - Ensure they're protected or disabled
+- [ ] **Audit environment variables** - Remove any development-only keys
+- [ ] **Contract Settings rate limit** - Currently 3 changes/hour (keep or adjust)
+
+---
+
 *This roadmap is the single source of truth for all planned work.*
-*Last Updated: December 28, 2025*
+*Last Updated: January 3, 2026*
