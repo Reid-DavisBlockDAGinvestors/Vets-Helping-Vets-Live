@@ -241,13 +241,18 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
       const usdPricePerNft = hasNftPrice ? pricePerNft! : (totalAmountUsd - tipAmountUsd) / quantity
       const liveCalculatedEth = usdToEth(usdPricePerNft, liveEthPrice)
       
-      // Add 1% buffer to handle price fluctuations and ensure contract accepts payment
-      // This protects against the on-chain minimum while still using live pricing
-      const bufferedEth = liveCalculatedEth * 1.01
-      const finalPriceWei = parseEther(bufferedEth.toFixed(18))
+      // Get on-chain price and compare with live-calculated price
+      // Use the MAXIMUM to ensure payment is always sufficient
+      const onChainPriceWei = BigInt(campaign[7].toString())
+      const liveCalculatedWei = parseEther(liveCalculatedEth.toFixed(18))
+      
+      // Add 1% buffer to live price for fluctuations
+      const bufferedLiveWei = (liveCalculatedWei * 101n) / 100n
+      
+      // Use MAX of (buffered live price, on-chain price) to ensure payment is accepted
+      const finalPriceWei = bufferedLiveWei > onChainPriceWei ? bufferedLiveWei : onChainPriceWei
       
       // Log for transparency
-      const onChainPriceWei = BigInt(campaign[7].toString())
       
       const tipEthWei = tipAmountUsd > 0 ? parseEther(usdToEth(tipAmountUsd, liveEthPrice).toFixed(18)) : 0n
       const gasLimit = 800000n // V7 needs higher gas for mint + immediate payout distribution
