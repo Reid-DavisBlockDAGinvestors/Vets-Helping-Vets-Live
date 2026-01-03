@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 import { createClient } from '@supabase/supabase-js'
 import { PatriotPledgeV5ABI } from '@/lib/onchain'
-import { V7_ABI } from '@/lib/contracts'
+import { V7_ABI, V8_ABI } from '@/lib/contracts'
 import { getProviderForChain, ChainId } from '@/lib/chains'
 import { ethers } from 'ethers'
 
@@ -108,14 +108,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'FUNDRAISER_QUERY_FAILED', details: error.message }, { status: 500 })
     }
 
-    // Cache contract instances by address+chain
+    // Cache contract instances by address+chain+version
     const contractCache: Record<string, ethers.Contract> = {}
-    const getContractForChain = (addr: string, chainId: number) => {
-      const key = `${addr.toLowerCase()}-${chainId}`
+    const getContractForChain = (addr: string, chainId: number, contractVersion?: string) => {
+      const key = `${addr.toLowerCase()}-${chainId}-${contractVersion || 'default'}`
       if (!contractCache[key]) {
         const provider = getProviderForChain(chainId as ChainId)
         const isEthChain = chainId === 1 || chainId === 11155111
-        const abi = isEthChain ? V7_ABI : PatriotPledgeV5ABI
+        const isV8 = contractVersion === 'v8'
+        // Use V8 ABI for V8 contracts, V7 for other ETH chains, V5 for BlockDAG
+        const abi = isV8 ? V8_ABI : isEthChain ? V7_ABI : PatriotPledgeV5ABI
         contractCache[key] = new ethers.Contract(addr, abi, provider)
       }
       return contractCache[key]
@@ -155,7 +157,8 @@ export async function GET(req: NextRequest) {
       const usdRate = isEthChain ? ETH_USD_RATE : BDAG_USD_RATE
       
       try {
-        const contract = getContractForChain(subContractAddr, chainId)
+        const contractVersion = sub.contract_version || ''
+        const contract = getContractForChain(subContractAddr, chainId, contractVersion)
         const camp = await (contract as any).getCampaign(BigInt(campaignId))
         const grossRaisedWei = BigInt(camp.grossRaised ?? 0n)
         const grossRaisedNative = Number(grossRaisedWei) / 1e18
