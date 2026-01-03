@@ -259,7 +259,7 @@ export async function POST(req: NextRequest) {
     
     if (targetChainId === 11155111 || targetChainId === 1) {
       // Ethereum / Sepolia - use ETH
-      const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '2300')  // 1 ETH = $2300
+      const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '3100')  // 1 ETH = $3100 (Jan 2026)
       const goalETH = goalUSD / ETH_USD_RATE
       const priceETH = priceUSD / ETH_USD_RATE
       goalWei = BigInt(Math.floor(goalETH * 1e18))
