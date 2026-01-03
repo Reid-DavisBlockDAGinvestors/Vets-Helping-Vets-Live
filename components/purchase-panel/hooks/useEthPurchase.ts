@@ -207,20 +207,19 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
 
       setCryptoMsg('Preparing transaction...')
 
-      // Calculate ETH amounts using LIVE price
-      const pricePerNftEth = hasNftPrice ? usdToEth(pricePerNft!, liveEthPrice) : usdToEth(totalAmountUsd - tipAmountUsd, liveEthPrice) / quantity
-      const pricePerNftWei = parseEther(pricePerNftEth.toFixed(18))
+      // Use ON-CHAIN price (campaign[7] = pricePerEdition in wei) - this is what the contract expects
+      // The live price is for display only; the actual payment must match what's stored on-chain
+      const onChainPriceWei = BigInt(campaign[7].toString())
       const tipEthWei = tipAmountUsd > 0 ? parseEther(usdToEth(tipAmountUsd, liveEthPrice).toFixed(18)) : 0n
       const gasLimit = 450000n // V7 needs ~365k gas for mint
 
       // Debug logging
-      logger.debug('[useEthPurchase] Transaction params (LIVE PRICE):', {
+      logger.debug('[useEthPurchase] Transaction params (ON-CHAIN PRICE):', {
         contractAddress,
         targetId,
         liveEthPrice,
-        pricePerNftUsd: hasNftPrice ? pricePerNft : (totalAmountUsd - tipAmountUsd) / quantity,
-        pricePerNftEth,
-        pricePerNftWei: pricePerNftWei.toString(),
+        onChainPriceWei: onChainPriceWei.toString(),
+        onChainPriceEth: Number(onChainPriceWei) / 1e18,
         tipUsd: tipAmountUsd,
         tipEthWei: tipEthWei.toString(),
         gasLimit: gasLimit.toString(),
@@ -240,12 +239,12 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
           const campaignIdBigInt = BigInt(targetId)
           logger.debug('[useEthPurchase] Calling mintWithBDAG:', {
             campaignId: campaignIdBigInt.toString(),
-            value: pricePerNftWei.toString(),
+            value: onChainPriceWei.toString(),
           })
 
           if (isLast && tipEthWei > 0n) {
             // Last NFT includes tip - use legacy mintWithBDAGAndTip
-            const valueWithTip = pricePerNftWei + tipEthWei
+            const valueWithTip = onChainPriceWei + tipEthWei
             logger.debug('[useEthPurchase] Using mintWithBDAGAndTip with tip:', tipEthWei.toString())
             tx = await contract.mintWithBDAGAndTip(campaignIdBigInt, tipEthWei, {
               value: valueWithTip,
@@ -254,7 +253,7 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
           } else {
             // Regular mint without tip - use legacy mintWithBDAG
             tx = await contract.mintWithBDAG(campaignIdBigInt, {
-              value: pricePerNftWei,
+              value: onChainPriceWei,
               gasLimit,
             })
           }
