@@ -196,7 +196,7 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
       }
       
       // Select ABI based on contract version
-      const isV8 = contractVersion === 'v8' || (contractVersion && parseInt(contractVersion.slice(1)) >= 8)
+      const isV8 = Boolean(contractVersion === 'v8' || (contractVersion && parseInt(contractVersion.slice(1)) >= 8))
       const selectedABI = isV8 ? V8_MINT_ABI : V7_MINT_ABI
       const contract = new Contract(contractAddress, selectedABI, signer)
       logger.debug(`[useEthPurchase] Using ${isV8 ? 'V8' : 'V7'} ABI for contract version: ${contractVersion}`)
@@ -288,7 +288,7 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
         usdPricePerNft,
         liveEthPrice,
         liveCalculatedEth,
-        bufferedEth,
+        bufferedLiveWei: bufferedLiveWei.toString(),
         finalPriceWei: finalPriceWei.toString(),
         onChainPriceWei: onChainPriceWei.toString(),
         onChainPriceEth: Number(onChainPriceWei) / 1e18,
