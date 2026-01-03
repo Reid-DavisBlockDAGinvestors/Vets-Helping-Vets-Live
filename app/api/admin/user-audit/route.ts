@@ -151,12 +151,12 @@ export async function GET(request: NextRequest) {
 /**
  * Admin actions for user management
  * POST /api/admin/user-audit
- * Body: { email: string, action: 'confirm_email' | 'send_recovery' | 'reset_mfa' }
+ * Body: { email: string, action: 'confirm_email' | 'send_recovery' | 'reset_mfa' | 'set_password', password?: string }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, action } = body
+    const { email, action, password } = body
     
     if (!email || !action) {
       return NextResponse.json({ error: 'Email and action required' }, { status: 400 })
@@ -222,6 +222,21 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ 
           success: true, 
           message: `MFA reset for ${email}`
+        })
+      }
+      
+      case 'set_password': {
+        if (!password || password.length < 6) {
+          return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 })
+        }
+        const { data, error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+          password: password
+        })
+        if (error) throw error
+        return NextResponse.json({ 
+          success: true, 
+          message: `Password updated for ${email}. User can now login with the new password.`,
+          user_id: data.user.id
         })
       }
       
