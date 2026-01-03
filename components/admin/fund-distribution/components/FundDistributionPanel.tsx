@@ -5,6 +5,7 @@ import { useCampaignBalances } from '../hooks/useCampaignBalances'
 import { CampaignBalanceCard } from './CampaignBalanceCard'
 import { TipSplitModal } from './TipSplitModal'
 import { DistributionHistory } from './DistributionHistory'
+import { supabase } from '@/lib/supabase'
 import type { BalanceFilters, CampaignBalance } from '../types'
 
 /**
@@ -15,6 +16,8 @@ export function FundDistributionPanel() {
   const [filters, setFilters] = useState<BalanceFilters>({})
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null)
   const [activeModal, setActiveModal] = useState<'funds' | 'tips' | 'history' | 'tipSplit' | null>(null)
+  const [isExecuting, setIsExecuting] = useState(false)
+  const [distributionResult, setDistributionResult] = useState<{ success: boolean; message: string } | null>(null)
 
   const { balances, isLoading, error, refresh } = useCampaignBalances(filters)
 
@@ -48,7 +51,54 @@ export function FundDistributionPanel() {
   const closeModal = useCallback(() => {
     setSelectedCampaign(null)
     setActiveModal(null)
+    setDistributionResult(null)
   }, [])
+
+  // Execute distribution API call
+  const executeDistribution = useCallback(async (type: 'funds' | 'tips') => {
+    if (!selectedCampaign) return
+
+    setIsExecuting(true)
+    setDistributionResult(null)
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData?.session?.access_token
+      if (!token) throw new Error('Not authenticated')
+
+      const selectedBalance = balances.find(b => b.campaignId === selectedCampaign)
+      const amount = type === 'funds' 
+        ? selectedBalance?.pendingDistributionNative 
+        : selectedBalance?.pendingTipsNative
+
+      const response = await fetch('/api/admin/distributions/execute', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type,
+          campaignId: selectedCampaign,
+          amount,
+          tipSplit: type === 'tips' ? { submitterPercent: 100, nonprofitPercent: 0 } : undefined
+        })
+      })
+
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Distribution failed')
+      }
+
+      setDistributionResult({ success: true, message: data.message })
+      refresh() // Refresh balances after successful distribution
+    } catch (err: any) {
+      setDistributionResult({ success: false, message: err.message || 'Distribution failed' })
+    } finally {
+      setIsExecuting(false)
+    }
+  }, [selectedCampaign, balances, refresh])
 
   return (
     <div className="space-y-6" data-testid="fund-distribution-panel">
@@ -196,7 +246,7 @@ export function FundDistributionPanel() {
         />
       )}
 
-      {/* Placeholder modals for distribution (Phase 3) */}
+      {/* Distribution execution modal */}
       {activeModal && ['funds', 'tips'].includes(activeModal) && selectedCampaign && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-2xl max-w-lg w-full p-6 border border-white/10">
@@ -204,15 +254,69 @@ export function FundDistributionPanel() {
               {activeModal === 'funds' && '💸 Distribute Funds'}
               {activeModal === 'tips' && '💜 Distribute Tips'}
             </h3>
-            <p className="text-white/60 mb-4">
-              Distribution execution will be available after V8 contract deployment.
-            </p>
-            <button
-              onClick={closeModal}
-              className="w-full px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white"
-            >
-              Close
-            </button>
+            
+            {/* Show campaign details */}
+            {(() => {
+              const campaign = balances.find(b => b.campaignId === selectedCampaign)
+              if (!campaign) return <p className="text-white/60">Campaign not found</p>
+              
+              const amount = activeModal === 'funds' 
+                ? campaign.pendingDistributionNative 
+                : campaign.pendingTipsNative
+              const currency = campaign.nativeCurrency
+              
+              return (
+                <div className="space-y-4">
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <p className="text-white/60 text-sm">Campaign</p>
+                    <p className="text-white font-medium">{campaign.title}</p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <p className="text-white/60 text-sm">Amount to Distribute</p>
+                    <p className="text-white font-medium text-lg">{amount.toFixed(4)} {currency}</p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <p className="text-white/60 text-sm">Recipient (Submitter)</p>
+                    <p className="text-white font-mono text-sm">{campaign.submitterWallet || 'Not set'}</p>
+                  </div>
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                    <p className="text-yellow-400 text-sm">
+                      ⚠️ <strong>V7 Off-Chain Distribution:</strong> This will create a pending distribution record. 
+                      You will need to manually transfer the funds from the contract to the submitter wallet.
+                    </p>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Result message */}
+            {distributionResult && (
+              <div className={`mt-4 p-4 rounded-lg ${distributionResult.success ? 'bg-green-500/20 border border-green-500/30' : 'bg-red-500/20 border border-red-500/30'}`}>
+                <p className={distributionResult.success ? 'text-green-400' : 'text-red-400'}>
+                  {distributionResult.message}
+                </p>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={closeModal}
+                className="flex-1 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+                disabled={isExecuting}
+              >
+                {distributionResult?.success ? 'Done' : 'Cancel'}
+              </button>
+              {!distributionResult?.success && (
+                <button
+                  onClick={() => executeDistribution(activeModal as 'funds' | 'tips')}
+                  disabled={isExecuting}
+                  className="flex-1 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white disabled:opacity-50"
+                >
+                  {isExecuting ? '⏳ Processing...' : '✅ Confirm Distribution'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
