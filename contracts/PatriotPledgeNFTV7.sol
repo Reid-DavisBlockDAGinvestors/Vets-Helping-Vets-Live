@@ -919,6 +919,19 @@ contract PatriotPledgeNFTV7 is
         emit CampaignClosed(campaignId);
     }
 
+    /**
+     * @notice Reopen a permanently closed campaign (emergency admin function)
+     * @dev Use with caution - only for fixing accidental closures
+     */
+    function reopenCampaign(uint256 campaignId) external onlyOwner {
+        Campaign storage c = campaigns[campaignId];
+        require(c.closed, "Campaign not closed");
+        require(!c.refunded, "Campaign was refunded");
+        c.closed = false;
+        c.active = true;
+        emit CampaignUpdated(campaignId, "reopened");
+    }
+
     // ============ Admin URI Fix Functions ============
 
     function setTokenURI(uint256 tokenId, string calldata uri) external onlyOwner {
