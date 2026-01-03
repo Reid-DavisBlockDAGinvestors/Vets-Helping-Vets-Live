@@ -122,10 +122,15 @@ export function useAccountAuth() {
         email: formState.email, 
         hasError: !!error,
         userId: data?.user?.id,
-        emailConfirmed: data?.user?.email_confirmed_at
+        emailConfirmed: data?.user?.email_confirmed_at,
+        identitiesCount: data?.user?.identities?.length
       })
+      
       if (error) {
         setMessage(error.message)
+      } else if (data?.user?.identities?.length === 0) {
+        // User already exists - Supabase returns empty identities array for existing users
+        setMessage('EXISTING_ACCOUNT')
       } else {
         setMessage('✅ Check your email to confirm your account!')
         setFormState(prev => ({ ...prev, firstName: '', lastName: '', company: '' }))

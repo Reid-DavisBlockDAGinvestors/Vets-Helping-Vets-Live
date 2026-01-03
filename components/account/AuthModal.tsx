@@ -127,7 +127,27 @@ export function AuthModal({
               {loading ? 'Please wait...' : (mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Send Reset Link')}
             </button>
 
-            {message && (
+            {message === 'EXISTING_ACCOUNT' ? (
+              <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30 text-center space-y-3">
+                <div className="text-blue-400 text-lg">👋 Welcome back!</div>
+                <p className="text-white/80 text-sm">
+                  An account with this email already exists.
+                </p>
+                <button
+                  onClick={() => onModeChange('login')}
+                  data-testid="go-to-login-btn"
+                  className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors"
+                >
+                  Sign In Instead
+                </button>
+                <button
+                  onClick={() => onModeChange('forgot')}
+                  className="text-sm text-blue-400 hover:text-blue-300"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            ) : message && (
               <div className={`p-3 rounded-lg text-sm text-center ${
                 message.startsWith('✅')
                   ? 'bg-green-500/10 border border-green-500/30 text-green-400'
