@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { ethers } from 'ethers'
+import { getSignerForChain, getContractAddress, CHAIN_CONFIGS, type ChainId } from '@/lib/chains'
+import { V5_ABI, V6_ABI, V7_ABI } from '@/lib/contracts'
+import { logger } from '@/lib/logger'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+// Get the appropriate ABI for a contract version
+function getAbiForVersion(version: string): string[] {
+  if (version === 'v7') return V7_ABI
+  if (version === 'v6') return V6_ABI
+  return V5_ABI
+}
 
 /**
  * POST /api/admin/distributions/execute
@@ -125,25 +136,100 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create distribution record' }, { status: 500 })
     }
 
-    // For V7 (off-chain distribution): Mark as pending for manual processing
-    // The admin will need to manually transfer funds and then confirm the distribution
-    // For V8: This will trigger an on-chain transaction
+    // Execute on-chain withdrawal
+    const chainId = (campaign.chain_id || 1043) as ChainId
+    const version = campaign.contract_version || 'v6'
+    const contractAddress = getContractAddress(chainId, version as any)
+    
+    if (!contractAddress) {
+      return NextResponse.json({ 
+        error: `No contract address found for chain ${chainId} version ${version}` 
+      }, { status: 400 })
+    }
 
-    // For now, just return the pending distribution
-    // In a real implementation, you would:
-    // 1. For immediate payout campaigns: Funds already distributed on mint
-    // 2. For held funds: Trigger withdrawal from contract
-    // 3. For off-chain: Queue for manual transfer
+    const recipientWallet = recipient || campaign.creator_wallet
+    if (!recipientWallet || !ethers.isAddress(recipientWallet)) {
+      return NextResponse.json({ 
+        error: 'Invalid recipient wallet address' 
+      }, { status: 400 })
+    }
 
-    return NextResponse.json({
-      success: true,
-      distributionId: distribution.id,
-      status: 'pending',
-      message: `Distribution created. Total: ${totalAmount} ${nativeCurrency}. ` +
-        `Submitter: ${submitterAmount} ${nativeCurrency}, Nonprofit: ${nonprofitAmount} ${nativeCurrency}. ` +
-        `Status: Pending manual transfer (V7 off-chain).`,
-      distribution
-    })
+    try {
+      // Get signer for the chain
+      const signer = getSignerForChain(chainId)
+      const abi = getAbiForVersion(version)
+      const contract = new ethers.Contract(contractAddress, abi, signer)
+
+      // Convert amount to wei (18 decimals)
+      const amountWei = ethers.parseEther(totalAmount.toString())
+
+      logger.info(`[Distribution] Executing withdraw: ${totalAmount} ${nativeCurrency} to ${recipientWallet}`)
+      logger.info(`[Distribution] Contract: ${contractAddress}, Chain: ${chainId}, Version: ${version}`)
+
+      // Call withdraw function on contract
+      const tx = await contract.withdraw(recipientWallet, amountWei)
+      logger.info(`[Distribution] Transaction submitted: ${tx.hash}`)
+
+      // Wait for confirmation
+      const receipt = await tx.wait(1)
+      logger.info(`[Distribution] Transaction confirmed in block ${receipt.blockNumber}`)
+
+      // Update distribution record with tx hash and status
+      await supabase
+        .from('distributions')
+        .update({
+          status: 'completed',
+          tx_hash: tx.hash,
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', distribution.id)
+
+      // Update campaign distributed totals if applicable
+      if (type === 'funds') {
+        await supabase
+          .from('submissions')
+          .update({ 
+            funds_distributed: (Number(campaign.funds_distributed) || 0) + totalAmount 
+          })
+          .eq('id', campaignId)
+      } else if (type === 'tips') {
+        await supabase
+          .from('submissions')
+          .update({ 
+            tips_distributed: (Number(campaign.tips_distributed) || 0) + totalAmount 
+          })
+          .eq('id', campaignId)
+      }
+
+      return NextResponse.json({
+        success: true,
+        distributionId: distribution.id,
+        status: 'completed',
+        txHash: tx.hash,
+        message: `✅ Distribution completed! ${totalAmount} ${nativeCurrency} sent to ${recipientWallet.slice(0, 6)}...${recipientWallet.slice(-4)}. Tx: ${tx.hash.slice(0, 10)}...`,
+        distribution: { ...distribution, tx_hash: tx.hash, status: 'completed' }
+      })
+
+    } catch (txError: any) {
+      logger.error(`[Distribution] Transaction failed:`, txError)
+
+      // Update distribution record with error
+      await supabase
+        .from('distributions')
+        .update({
+          status: 'failed',
+          error_message: txError.message || 'Transaction failed'
+        })
+        .eq('id', distribution.id)
+
+      return NextResponse.json({
+        success: false,
+        distributionId: distribution.id,
+        status: 'failed',
+        message: `❌ Transaction failed: ${txError.shortMessage || txError.message}`,
+        error: txError.message
+      }, { status: 500 })
+    }
 
   } catch (error) {
     console.error('Error in distributions/execute:', error)

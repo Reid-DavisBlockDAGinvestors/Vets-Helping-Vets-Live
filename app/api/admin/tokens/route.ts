@@ -99,7 +99,14 @@ export async function GET(req: NextRequest) {
       const chainId = parseInt(chainIdStr) as ChainId
 
       try {
-        const provider = getProviderForChain(chainId)
+        let provider: ethers.JsonRpcProvider
+        try {
+          provider = getProviderForChain(chainId)
+        } catch (providerError: any) {
+          logger.error(`[admin/tokens] Failed to get provider for chain ${chainId}: ${providerError.message}`)
+          continue
+        }
+
         const contractAddress = getContractAddress(chainId, version as any)
 
         if (!contractAddress) {
@@ -109,6 +116,20 @@ export async function GET(req: NextRequest) {
 
         const abi = getAbiForVersion(version)
         const contract = new ethers.Contract(contractAddress, abi, provider)
+        
+        // Test connection with a timeout
+        const connectionTest = await Promise.race([
+          provider.getBlockNumber(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('RPC timeout')), 10000))
+        ]).catch((err) => {
+          logger.warn(`[admin/tokens] RPC connection failed for chain ${chainId}: ${err.message}`)
+          return null
+        })
+        
+        if (connectionTest === null) {
+          logger.warn(`[admin/tokens] Skipping chain ${chainId} due to RPC issues`)
+          continue
+        }
 
         // For each campaign, get its editions
         for (const camp of groupCampaigns) {

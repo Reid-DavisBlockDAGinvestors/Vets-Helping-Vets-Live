@@ -152,6 +152,18 @@ export const V7_ABI = [
   // Royalties (EIP-2981)
   'function royaltyInfo(uint256 tokenId, uint256 salePrice) view returns (address receiver, uint256 royaltyAmount)',
   'function setDefaultRoyalty(address receiver, uint96 feeNumerator) external',
+  
+  // Fund Distribution (V7 specific)
+  'function withdraw(address to, uint256 amount) external',
+  'function distributePendingFunds(uint256 campaignId) external',
+  'function emergencyWithdraw() external',
+  'function campaignDistributed(uint256 campaignId) view returns (uint256)',
+  
+  // Fee Config (V7 specific)
+  'function feeConfig() view returns (uint16 platformFeeBps, bool immediatePayout)',
+  'function getFeeConfig() view returns (uint16 platformFeeBps, bool immediatePayout)',
+  'function setFeeConfig(uint16 platformFeeBps, bool immediatePayout) external',
+  'function setCampaignImmediatePayout(uint256 campaignId, bool enabled) external',
 ]
 
 // V6 ABI - Extended with new features
