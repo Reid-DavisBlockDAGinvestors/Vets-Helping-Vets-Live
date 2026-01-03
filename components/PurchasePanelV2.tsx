@@ -71,12 +71,17 @@ export default function PurchasePanelV2({
   const auth = usePurchaseAuth()
   const config = usePurchaseConfig(pricePerNft, quantity, tipAmount, customAmount, remainingCopies)
   
-  // Live price for ETH (always fetch so it's ready when user switches to Sepolia)
-  const { price: liveEthPrice, loading: priceLoading } = useLivePrice(11155111, { 
+  // Determine chainId based on selected network
+  const liveChainId = selectedNetwork === 'ethereum' ? 1 : selectedNetwork === 'sepolia' ? 11155111 : 1043
+  const isEthNetwork = selectedNetwork === 'ethereum' || selectedNetwork === 'sepolia'
+  
+  // Live price for native currency (ETH for Sepolia/Mainnet, BDAG for BlockDAG)
+  const { price: livePrice, loading: priceLoading, refresh: refreshPrice } = useLivePrice(liveChainId, { 
     refreshInterval: 60000, 
-    enabled: true // Always fetch live ETH price
+    enabled: true // Always fetch live price
   })
-  const ethRate = liveEthPrice?.priceUsd || 3100 // Fallback to $3100
+  const ethRate = livePrice?.priceUsd || 3100 // Fallback to $3100 for ETH
+  const bdagRate = livePrice?.priceUsd || 0.05 // Fallback to $0.05 for BDAG
   
   // V7/V8 ETH contract addresses
   const sepoliaContractAddress = getContractAddress(11155111, 'v8') || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V8_SEPOLIA || ''
@@ -383,13 +388,13 @@ export default function PurchasePanelV2({
               </p>
             </div>
 
-            {/* Price Display */}
+            {/* Price Display with Live Rate */}
             <div className="bg-white/5 rounded-lg p-3 border border-white/10">
               <div className="flex justify-between items-center">
                 <span className="text-white/70">Amount</span>
                 <span className="text-white font-medium">
-                  {(selectedNetwork === 'sepolia' || selectedNetwork === 'ethereum')
-                    ? `${usdToEth(config.totalAmount).toFixed(6)} ETH` 
+                  {isEthNetwork
+                    ? `${usdToEth(config.totalAmount, ethRate).toFixed(6)} ETH` 
                     : `${config.bdagAmount.toFixed(2)} BDAG`}
                 </span>
               </div>
@@ -397,6 +402,31 @@ export default function PurchasePanelV2({
                 <span className="text-white/50">≈ USD</span>
                 <span className="text-white/50">${config.totalAmount}</span>
               </div>
+              
+              {/* Live Rate Display */}
+              {livePrice && (
+                <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-white/50">Live Rate:</span>
+                    <span className="text-xs text-emerald-400 font-medium">
+                      ${livePrice.priceUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / {isEthNetwork ? 'ETH' : 'BDAG'}
+                    </span>
+                    {livePrice.source === 'coingecko' && (
+                      <span className="text-[10px] text-white/30 bg-white/5 px-1.5 py-0.5 rounded">
+                        CoinGecko
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={refreshPrice}
+                    disabled={priceLoading}
+                    className="text-xs text-white/40 hover:text-white/60 transition-colors"
+                    title="Refresh price"
+                  >
+                    {priceLoading ? '⏳' : '🔄'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Crypto Payment Section */}
