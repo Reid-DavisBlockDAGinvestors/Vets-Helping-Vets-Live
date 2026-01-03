@@ -139,7 +139,15 @@ export async function GET(req: NextRequest) {
     })
 
     logger.debug(`[admin/tokens] Returning ${tokens.length} tokens from cache`)
-    return NextResponse.json({ tokens })
+    
+    // Include debug info in response for troubleshooting
+    const debugInfo = {
+      queryFilters: { chainId: filterChainId, frozen: filterFrozen, soulbound: filterSoulbound, owner: filterOwner, campaignId: filterCampaignId },
+      rawTokenCount: cachedTokens?.length || 0,
+      transformedTokenCount: tokens.length
+    }
+    
+    return NextResponse.json({ tokens, _debug: debugInfo })
 
   } catch (e: any) {
     logger.error('[admin/tokens] Error:', e)
