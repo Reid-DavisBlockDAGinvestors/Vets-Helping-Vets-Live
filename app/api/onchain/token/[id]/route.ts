@@ -15,8 +15,9 @@ const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '3100')
 // Contract addresses
 const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
 const V6_CONTRACT = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
-const V7_CONTRACT = '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e'
-const V8_CONTRACT = '0x042652292B8f1670b257707C1aDA4D19de9E9399'
+const V7_CONTRACT_SEPOLIA = '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e' // V7 Sepolia (deprecated)
+const V8_CONTRACT_SEPOLIA = '0x042652292B8f1670b257707C1aDA4D19de9E9399' // V8 Sepolia
+const V8_CONTRACT_MAINNET = '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e' // V8 Ethereum Mainnet (same address as V7 Sepolia!)
 
 export async function GET(req: NextRequest, context: { params: { id: string } }) {
   try {
@@ -25,10 +26,11 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       return NextResponse.json({ error: 'INVALID_CAMPAIGN_ID' }, { status: 400 })
     }
 
-    // Allow contract address override via query param
+    // Allow contract address and chain_id override via query params
     const url = new URL(req.url)
     let contractAddress = url.searchParams.get('contract')?.trim() || ''
-    let chainId: number = 1043 // Default to BlockDAG
+    let chainIdParam = url.searchParams.get('chainId')?.trim() || ''
+    let chainId: number = chainIdParam ? parseInt(chainIdParam) : 1043 // Default to BlockDAG
     let contractVersion: string = 'v5'
     
     // If no contract specified, look up from submission in Supabase
@@ -42,14 +44,41 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       contractAddress = submission?.contract_address || ''
       chainId = submission?.chain_id || 1043
       contractVersion = submission?.contract_version || 'v5'
+    } else if (!chainIdParam) {
+      // If contract provided but no chainId, look up from Supabase first
+      const { data: submission } = await supabaseAdmin
+        .from('submissions')
+        .select('chain_id, contract_version')
+        .eq('campaign_id', campaignId)
+        .eq('contract_address', contractAddress)
+        .single()
+      
+      if (submission) {
+        chainId = submission.chain_id || 1043
+        contractVersion = submission.contract_version || 'v5'
+      } else {
+        // Fall back to address-based detection (less reliable)
+        if (contractAddress.toLowerCase() === V8_CONTRACT_SEPOLIA.toLowerCase()) {
+          chainId = 11155111
+          contractVersion = 'v8'
+        } else if (contractAddress.toLowerCase() === V8_CONTRACT_MAINNET.toLowerCase()) {
+          // Could be V7 Sepolia OR V8 Mainnet - default to checking Mainnet first
+          // Since V8 Mainnet is the production contract
+          chainId = 1
+          contractVersion = 'v8'
+        }
+      }
     } else {
-      // Determine version from address
-      if (contractAddress.toLowerCase() === V8_CONTRACT.toLowerCase()) {
-        chainId = 11155111
-        contractVersion = 'v8'
-      } else if (contractAddress.toLowerCase() === V7_CONTRACT.toLowerCase()) {
-        chainId = 11155111
-        contractVersion = 'v7'
+      // chainId provided, determine version
+      if (chainId === 1) {
+        contractVersion = 'v8' // Mainnet uses V8
+      } else if (chainId === 11155111) {
+        // Sepolia could be V7 or V8 based on address
+        if (contractAddress.toLowerCase() === V8_CONTRACT_SEPOLIA.toLowerCase()) {
+          contractVersion = 'v8'
+        } else {
+          contractVersion = 'v7'
+        }
       }
     }
     
