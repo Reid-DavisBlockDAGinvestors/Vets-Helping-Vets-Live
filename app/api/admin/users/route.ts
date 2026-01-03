@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 import { createClient } from '@supabase/supabase-js'
-import { ethers } from 'ethers'
-import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -57,7 +55,7 @@ export async function GET(req: NextRequest) {
       logger.error('[admin/users] profiles error:', profilesErr)
     }
 
-    // Build purchase stats from multiple sources
+    // Build purchase stats from Supabase (no blockchain queries for speed)
     const userPurchaseStats: Record<string, { 
       count: number
       total: number
@@ -66,102 +64,7 @@ export async function GET(req: NextRequest) {
       first_purchase: string | null
     }> = {}
 
-    // 1. Query blockchain for NFT owners (primary source of truth)
-    let blockchainQueried = false
-    let blockchainError = ''
-    try {
-      // Get contract addresses from marketplace_contracts or env
-      const { data: mktRows } = await supabaseAdmin
-        .from('marketplace_contracts')
-        .select('contract_address')
-        .eq('enabled', true)
-
-      const enabledAddrs = (mktRows || [])
-        .map(r => (r as any).contract_address?.trim())
-        .filter(Boolean) as string[]
-
-      const fallbackEnv = (process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '').trim()
-      const targetContracts = enabledAddrs.length > 0 ? enabledAddrs : (fallbackEnv ? [fallbackEnv] : [])
-
-      logger.debug('[admin/users] Target contracts:', targetContracts)
-      logger.debug('[admin/users] RPC URL:', process.env.BLOCKDAG_RPC ? 'set' : 'not set')
-
-      if (targetContracts.length > 0) {
-        const provider = getProvider()
-        
-        for (const addr of targetContracts) {
-          try {
-            const contract = new ethers.Contract(addr, PatriotPledgeV5ABI, provider)
-            
-            // Add timeout for totalSupply call
-            const totalSupplyPromise = contract.totalSupply()
-            const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('RPC timeout')), 10000)
-            )
-            
-            const totalSupply = await Promise.race([totalSupplyPromise, timeoutPromise]) as bigint
-            const total = Number(totalSupply)
-            logger.debug(`[admin/users] Contract ${addr}: ${total} NFTs`)
-
-            // Fetch owners in parallel batches with timeout
-            const batchSize = 5
-            for (let start = 0; start < total; start += batchSize) {
-              const end = Math.min(start + batchSize, total)
-              const promises: Promise<{ owner: string } | null>[] = []
-              
-              for (let i = start; i < end; i++) {
-                promises.push(
-                  (async () => {
-                    try {
-                      const tokenId = await contract.tokenByIndex(i)
-                      const owner = await contract.ownerOf(tokenId)
-                      return { owner }
-                    } catch {
-                      return null
-                    }
-                  })()
-                )
-              }
-              
-              // Race batch against timeout
-              const batchTimeout = new Promise<({ owner: string } | null)[]>((resolve) => 
-                setTimeout(() => resolve(promises.map(() => null)), 8000)
-              )
-              
-              const results = await Promise.race([
-                Promise.all(promises),
-                batchTimeout
-              ])
-              
-              for (const r of results) {
-                if (!r) continue
-                const ownerLower = r.owner.toLowerCase()
-                if (!userPurchaseStats[ownerLower]) {
-                  userPurchaseStats[ownerLower] = {
-                    count: 0, total: 0, nfts: 0,
-                    wallet_address: r.owner,
-                    first_purchase: null
-                  }
-                }
-                userPurchaseStats[ownerLower].nfts += 1
-                userPurchaseStats[ownerLower].count += 1
-              }
-            }
-            blockchainQueried = true
-          } catch (contractErr: any) {
-            blockchainError = contractErr?.message || 'Unknown error'
-            logger.error(`[admin/users] Contract ${addr} error:`, blockchainError)
-          }
-        }
-      }
-    } catch (e: any) {
-      blockchainError = e?.message || 'Unknown error'
-      logger.error('[admin/users] Blockchain query failed:', blockchainError)
-    }
-
-    logger.debug('[admin/users] Blockchain queried:', blockchainQueried, 'Wallet owners:', Object.keys(userPurchaseStats).length, 'Error:', blockchainError)
-
-    // 2. Query purchases table for spending data (primary source for USD amounts)
+    // Query purchases table for spending data (primary source)
     const { data: purchases } = await supabaseAdmin
       .from('purchases')
       .select('wallet_address, amount_usd, tip_usd, email, user_id, created_at')
@@ -330,10 +233,9 @@ export async function GET(req: NextRequest) {
       total: users.length,
       debug: {
         profilesCount: profiles?.length || 0,
-        walletOwnersCount: Object.keys(userPurchaseStats).length,
-        mintedCampaignsWithSales: mintedWithSales.length,
-        blockchainQueried,
-        blockchainError: blockchainError || null
+        purchasersCount: Object.keys(userPurchaseStats).length,
+        purchasesCount: purchases?.length || 0,
+        mintedCampaignsWithSales: mintedWithSales.length
       }
     })
   } catch (e: any) {
