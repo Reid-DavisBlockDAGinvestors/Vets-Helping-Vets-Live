@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PatriotPledgeV5ABI } from '@/lib/onchain'
+import { V7_ABI } from '@/lib/contracts'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { ethers } from 'ethers'
 import { getProviderForChain, ChainId } from '@/lib/chains'
@@ -14,6 +15,7 @@ const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '3100')
 // Contract addresses
 const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
 const V6_CONTRACT = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
+const V7_CONTRACT = '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e'
 
 export async function GET(req: NextRequest, context: { params: { id: string } }) {
   try {
@@ -26,17 +28,25 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
     const url = new URL(req.url)
     let contractAddress = url.searchParams.get('contract')?.trim() || ''
     let chainId: number = 1043 // Default to BlockDAG
+    let contractVersion: string = 'v5'
     
     // If no contract specified, look up from submission in Supabase
     if (!contractAddress) {
       const { data: submission } = await supabaseAdmin
         .from('submissions')
-        .select('contract_address, chain_id')
+        .select('contract_address, chain_id, contract_version')
         .eq('campaign_id', campaignId)
         .single()
       
       contractAddress = submission?.contract_address || ''
       chainId = submission?.chain_id || 1043
+      contractVersion = submission?.contract_version || 'v5'
+    } else {
+      // Determine version from address
+      if (contractAddress.toLowerCase() === V7_CONTRACT.toLowerCase()) {
+        chainId = 11155111
+        contractVersion = 'v7'
+      }
     }
     
     // Fall back to trying both contracts if still no address
@@ -48,14 +58,14 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       return NextResponse.json({ error: 'NO_CONTRACT_CONFIGURED' }, { status: 500 })
     }
 
-    // Get the appropriate provider for the chain
-    logger.debug(`[OnchainToken] Querying campaign ${campaignId} on chain ${chainId}, contract ${contractAddress}`)
-    const provider = getProviderForChain(chainId as ChainId)
-    const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
-    
-    // Determine USD rate based on chain
+    // Get the appropriate provider and ABI for the chain
     const isEthChain = chainId === 1 || chainId === 11155111
+    const abi = isEthChain ? V7_ABI : PatriotPledgeV5ABI
     const usdRate = isEthChain ? ETH_USD_RATE : BDAG_USD_RATE
+    
+    logger.debug(`[OnchainToken] Querying campaign ${campaignId} on chain ${chainId} (${contractVersion}), contract ${contractAddress}`)
+    const provider = getProviderForChain(chainId as ChainId)
+    const contract = new ethers.Contract(contractAddress, abi, provider)
 
     // V5: Get campaign data (campaigns exist without NFTs being minted)
     let camp: any
