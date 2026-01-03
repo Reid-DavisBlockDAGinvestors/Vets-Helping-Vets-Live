@@ -18,11 +18,13 @@ export interface CryptoPaymentSectionProps {
     balance: string | null
     isOnBlockDAG: boolean
     isOnSepolia?: boolean
+    isOnEthereum?: boolean
     error: string | null
     connectAuto: () => Promise<void>
     disconnect: () => void
     switchToBlockDAG: () => Promise<void>
     switchToSepolia?: () => Promise<void>
+    switchToEthereum?: () => Promise<void>
   }
   bdagAmount: number
   totalAmount: number
@@ -30,7 +32,7 @@ export interface CryptoPaymentSectionProps {
   txHash: string | null
   loading: boolean
   onPurchase: () => Promise<void>
-  network?: 'bdag' | 'sepolia'
+  network?: 'bdag' | 'sepolia' | 'ethereum'
 }
 
 export function CryptoPaymentSection({
@@ -43,19 +45,26 @@ export function CryptoPaymentSection({
   onPurchase,
   network = 'bdag'
 }: CryptoPaymentSectionProps) {
-  // Get live price for ETH (Sepolia uses mainnet ETH price)
-  const chainId = network === 'sepolia' ? 11155111 : 1043
+  // Get live price for ETH (both Sepolia and Mainnet use ETH)
+  const chainId = network === 'ethereum' ? 1 : network === 'sepolia' ? 11155111 : 1043
+  const isEthNetwork = network === 'sepolia' || network === 'ethereum'
   const { price: livePrice, loading: priceLoading, refresh: refreshPrice } = useLivePrice(chainId, {
     refreshInterval: 60000, // Refresh every minute
-    enabled: network === 'sepolia', // Only fetch live price for ETH networks
+    enabled: isEthNetwork, // Only fetch live price for ETH networks
   })
   
-  const isOnCorrectNetwork = network === 'sepolia' ? wallet.isOnSepolia : wallet.isOnBlockDAG
-  const networkName = network === 'sepolia' ? 'Sepolia' : 'BlockDAG'
-  const currencySymbol = network === 'sepolia' ? 'ETH' : 'BDAG'
-  const explorerUrl = network === 'sepolia' 
-    ? 'https://sepolia.etherscan.io/tx/' 
-    : 'https://awakening.bdagscan.com/tx/'
+  const isOnCorrectNetwork = network === 'ethereum' 
+    ? wallet.isOnEthereum 
+    : network === 'sepolia' 
+      ? wallet.isOnSepolia 
+      : wallet.isOnBlockDAG
+  const networkName = network === 'ethereum' ? 'Ethereum Mainnet' : network === 'sepolia' ? 'Sepolia' : 'BlockDAG'
+  const currencySymbol = isEthNetwork ? 'ETH' : 'BDAG'
+  const explorerUrl = network === 'ethereum'
+    ? 'https://etherscan.io/tx/'
+    : network === 'sepolia' 
+      ? 'https://sepolia.etherscan.io/tx/' 
+      : 'https://awakening.bdagscan.com/tx/'
   if (!wallet.isConnected) {
     return (
       <div className="space-y-3" data-testid="crypto-connect-section">
@@ -100,7 +109,7 @@ export function CryptoPaymentSection({
         )}
         {!isOnCorrectNetwork && (
           <button 
-            onClick={network === 'sepolia' ? wallet.switchToSepolia : wallet.switchToBlockDAG} 
+            onClick={network === 'ethereum' ? wallet.switchToEthereum : network === 'sepolia' ? wallet.switchToSepolia : wallet.switchToBlockDAG} 
             data-testid="switch-network-btn"
             className="mt-2 text-xs text-amber-400 hover:text-amber-300"
           >
@@ -114,13 +123,13 @@ export function CryptoPaymentSection({
         <div className="flex justify-between items-center">
           <span className="text-white/70 text-sm">Amount in {currencySymbol}</span>
           <span className="text-white font-bold">
-            {network === 'sepolia' ? bdagAmount.toFixed(6) : bdagAmount.toLocaleString()} {currencySymbol}
+            {isEthNetwork ? bdagAmount.toFixed(6) : bdagAmount.toLocaleString()} {currencySymbol}
           </span>
         </div>
         <p className="text-xs text-white/40 mt-1">≈ ${totalAmount} USD</p>
         
         {/* Live Rate Display for ETH */}
-        {network === 'sepolia' && livePrice && (
+        {isEthNetwork && livePrice && (
           <div className="mt-2 pt-2 border-t border-purple-500/20 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xs text-white/50">Live Rate:</span>
@@ -174,9 +183,9 @@ export function CryptoPaymentSection({
         onClick={onPurchase} 
         disabled={loading || !isOnCorrectNetwork}
         data-testid="crypto-purchase-btn"
-        className={`w-full rounded-lg bg-gradient-to-r ${network === 'sepolia' ? 'from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500' : 'from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500'} px-6 py-4 font-semibold text-white shadow-lg disabled:opacity-50`}
+        className={`w-full rounded-lg bg-gradient-to-r ${isEthNetwork ? 'from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500' : 'from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500'} px-6 py-4 font-semibold text-white shadow-lg disabled:opacity-50`}
       >
-        {loading ? 'Processing...' : `Pay ${network === 'sepolia' ? bdagAmount.toFixed(6) : bdagAmount.toLocaleString()} ${currencySymbol}`}
+        {loading ? 'Processing...' : `Pay ${isEthNetwork ? bdagAmount.toFixed(6) : bdagAmount.toLocaleString()} ${currencySymbol}`}
       </button>
 
       {txHash && (

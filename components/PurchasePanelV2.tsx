@@ -38,10 +38,16 @@ export default function PurchasePanelV2({
   remainingCopies, 
   isPendingOnchain, 
   contractVersion, 
-  contractAddress 
+  contractAddress,
+  chainId: propChainId
 }: PurchasePanelProps) {
   const targetId = campaignId || tokenId || '0'
   const effectiveContractAddress = getEffectiveContractAddress(contractAddress, contractVersion as 'v5' | 'v6')
+  
+  // Determine network type based on chainId
+  const isEthereumMainnet = propChainId === 1
+  const isSepoliaTestnet = propChainId === 11155111
+  const isEthNetwork = isEthereumMainnet || isSepoliaTestnet
 
   // UI State
   const [quantity, setQuantity] = useState(1)
@@ -56,7 +62,9 @@ export default function PurchasePanelV2({
   const [donorNote, setDonorNote] = useState('')
   const [donorName, setDonorName] = useState('')
   const [showNoteField, setShowNoteField] = useState(false)
-  const [selectedNetwork, setSelectedNetwork] = useState<'bdag' | 'sepolia'>('bdag')
+  // Default network based on campaign's chainId
+  const defaultNetwork = isEthereumMainnet ? 'ethereum' : isSepoliaTestnet ? 'sepolia' : 'bdag'
+  const [selectedNetwork, setSelectedNetwork] = useState<'bdag' | 'sepolia' | 'ethereum'>(defaultNetwork)
 
   // Modular hooks
   const wallet = useWallet()
@@ -70,8 +78,13 @@ export default function PurchasePanelV2({
   })
   const ethRate = liveEthPrice?.priceUsd || 3100 // Fallback to $3100
   
-  // V7 Sepolia contract address - get from chains config (more reliable than process.env)
-  const sepoliaContractAddress = getContractAddress(11155111, 'v7') || process.env.NEXT_PUBLIC_V7_CONTRACT_SEPOLIA || ''
+  // V7/V8 ETH contract addresses
+  const sepoliaContractAddress = getContractAddress(11155111, 'v8') || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V8_SEPOLIA || ''
+  const ethereumContractAddress = getContractAddress(1, 'v8') || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V8_MAINNET || '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e'
+  
+  // Select contract address and chainId based on selected network
+  const ethContractAddress = selectedNetwork === 'ethereum' ? ethereumContractAddress : sepoliaContractAddress
+  const ethChainId = selectedNetwork === 'ethereum' ? 1 : 11155111
 
   // BDAG purchase hook (BlockDAG network)
   const bdagPurchase = useBdagPurchase({
@@ -96,12 +109,12 @@ export default function PurchasePanelV2({
   const ethAmountLive = (config.totalAmount - tipAmount) / ethRate
   const ethTipAmountLive = tipAmount / ethRate
   
-  // ETH purchase hook (Sepolia testnet)
+  // ETH purchase hook (Sepolia testnet or Ethereum Mainnet)
   const ethPurchase = useEthPurchase({
     targetId,
-    contractAddress: sepoliaContractAddress,
-    contractVersion: 'v7',
-    chainId: 11155111,
+    contractAddress: ethContractAddress,
+    contractVersion: 'v8',
+    chainId: ethChainId,
     pricePerNft: pricePerNft ?? null,
     hasNftPrice: config.hasNftPrice,
     ethAmount: ethAmountLive,
@@ -120,7 +133,7 @@ export default function PurchasePanelV2({
   })
 
   // Select active purchase hook based on network
-  const activePurchase = selectedNetwork === 'sepolia' ? ethPurchase : bdagPurchase
+  const activePurchase = (selectedNetwork === 'sepolia' || selectedNetwork === 'ethereum') ? ethPurchase : bdagPurchase
 
   // Combined result from card or crypto
   const result = activePurchase.result || (cardResult?.success ? { success: true } : null)
@@ -325,11 +338,11 @@ export default function PurchasePanelV2({
             {/* Network Selector */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">Select Network</label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => setSelectedNetwork('bdag')}
                   data-testid="network-bdag-btn"
-                  className={`rounded-lg py-3 px-4 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                  className={`rounded-lg py-3 px-3 text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                     selectedNetwork === 'bdag' 
                       ? 'bg-blue-600 text-white ring-2 ring-blue-400' 
                       : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
@@ -340,20 +353,33 @@ export default function PurchasePanelV2({
                 <button
                   onClick={() => setSelectedNetwork('sepolia')}
                   data-testid="network-sepolia-btn"
-                  className={`rounded-lg py-3 px-4 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                  className={`rounded-lg py-3 px-3 text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                     selectedNetwork === 'sepolia' 
                       ? 'bg-purple-600 text-white ring-2 ring-purple-400' 
                       : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
                   }`}
                 >
-                  <span>🧪</span> Sepolia (ETH)
+                  <span>🧪</span> Sepolia
+                </button>
+                <button
+                  onClick={() => setSelectedNetwork('ethereum')}
+                  data-testid="network-ethereum-btn"
+                  className={`rounded-lg py-3 px-3 text-sm font-medium transition-all flex items-center justify-center gap-1 ${
+                    selectedNetwork === 'ethereum' 
+                      ? 'bg-indigo-600 text-white ring-2 ring-indigo-400' 
+                      : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                  }`}
+                >
+                  <span>⟠</span> Ethereum
                 </button>
               </div>
-              {/* Testnet Warning - shown for ALL testnet networks */}
-              <p className="text-xs text-yellow-400/80 mt-2">
-                {selectedNetwork === 'sepolia' 
-                  ? '⚠️ Sepolia is a testnet - uses test ETH only'
-                  : '⚠️ BlockDAG Awakening is a testnet - uses test BDAG only'}
+              {/* Network Warning */}
+              <p className="text-xs mt-2">
+                {selectedNetwork === 'ethereum' 
+                  ? <span className="text-green-400">✓ Ethereum Mainnet - uses real ETH</span>
+                  : selectedNetwork === 'sepolia' 
+                    ? <span className="text-yellow-400/80">⚠️ Sepolia is a testnet - uses test ETH only</span>
+                    : <span className="text-yellow-400/80">⚠️ BlockDAG Awakening is a testnet - uses test BDAG only</span>}
               </p>
             </div>
 
@@ -362,7 +388,7 @@ export default function PurchasePanelV2({
               <div className="flex justify-between items-center">
                 <span className="text-white/70">Amount</span>
                 <span className="text-white font-medium">
-                  {selectedNetwork === 'sepolia' 
+                  {(selectedNetwork === 'sepolia' || selectedNetwork === 'ethereum')
                     ? `${usdToEth(config.totalAmount).toFixed(6)} ETH` 
                     : `${config.bdagAmount.toFixed(2)} BDAG`}
                 </span>

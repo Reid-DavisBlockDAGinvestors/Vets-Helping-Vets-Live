@@ -16,6 +16,7 @@ type WalletState = {
 
 const BLOCKDAG_CHAIN_ID = 1043 // BlockDAG Awakening Testnet
 const SEPOLIA_CHAIN_ID = 11155111 // Ethereum Sepolia Testnet
+const ETHEREUM_CHAIN_ID = 1 // Ethereum Mainnet
 
 const CHAIN_CONFIGS: Record<number, {
   chainId: string
@@ -37,6 +38,13 @@ const CHAIN_CONFIGS: Record<number, {
     nativeCurrency: { name: 'Sepolia ETH', symbol: 'ETH', decimals: 18 },
     rpcUrls: ['https://ethereum-sepolia-rpc.publicnode.com'],
     blockExplorerUrls: ['https://sepolia.etherscan.io'],
+  },
+  [ETHEREUM_CHAIN_ID]: {
+    chainId: '0x1', // 1 in hex
+    chainName: 'Ethereum Mainnet',
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    rpcUrls: ['https://eth.llamarpc.com'],
+    blockExplorerUrls: ['https://etherscan.io'],
   },
 }
 
@@ -320,6 +328,10 @@ export function useWallet() {
     return switchToChain(SEPOLIA_CHAIN_ID)
   }, [switchToChain])
 
+  const switchToEthereum = useCallback(async () => {
+    return switchToChain(ETHEREUM_CHAIN_ID)
+  }, [switchToChain])
+
   // Listen for account/chain changes
   useEffect(() => {
     const ethereum = (window as any).ethereum
@@ -386,7 +398,8 @@ export function useWallet() {
 
   const isOnBlockDAG = state.chainId === BLOCKDAG_CHAIN_ID
   const isOnSepolia = state.chainId === SEPOLIA_CHAIN_ID
-  const isOnSupportedChain = isOnBlockDAG || isOnSepolia
+  const isOnEthereum = state.chainId === ETHEREUM_CHAIN_ID
+  const isOnSupportedChain = isOnBlockDAG || isOnSepolia || isOnEthereum
 
   // Detect if we're on mobile
   const isMobile = typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
@@ -421,6 +434,7 @@ export function useWallet() {
     ...state,
     isOnBlockDAG,
     isOnSepolia,
+    isOnEthereum,
     isOnSupportedChain,
     isMobile,
     hasInjectedWallet,
@@ -431,10 +445,12 @@ export function useWallet() {
     disconnect,
     switchToBlockDAG,
     switchToSepolia,
+    switchToEthereum,
     switchToChain,
     updateBalance: () => state.address && updateBalance(state.address),
     BLOCKDAG_CHAIN_ID,
     SEPOLIA_CHAIN_ID,
+    ETHEREUM_CHAIN_ID,
   }
 }
 

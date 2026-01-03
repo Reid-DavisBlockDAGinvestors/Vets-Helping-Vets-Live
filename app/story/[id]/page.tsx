@@ -387,6 +387,7 @@ export default async function StoryViewer({ params }: { params: { id: string } }
                 isPendingOnchain={isPendingOnchain}
                 contractVersion={submission?.contract_version || 'v5'}
                 contractAddress={submission?.contract_address}
+                chainId={submission?.chain_id}
               />
             </div>
           </div>

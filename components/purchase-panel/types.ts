@@ -16,6 +16,7 @@ export interface PurchasePanelProps {
   isPendingOnchain?: boolean
   contractVersion?: string
   contractAddress?: string
+  chainId?: number
 }
 
 export interface PurchaseState {

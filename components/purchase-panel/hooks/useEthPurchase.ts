@@ -74,7 +74,9 @@ export interface UseEthPurchaseProps {
     address: string | null
     chainId: number | null
     isOnSepolia: boolean
+    isOnEthereum?: boolean
     switchToSepolia: () => Promise<void>
+    switchToEthereum?: () => Promise<void>
     updateBalance: () => void
   }
   isPendingOnchain?: boolean
@@ -132,13 +134,22 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
       setCryptoMsg('Please connect your wallet first')
       return
     }
-    if (!wallet.isOnSepolia) {
-      setCryptoMsg('Please switch to Sepolia network')
-      await wallet.switchToSepolia()
+    // Check if on correct ETH network (Sepolia or Mainnet based on chainId)
+    const isMainnet = chainId === 1
+    const isOnCorrectNetwork = isMainnet ? wallet.isOnEthereum : wallet.isOnSepolia
+    const networkName = isMainnet ? 'Ethereum Mainnet' : 'Sepolia'
+    
+    if (!isOnCorrectNetwork) {
+      setCryptoMsg(`Please switch to ${networkName} network`)
+      if (isMainnet && wallet.switchToEthereum) {
+        await wallet.switchToEthereum()
+      } else {
+        await wallet.switchToSepolia()
+      }
       return
     }
     if (!contractAddress) {
-      setCryptoMsg('V7 Contract not configured for Sepolia')
+      setCryptoMsg(`V8 Contract not configured for ${networkName}`)
       return
     }
     if (isPendingOnchain) {

@@ -9,7 +9,7 @@ import { ethers } from 'ethers'
 
 export type ChainId = 1043 | 1 | 11155111 | 137 | 8453
 
-export type ContractVersion = 'v5' | 'v6' | 'v7'
+export type ContractVersion = 'v5' | 'v6' | 'v7' | 'v8'
 
 export interface ChainConfig {
   chainId: ChainId
@@ -76,7 +76,8 @@ export const CHAIN_CONFIGS: Record<ChainId, ChainConfig> = {
       decimals: 18
     },
     contracts: {
-      v7: process.env.NEXT_PUBLIC_V7_CONTRACT_ETHEREUM || ''
+      v7: process.env.NEXT_PUBLIC_V7_CONTRACT_ETHEREUM || '',
+      v8: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V8_MAINNET || '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e'
     },
     gasEstimate: 'high',
     avgBlockTime: 12,
@@ -102,7 +103,8 @@ export const CHAIN_CONFIGS: Record<ChainId, ChainConfig> = {
     },
     contracts: {
       // V7 deployed Jan 1, 2026 - hardcoded as fallback since env vars may not load on client
-      v7: process.env.NEXT_PUBLIC_V7_CONTRACT_SEPOLIA || '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e'
+      v7: process.env.NEXT_PUBLIC_V7_CONTRACT_SEPOLIA || '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e',
+      v8: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V8_SEPOLIA || '0x042652292B8f1670b257707C1aDA4D19de9E9399'
     },
     gasEstimate: 'medium',
     avgBlockTime: 12,
