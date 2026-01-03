@@ -560,6 +560,30 @@ const CONTRACT_REGISTRY: Record<string, ContractConfig> = {
 - Contract registry refactor
 - Multi-chain preparation
 
+---
+
+## 🔧 Admin Panel Improvements (Added Jan 2026)
+
+### Campaign Price Management UI
+- [ ] Add "Edit Campaign" button in admin campaign list
+- [ ] Create modal/page to update on-chain campaign properties:
+  - Price per NFT (with USD input, auto-convert to native currency)
+  - Goal amount
+  - Max editions
+  - Submitter/nonprofit addresses
+- [ ] Call `updateCampaignPrice()`, `updateCampaignGoal()` etc. on-chain
+- [ ] Show confirmation with tx hash and explorer link
+
+### Live Price Feeds for Mainnet
+- [ ] Integrate Chainlink price feeds or CoinGecko API for:
+  - ETH/USD (for Ethereum Mainnet & Sepolia)
+  - BDAG/USD (when available, currently testnet only)
+  - BTC/USD, SOL/USD, XRP/USD (future chains)
+- [ ] Cache prices with reasonable TTL (5 min for display, refresh on purchase)
+- [ ] Display current rates in admin dashboard
+- [ ] Use live rates for campaign creation instead of hardcoded defaults
+- [ ] Add env var override: `ETH_USD_RATE`, `BDAG_USD_RATE` for manual control
+
 ### Week 9+: Scale
 - Performance optimization
 - Advanced analytics
