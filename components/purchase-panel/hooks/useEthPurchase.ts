@@ -155,6 +155,20 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
 
       const provider = new BrowserProvider(ethereum)
       const signer = await provider.getSigner()
+      const signerAddress = await signer.getAddress()
+      
+      // Debug: Log which wallet is being used for the transaction
+      logger.debug('[useEthPurchase] Transaction wallet:', {
+        signerAddress,
+        expectedWalletAddress: wallet.address,
+        addressMatch: signerAddress.toLowerCase() === wallet.address?.toLowerCase(),
+      })
+      
+      // Warn if wallet mismatch detected
+      if (wallet.address && signerAddress.toLowerCase() !== wallet.address.toLowerCase()) {
+        logger.warn('[useEthPurchase] WALLET MISMATCH! Signer:', signerAddress, 'Expected:', wallet.address)
+      }
+      
       const contract = new Contract(contractAddress, V7_MINT_ABI, signer)
 
       // Verify campaign on-chain
