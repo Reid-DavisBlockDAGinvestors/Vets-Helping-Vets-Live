@@ -11,7 +11,7 @@ export const maxDuration = 120 // Extended timeout for blockchain operations
 
 // Currency/USD conversion rates
 const BDAG_USD_RATE = parseFloat(process.env.BDAG_USD_RATE || '0.05')
-const ETH_USD_RATE = parseFloat(process.env.ETH_USD_RATE || '2300') // ~$2300/ETH
+const ETH_USD_RATE = parseFloat(process.env.ETH_USD_RATE || '3100') // ~$3100/ETH (Jan 2026)
 
 // Chain ID constants
 const SEPOLIA_CHAIN_ID = 11155111
