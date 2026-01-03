@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
+import { PatriotPledgeV5ABI } from '@/lib/onchain'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { ethers } from 'ethers'
+import { getProviderForChain, ChainId } from '@/lib/chains'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
-// BDAG to USD conversion rate (configurable via env)
+// USD conversion rates
 const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
+const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '3100')
 
 // Contract addresses
 const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
@@ -22,16 +25,18 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
     // Allow contract address override via query param
     const url = new URL(req.url)
     let contractAddress = url.searchParams.get('contract')?.trim() || ''
+    let chainId: number = 1043 // Default to BlockDAG
     
     // If no contract specified, look up from submission in Supabase
     if (!contractAddress) {
       const { data: submission } = await supabaseAdmin
         .from('submissions')
-        .select('contract_address')
+        .select('contract_address, chain_id')
         .eq('campaign_id', campaignId)
         .single()
       
       contractAddress = submission?.contract_address || ''
+      chainId = submission?.chain_id || 1043
     }
     
     // Fall back to trying both contracts if still no address
@@ -43,8 +48,14 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       return NextResponse.json({ error: 'NO_CONTRACT_CONFIGURED' }, { status: 500 })
     }
 
-    const provider = getProvider()
+    // Get the appropriate provider for the chain
+    logger.debug(`[OnchainToken] Querying campaign ${campaignId} on chain ${chainId}, contract ${contractAddress}`)
+    const provider = getProviderForChain(chainId as ChainId)
     const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
+    
+    // Determine USD rate based on chain
+    const isEthChain = chainId === 1 || chainId === 11155111
+    const usdRate = isEthChain ? ETH_USD_RATE : BDAG_USD_RATE
 
     // V5: Get campaign data (campaigns exist without NFTs being minted)
     let camp: any
@@ -64,16 +75,17 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       } catch {}
     }
 
-    // Helper to convert wei to BDAG then to USD
+    // Helper to convert wei to native currency then to USD
     const fromWeiToUSD = (val: any): string => {
       const wei = BigInt(val ?? 0n)
-      const bdag = Number(wei) / 1e18
-      const usd = bdag * BDAG_USD_RATE
+      const native = Number(wei) / 1e18
+      const usd = native * usdRate
       return usd.toString()
     }
 
     return NextResponse.json({
       contractAddress,
+      chainId,
       campaignId,
       tokenId: campaignId, // Legacy compat
       uri,
