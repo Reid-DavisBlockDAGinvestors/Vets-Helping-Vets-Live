@@ -7,7 +7,7 @@
  * Supports immediate payout and single mint per transaction
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { BrowserProvider, Contract, parseEther } from 'ethers'
 import { withRetry, IRetryConfig } from '@/lib/retry'
 import { logger } from '@/lib/logger'
@@ -25,11 +25,24 @@ const V7_MINT_ABI = [
   'event EditionMinted(uint256 indexed campaignId, uint256 indexed tokenId, address indexed donor, uint256 editionNumber, uint256 amountPaid)',
 ]
 
-// USD to ETH conversion (rough estimate - should use oracle in production)
-const ETH_USD_RATE = 2300 // $2300 per ETH
+// Default fallback rate if live price fetch fails
+const DEFAULT_ETH_USD_RATE = 3100
 
-export function usdToEth(usd: number): number {
-  return usd / ETH_USD_RATE
+export function usdToEth(usd: number, rate: number = DEFAULT_ETH_USD_RATE): number {
+  return usd / rate
+}
+
+// Fetch live ETH price from our price API
+async function fetchLiveEthPrice(): Promise<number> {
+  try {
+    const response = await fetch('/api/prices/convert?usd=1&chainId=11155111')
+    if (!response.ok) throw new Error('Price fetch failed')
+    const data = await response.json()
+    return data.rate || DEFAULT_ETH_USD_RATE
+  } catch (e) {
+    logger.debug('[useEthPurchase] Live price fetch failed, using fallback')
+    return DEFAULT_ETH_USD_RATE
+  }
 }
 
 export interface UseEthPurchaseProps {
@@ -124,8 +137,14 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
 
     try {
       setLoading(true)
-      setCryptoMsg('Verifying campaign on blockchain...')
+      setCryptoMsg('Fetching live ETH price...')
       setTxHash(null)
+
+      // Fetch live ETH price for accurate USD to ETH conversion
+      const liveEthPrice = await fetchLiveEthPrice()
+      logger.debug(`[useEthPurchase] Live ETH price: $${liveEthPrice}`)
+      
+      setCryptoMsg('Verifying campaign on blockchain...')
 
       const ethereum = (window as any).ethereum
       if (!ethereum) {
@@ -188,18 +207,22 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
 
       setCryptoMsg('Preparing transaction...')
 
-      // Calculate ETH amounts
-      const pricePerNftEth = hasNftPrice ? usdToEth(pricePerNft!) : ethAmount
+      // Calculate ETH amounts using LIVE price
+      const pricePerNftEth = hasNftPrice ? usdToEth(pricePerNft!, liveEthPrice) : usdToEth(totalAmountUsd - tipAmountUsd, liveEthPrice) / quantity
       const pricePerNftWei = parseEther(pricePerNftEth.toFixed(18))
-      const tipEthWei = ethTipAmount > 0 ? parseEther(ethTipAmount.toFixed(18)) : 0n
+      const tipEthWei = tipAmountUsd > 0 ? parseEther(usdToEth(tipAmountUsd, liveEthPrice).toFixed(18)) : 0n
       const gasLimit = 450000n // V7 needs ~365k gas for mint
 
       // Debug logging
-      logger.debug('[useEthPurchase] Transaction params:', {
+      logger.debug('[useEthPurchase] Transaction params (LIVE PRICE):', {
         contractAddress,
         targetId,
+        liveEthPrice,
+        pricePerNftUsd: hasNftPrice ? pricePerNft : (totalAmountUsd - tipAmountUsd) / quantity,
         pricePerNftEth,
         pricePerNftWei: pricePerNftWei.toString(),
+        tipUsd: tipAmountUsd,
+        tipEthWei: tipEthWei.toString(),
         gasLimit: gasLimit.toString(),
       })
 

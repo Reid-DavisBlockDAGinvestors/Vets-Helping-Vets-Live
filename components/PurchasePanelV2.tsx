@@ -25,6 +25,7 @@ import {
   type PaymentTab,
 } from './purchase-panel'
 import { useEthPurchase, usdToEth } from './purchase-panel/hooks/useEthPurchase'
+import { useLivePrice } from '@/hooks/useLivePrice'
 import { getEffectiveContractAddress, PRESET_AMOUNTS, TIP_OPTIONS } from './purchase-panel/constants'
 import { getTestnetWarning, isTestnetChain, getContractAddress, type ChainId } from '@/lib/chains'
 
@@ -62,6 +63,13 @@ export default function PurchasePanelV2({
   const auth = usePurchaseAuth()
   const config = usePurchaseConfig(pricePerNft, quantity, tipAmount, customAmount, remainingCopies)
   
+  // Live price for ETH (Sepolia uses mainnet ETH price)
+  const { price: liveEthPrice } = useLivePrice(11155111, { 
+    refreshInterval: 60000, 
+    enabled: selectedNetwork === 'sepolia' 
+  })
+  const ethRate = liveEthPrice?.priceUsd || 3100 // Fallback to $3100
+  
   // V7 Sepolia contract address - get from chains config (more reliable than process.env)
   const sepoliaContractAddress = getContractAddress(11155111, 'v7') || process.env.NEXT_PUBLIC_V7_CONTRACT_SEPOLIA || ''
 
@@ -84,6 +92,10 @@ export default function PurchasePanelV2({
     donorName: donorName.trim() || undefined,
   })
 
+  // Calculate ETH amounts using live rate
+  const ethAmountLive = (config.totalAmount - tipAmount) / ethRate
+  const ethTipAmountLive = tipAmount / ethRate
+  
   // ETH purchase hook (Sepolia testnet)
   const ethPurchase = useEthPurchase({
     targetId,
@@ -92,8 +104,8 @@ export default function PurchasePanelV2({
     chainId: 11155111,
     pricePerNft: pricePerNft ?? null,
     hasNftPrice: config.hasNftPrice,
-    ethAmount: usdToEth(config.totalAmount - tipAmount),
-    ethTipAmount: usdToEth(tipAmount),
+    ethAmount: ethAmountLive,
+    ethTipAmount: ethTipAmountLive,
     totalAmountUsd: config.totalAmount,
     tipAmountUsd: tipAmount,
     quantity,
@@ -364,7 +376,7 @@ export default function PurchasePanelV2({
             {/* Crypto Payment Section */}
             <CryptoPaymentSection
               wallet={wallet}
-              bdagAmount={selectedNetwork === 'bdag' ? config.bdagAmount : usdToEth(config.totalAmount)}
+              bdagAmount={selectedNetwork === 'bdag' ? config.bdagAmount : (ethAmountLive + ethTipAmountLive)}
               totalAmount={config.totalAmount}
               cryptoMsg={activePurchase.cryptoMsg}
               txHash={activePurchase.txHash}
