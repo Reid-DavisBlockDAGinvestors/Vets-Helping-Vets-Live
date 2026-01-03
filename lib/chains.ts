@@ -62,12 +62,12 @@ export const CHAIN_CONFIGS: Record<ChainId, ChainConfig> = {
     iconUrl: '/images/chains/bdag.png'
   },
 
-  // Ethereum Mainnet (Production - V7)
+  // Ethereum Mainnet (Production - V8)
   1: {
     chainId: 1,
     name: 'Ethereum Mainnet',
     shortName: 'ETH',
-    rpcUrl: process.env.NEXT_PUBLIC_ETHEREUM_RPC || '',
+    rpcUrl: process.env.NEXT_PUBLIC_ETHEREUM_RPC || 'https://eth.llamarpc.com',
     explorerUrl: 'https://etherscan.io',
     explorerApiUrl: 'https://api.etherscan.io/api',
     nativeCurrency: {
