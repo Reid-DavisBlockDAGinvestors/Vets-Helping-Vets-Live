@@ -142,10 +142,20 @@ async function loadCampaignUpdates(submissionId: string): Promise<CampaignUpdate
 
 export default async function StoryViewer({ params }: { params: { id: string } }) {
   const { id } = params
-  let [onchain, submission] = await Promise.all([
-    loadOnchainToken(id),
-    loadSubmissionByToken(id)
-  ])
+  
+  // First load the submission to get the campaign_id
+  let submission = await loadSubmissionByToken(id)
+  
+  // Determine the on-chain campaign ID
+  // If accessed via UUID submission ID, use submission.campaign_id
+  // If accessed via numeric campaign ID, use it directly
+  const isNumericId = /^\d+$/.test(id)
+  const onchainId = submission?.campaign_id != null 
+    ? String(submission.campaign_id) 
+    : (isNumericId ? id : null)
+  
+  // Load on-chain data using the campaign_id (not submission UUID)
+  let onchain = onchainId ? await loadOnchainToken(onchainId) : null
   
   // Case 1: On-chain data failed to load but submission exists with pending status
   // Try to verify and fix the campaign_id on the blockchain
