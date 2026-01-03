@@ -55,7 +55,7 @@ export interface UseBdagPurchaseProps {
   bdagAmount: number
   bdagTipAmount: number
   totalAmount: number
-  tipAmount: number
+  giftAmount: number
   quantity: number
   auth: AuthState
   wallet: {
@@ -90,7 +90,7 @@ export function useBdagPurchase(props: UseBdagPurchaseProps): UseBdagPurchaseRet
     bdagAmount,
     bdagTipAmount,
     totalAmount,
-    tipAmount,
+    giftAmount,
     quantity,
     auth,
     wallet,
@@ -270,7 +270,7 @@ export function useBdagPurchase(props: UseBdagPurchaseProps): UseBdagPurchaseRet
             tokenId: mintedTokenIds[mintedTokenIds.length - 1] || null,
             txHash: txHashes[txHashes.length - 1],
             amountUSD: totalAmount,
-            tipUSD: tipAmount,
+            giftUSD: giftAmount,
             amountBDAG: bdagAmount,
             tipBDAG: bdagTipAmount,
             walletAddress: wallet.address,
@@ -307,7 +307,7 @@ export function useBdagPurchase(props: UseBdagPurchaseProps): UseBdagPurchaseRet
     }
   }, [
     targetId, contractAddress, contractVersion, pricePerNft, hasNftPrice,
-    bdagAmount, bdagTipAmount, totalAmount, tipAmount, quantity,
+    bdagAmount, bdagTipAmount, totalAmount, giftAmount, quantity,
     auth, wallet, isPendingOnchain, donorNote, donorName
   ])
 

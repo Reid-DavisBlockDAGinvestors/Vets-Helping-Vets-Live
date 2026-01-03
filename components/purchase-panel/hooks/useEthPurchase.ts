@@ -64,9 +64,9 @@ export interface UseEthPurchaseProps {
   pricePerNft: number | null
   hasNftPrice: boolean
   ethAmount: number
-  ethTipAmount: number
+  ethGiftAmount: number
   totalAmountUsd: number
-  tipAmountUsd: number
+  giftAmountUsd: number
   quantity: number
   auth: AuthState
   wallet: {
@@ -103,9 +103,9 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
     pricePerNft,
     hasNftPrice,
     ethAmount,
-    ethTipAmount,
+    ethGiftAmount,
     totalAmountUsd,
-    tipAmountUsd,
+    giftAmountUsd,
     quantity,
     auth,
     wallet,
@@ -277,7 +277,7 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
 
       // Calculate price using LIVE ETH rate
       // USD price is the source of truth - convert to ETH at current market rate
-      const usdPricePerNft = hasNftPrice ? pricePerNft! : (totalAmountUsd - tipAmountUsd) / quantity
+      const usdPricePerNft = hasNftPrice ? pricePerNft! : (totalAmountUsd - giftAmountUsd) / quantity
       const liveCalculatedEth = usdToEth(usdPricePerNft, liveEthPrice)
       const liveCalculatedWei = parseEther(liveCalculatedEth.toFixed(18))
       
@@ -289,7 +289,7 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
       
       // Log for transparency
       
-      const tipEthWei = tipAmountUsd > 0 ? parseEther(usdToEth(tipAmountUsd, liveEthPrice).toFixed(18)) : 0n
+      const giftEthWei = giftAmountUsd > 0 ? parseEther(usdToEth(giftAmountUsd, liveEthPrice).toFixed(18)) : 0n
       const gasLimit = 800000n // V7 needs higher gas for mint + immediate payout distribution
 
       // Debug logging
@@ -303,8 +303,8 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
         finalPriceWei: finalPriceWei.toString(),
         onChainPriceWei: onChainPriceWei.toString(),
         onChainPriceEth: Number(onChainPriceWei) / 1e18,
-        tipUsd: tipAmountUsd,
-        tipEthWei: tipEthWei.toString(),
+        giftUsd: giftAmountUsd,
+        giftEthWei: giftEthWei.toString(),
         gasLimit: gasLimit.toString(),
       })
 
@@ -331,12 +331,12 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
             isV8: useMint,
           })
 
-          if (isLast && tipEthWei > 0n) {
-            // Last NFT includes tip
-            const valueWithTip = finalPriceWei + tipEthWei
-            logger.debug(`[useEthPurchase] Using ${mintWithTipFn} with tip:`, tipEthWei.toString())
-            tx = await contract[mintWithTipFn](campaignIdBigInt, tipEthWei, {
-              value: valueWithTip,
+          if (isLast && giftEthWei > 0n) {
+            // Last NFT includes gift
+            const valueWithGift = finalPriceWei + giftEthWei
+            logger.debug(`[useEthPurchase] Using ${mintWithTipFn} with gift:`, giftEthWei.toString())
+            tx = await contract[mintWithTipFn](campaignIdBigInt, giftEthWei, {
+              value: valueWithGift,
               gasLimit,
             })
           } else {
@@ -391,9 +391,9 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
             tokenId: mintedTokenIds[mintedTokenIds.length - 1] || null,
             txHash: txHashes[txHashes.length - 1],
             amountUSD: totalAmountUsd,
-            tipUSD: tipAmountUsd,
-            amountCrypto: ethAmount + ethTipAmount, // Multi-chain: generic crypto amount
-            tipCrypto: ethTipAmount,
+            giftUSD: giftAmountUsd,
+            amountCrypto: ethAmount + ethGiftAmount, // Multi-chain: generic crypto amount
+            giftCrypto: ethGiftAmount,
             amountBDAG: 0, // Legacy field
             tipBDAG: 0,
             walletAddress: wallet.address,
@@ -431,7 +431,7 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
     }
   }, [
     targetId, contractAddress, contractVersion, chainId, pricePerNft, hasNftPrice,
-    ethAmount, ethTipAmount, totalAmountUsd, tipAmountUsd, quantity,
+    ethAmount, ethGiftAmount, totalAmountUsd, giftAmountUsd, quantity,
     auth, wallet, isPendingOnchain, donorNote, donorName
   ])
 

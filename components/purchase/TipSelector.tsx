@@ -1,28 +1,29 @@
 'use client'
 
-import type { TipSelectorProps } from './types'
+import type { GiftSelectorProps } from './types'
 
-const TIP_PRESETS = [0, 5, 10, 25, 50]
+const GIFT_PRESETS = [0, 5, 10, 25, 50]
 
 /**
- * Tip amount selector component
+ * Gift amount selector component
  */
-export function TipSelector({ tipAmount, onTipChange }: TipSelectorProps) {
+export function GiftSelector({ giftAmount, onGiftChange }: GiftSelectorProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-white/80 mb-2">Add a tip (optional)</label>
+      <label className="block text-sm font-medium text-white/80 mb-2">Add a gift (optional)</label>
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-2">
-        {TIP_PRESETS.map(tip => (
+        {GIFT_PRESETS.map(gift => (
           <button
-            key={tip}
-            onClick={() => onTipChange(tip)}
+            key={gift}
+            onClick={() => onGiftChange(gift)}
+            data-testid={`gift-${gift}-btn`}
             className={`rounded-lg py-2 text-sm font-medium transition-all ${
-              tipAmount === tip
+              giftAmount === gift
                 ? 'bg-blue-600 text-white'
                 : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
             }`}
           >
-            {tip === 0 ? 'None' : `$${tip}`}
+            {gift === 0 ? 'None' : `$${gift}`}
           </button>
         ))}
       </div>
@@ -30,4 +31,6 @@ export function TipSelector({ tipAmount, onTipChange }: TipSelectorProps) {
   )
 }
 
-export default TipSelector
+// Legacy export for backwards compatibility
+export const TipSelector = GiftSelector
+export default GiftSelector

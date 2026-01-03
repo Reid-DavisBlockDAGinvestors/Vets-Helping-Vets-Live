@@ -3,7 +3,7 @@
 /**
  * usePurchaseConfig Hook
  * 
- * Calculates payment configuration based on NFT price, quantity, and tips
+ * Calculates payment configuration based on NFT price, quantity, and gifts
  * Following ISP - focused on price calculations
  */
 
@@ -15,16 +15,16 @@ const BDAG_USD_PRICE = 0.05 // 1 BDAG = $0.05 USD
 export function usePurchaseConfig(
   pricePerNft: number | null | undefined,
   quantity: number,
-  tipAmount: number,
+  giftAmount: number,
   customAmount: number,
   remainingCopies: number | null | undefined
 ): PaymentConfig {
   return useMemo(() => {
     const hasNftPrice = !!(pricePerNft && pricePerNft > 0)
     const nftSubtotal = hasNftPrice ? (pricePerNft || 0) * quantity : 0
-    const totalAmount = hasNftPrice ? nftSubtotal + tipAmount : customAmount
+    const totalAmount = hasNftPrice ? nftSubtotal + giftAmount : customAmount
     const bdagAmount = totalAmount / BDAG_USD_PRICE
-    const bdagTipAmount = tipAmount > 0 ? tipAmount / BDAG_USD_PRICE : 0
+    const bdagGiftAmount = giftAmount > 0 ? giftAmount / BDAG_USD_PRICE : 0
     const isSoldOut = remainingCopies !== null && remainingCopies !== undefined && remainingCopies <= 0
     const maxQuantity = remainingCopies !== null && remainingCopies !== undefined ? remainingCopies : 10
 
@@ -34,11 +34,11 @@ export function usePurchaseConfig(
       nftSubtotal,
       totalAmount,
       bdagAmount,
-      bdagTipAmount,
+      bdagGiftAmount,
       isSoldOut,
       maxQuantity
     }
-  }, [pricePerNft, quantity, tipAmount, customAmount, remainingCopies])
+  }, [pricePerNft, quantity, giftAmount, customAmount, remainingCopies])
 }
 
 export function usdToBdag(usd: number): number {

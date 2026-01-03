@@ -28,7 +28,7 @@ export interface PurchasePanelProps {
  */
 export interface PurchaseState {
   quantity: number
-  tipAmount: number
+  giftAmount: number
   customAmount: number
   email: string
   loading: boolean
@@ -72,7 +72,7 @@ export interface PaymentOptions {
   campaignId: string
   tokenId?: string
   quantity?: number
-  tipAmount?: number
+  giftAmount?: number
   walletAddress?: string
   userId?: string
   contractAddress?: string
@@ -100,7 +100,7 @@ export interface CardPaymentOptions extends PaymentOptions {
 export interface CryptoPaymentOptions extends PaymentOptions {
   asset: CryptoAsset
   bdagAmount: number
-  tipBdagAmount: number
+  giftBdagAmount: number
 }
 
 /**
@@ -108,10 +108,10 @@ export interface CryptoPaymentOptions extends PaymentOptions {
  */
 export interface AmountCalculation {
   nftSubtotal: number
-  tipAmount: number
+  giftAmount: number
   totalAmount: number
   bdagAmount: number
-  bdagTipAmount: number
+  bdagGiftAmount: number
 }
 
 /**
@@ -126,12 +126,15 @@ export interface QuantitySelectorProps {
 }
 
 /**
- * Tip selector props
+ * Gift selector props
  */
-export interface TipSelectorProps {
-  tipAmount: number
-  onTipChange: (amount: number) => void
+export interface GiftSelectorProps {
+  giftAmount: number
+  onGiftChange: (amount: number) => void
 }
+
+// Legacy alias for backwards compatibility
+export type TipSelectorProps = GiftSelectorProps
 
 /**
  * Payment tab props

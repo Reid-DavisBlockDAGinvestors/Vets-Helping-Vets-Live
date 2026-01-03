@@ -324,31 +324,123 @@ Should we allow users to see the submitter's wallet address and send funds direc
 
 ## 🔄 Contract Behavior: Tips vs Gifts
 
-### Current V8 Behavior (Needs Discussion)
+### Current V8 Behavior (Issue)
 ```solidity
-// V8: Tips go immediately to submitter
+// V8: Tips go immediately to submitter (NOT DESIRED)
 function _distributeFunds(uint256 campaignId, uint256 contribution, uint256 tipAmount) internal {
     uint256 submitterAmount = contribution - platformFee + tipAmount; // ← Tips included
     c.submitter.call{value: submitterAmount}(""); // ← Sent immediately
 }
 ```
 
-### Desired V9 Behavior
+### V9 Contract Specification (REQUIRED)
+
+#### Fee Structure
+| Fee Type | Percentage | Recipient | When Applied |
+|----------|------------|-----------|---------------|
+| **Platform Fee** | 1% | Platform Treasury | On gift receipt |
+| **Nonprofit Fee** | 1% | Nonprofit Wallet | On gift receipt |
+| **Net Gift** | 98% | Held on contract | Manual distribution |
+
+#### Gift Distribution Flow
+```
+Gift Received: $100
+    ↓
+├─ Platform Fee (1%): $1.00 → Platform Treasury (immediate)
+├─ Nonprofit Fee (1%): $1.00 → Nonprofit Wallet (immediate)  
+└─ Net Gift (98%): $98.00 → Held on Contract
+    ↓
+Admin Manual Distribution:
+├─ Submitter %: Configurable (default 80%)
+└─ Platform %: Configurable (default 20%)
+```
+
+#### V9 Solidity Implementation
 ```solidity
-// V9: Gifts held for admin distribution
-function _distributeFunds(uint256 campaignId, uint256 contribution, uint256 giftAmount) internal {
-    uint256 submitterAmount = contribution - platformFee;
-    c.submitter.call{value: submitterAmount}(""); // ← Only contribution
+// V9: Gifts held for admin distribution with fee deductions
+uint256 public constant GIFT_PLATFORM_FEE_BPS = 100; // 1%
+uint256 public constant GIFT_NONPROFIT_FEE_BPS = 100; // 1%
+
+mapping(uint256 => uint256) public campaignGiftBalance; // Held gifts per campaign
+mapping(uint256 => uint256) public campaignGiftsDistributed;
+
+function _processGift(uint256 campaignId, uint256 giftAmount) internal {
+    Campaign storage c = campaigns[campaignId];
     
-    // Gifts held on contract
-    campaignGifts[campaignId] += giftAmount;
-    emit GiftReceived(campaignId, msg.sender, giftAmount);
+    // Deduct fees immediately
+    uint256 platformFee = (giftAmount * GIFT_PLATFORM_FEE_BPS) / BPS_DENOMINATOR;
+    uint256 nonprofitFee = (giftAmount * GIFT_NONPROFIT_FEE_BPS) / BPS_DENOMINATOR;
+    uint256 netGift = giftAmount - platformFee - nonprofitFee;
+    
+    // Transfer fees immediately
+    (bool s1,) = platformTreasury.call{value: platformFee}("");
+    require(s1, "Platform fee transfer failed");
+    
+    (bool s2,) = c.nonprofit.call{value: nonprofitFee}("");
+    require(s2, "Nonprofit fee transfer failed");
+    
+    // Hold net gift on contract for manual distribution
+    campaignGiftBalance[campaignId] += netGift;
+    c.grossRaised += giftAmount;
+    c.tipsReceived += giftAmount; // Track separately
+    
+    emit GiftReceived(campaignId, msg.sender, giftAmount, platformFee, nonprofitFee, netGift);
 }
 
-// Admin distributes gifts separately
-function distributeGifts(uint256 campaignId, address[] recipients, uint256[] amounts) external onlyOwner {
-    // Distribute according to tip split settings
+// Admin distributes held gifts manually
+function distributeGifts(
+    uint256 campaignId, 
+    uint256 submitterPercent // e.g., 8000 = 80%
+) external onlyOwner {
+    require(submitterPercent <= BPS_DENOMINATOR, "Invalid percent");
+    
+    uint256 balance = campaignGiftBalance[campaignId];
+    require(balance > 0, "No gifts to distribute");
+    
+    Campaign storage c = campaigns[campaignId];
+    
+    uint256 toSubmitter = (balance * submitterPercent) / BPS_DENOMINATOR;
+    uint256 toPlatform = balance - toSubmitter;
+    
+    campaignGiftBalance[campaignId] = 0;
+    campaignGiftsDistributed[campaignId] += balance;
+    
+    (bool s1,) = c.submitter.call{value: toSubmitter}("");
+    require(s1, "Submitter transfer failed");
+    
+    (bool s2,) = platformTreasury.call{value: toPlatform}("");
+    require(s2, "Platform transfer failed");
+    
+    emit GiftsDistributed(campaignId, toSubmitter, toPlatform, submitterPercent);
 }
+
+// Gift-only function (no NFT purchase required)
+function giveGift(uint256 campaignId) external payable {
+    require(msg.value > 0, "Gift must be > 0");
+    Campaign storage c = campaigns[campaignId];
+    require(c.active && !c.closed && !c.paused, "Campaign not accepting gifts");
+    
+    _processGift(campaignId, msg.value);
+}
+```
+
+#### V9 Events
+```solidity
+event GiftReceived(
+    uint256 indexed campaignId, 
+    address indexed donor, 
+    uint256 totalAmount,
+    uint256 platformFee,
+    uint256 nonprofitFee,
+    uint256 netGift
+);
+
+event GiftsDistributed(
+    uint256 indexed campaignId,
+    uint256 toSubmitter,
+    uint256 toPlatform,
+    uint256 submitterPercent
+);
 ```
 
 ### Migration Path

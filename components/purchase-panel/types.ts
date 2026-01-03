@@ -21,7 +21,7 @@ export interface PurchasePanelProps {
 
 export interface PurchaseState {
   quantity: number
-  tipAmount: number
+  giftAmount: number
   customAmount: number
   loading: boolean
   result: PurchaseResult | null
@@ -42,7 +42,7 @@ export interface PaymentConfig {
   nftSubtotal: number
   totalAmount: number
   bdagAmount: number
-  bdagTipAmount: number
+  bdagGiftAmount: number
   isSoldOut: boolean
   maxQuantity: number
 }
@@ -66,8 +66,8 @@ export interface AuthState {
 export interface CryptoPaymentProps {
   totalAmount: number
   bdagAmount: number
-  tipAmount: number
-  bdagTipAmount: number
+  giftAmount: number
+  bdagGiftAmount: number
   campaignId: string
   quantity: number
   pricePerNft: number | null
@@ -100,9 +100,9 @@ export interface QuantitySelectorProps {
   isSoldOut: boolean
 }
 
-export interface TipSelectorProps {
-  tipAmount: number
-  onChange: (tip: number) => void
+export interface GiftSelectorProps {
+  giftAmount: number
+  onChange: (gift: number) => void
   presets?: number[]
 }
 

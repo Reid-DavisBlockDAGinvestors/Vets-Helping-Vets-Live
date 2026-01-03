@@ -50,8 +50,8 @@ export default function PurchasePanelV2({
 
   // UI State
   const [quantity, setQuantity] = useState(1)
-  const [tipAmount, setTipAmount] = useState(0)
-  const [customTipAmount, setCustomTipAmount] = useState('')
+  const [giftAmount, setGiftAmount] = useState(0)
+  const [customGiftAmount, setCustomGiftAmount] = useState('')
   const [customAmount, setCustomAmount] = useState(pricePerNft && pricePerNft > 0 ? pricePerNft : 25)
   const [email, setEmail] = useState('')
   const [activeTab, setActiveTab] = useState<PaymentTab>('card')
@@ -68,7 +68,7 @@ export default function PurchasePanelV2({
   // Modular hooks
   const wallet = useWallet()
   const auth = usePurchaseAuth()
-  const config = usePurchaseConfig(pricePerNft, quantity, tipAmount, customAmount, remainingCopies)
+  const config = usePurchaseConfig(pricePerNft, quantity, giftAmount, customAmount, remainingCopies)
   
   // Determine chainId based on selected network
   const liveChainId = selectedNetwork === 'ethereum' ? 1 : selectedNetwork === 'sepolia' ? 11155111 : 1043
@@ -98,9 +98,9 @@ export default function PurchasePanelV2({
     pricePerNft: pricePerNft ?? null,
     hasNftPrice: config.hasNftPrice,
     bdagAmount: config.bdagAmount,
-    bdagTipAmount: config.bdagTipAmount,
+    bdagTipAmount: config.bdagGiftAmount,
     totalAmount: config.totalAmount,
-    tipAmount,
+    giftAmount,
     quantity,
     auth,
     wallet,
@@ -110,8 +110,8 @@ export default function PurchasePanelV2({
   })
 
   // Calculate ETH amounts using live rate
-  const ethAmountLive = (config.totalAmount - tipAmount) / ethRate
-  const ethTipAmountLive = tipAmount / ethRate
+  const ethAmountLive = (config.totalAmount - giftAmount) / ethRate
+  const ethTipAmountLive = giftAmount / ethRate
   
   // ETH purchase hook (Sepolia testnet or Ethereum Mainnet)
   const ethPurchase = useEthPurchase({
@@ -122,9 +122,9 @@ export default function PurchasePanelV2({
     pricePerNft: pricePerNft ?? null,
     hasNftPrice: config.hasNftPrice,
     ethAmount: ethAmountLive,
-    ethTipAmount: ethTipAmountLive,
+    ethGiftAmount: ethTipAmountLive,
     totalAmountUsd: config.totalAmount,
-    tipAmountUsd: tipAmount,
+    giftAmountUsd: giftAmount,
     quantity,
     auth,
     wallet: {
@@ -181,40 +181,40 @@ export default function PurchasePanelV2({
             </div>
           </div>
 
-          {/* Tip Selector */}
+          {/* Gift Selector */}
           <div>
-            <label className="block text-sm font-medium text-white/80 mb-2">Add a tip (optional)</label>
+            <label className="block text-sm font-medium text-white/80 mb-2">Add a gift (optional)</label>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {[0, 5, 10, 25, 50].map(tip => (
-                <button key={tip} onClick={() => { setTipAmount(tip); setCustomTipAmount(''); }}
-                  data-testid={`tip-${tip}-btn`}
+              {[0, 5, 10, 25, 50].map(gift => (
+                <button key={gift} onClick={() => { setGiftAmount(gift); setCustomGiftAmount(''); }}
+                  data-testid={`gift-${gift}-btn`}
                   className={`rounded-lg py-2 text-sm font-medium transition-all ${
-                    tipAmount === tip && !customTipAmount ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
-                  }`}>{tip === 0 ? 'None' : `$${tip}`}</button>
+                    giftAmount === gift && !customGiftAmount ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                  }`}>{gift === 0 ? 'None' : `$${gift}`}</button>
               ))}
               <button
-                onClick={() => setCustomTipAmount(customTipAmount || '0')}
-                data-testid="tip-custom-btn"
+                onClick={() => setCustomGiftAmount(customGiftAmount || '0')}
+                data-testid="gift-custom-btn"
                 className={`rounded-lg py-2 text-sm font-medium transition-all ${
-                  customTipAmount !== '' ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                  customGiftAmount !== '' ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
                 }`}
               >Custom</button>
             </div>
-            {customTipAmount !== '' && (
+            {customGiftAmount !== '' && (
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-white/70">$</span>
                 <input
                   type="number"
                   min={0}
                   max={1000}
-                  value={customTipAmount}
+                  value={customGiftAmount}
                   onChange={(e) => {
                     const val = e.target.value;
-                    setCustomTipAmount(val);
-                    setTipAmount(parseFloat(val) || 0);
+                    setCustomGiftAmount(val);
+                    setGiftAmount(parseFloat(val) || 0);
                   }}
                   placeholder="Enter amount"
-                  data-testid="custom-tip-input"
+                  data-testid="custom-gift-input"
                   className="w-24 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-white text-sm"
                 />
               </div>
