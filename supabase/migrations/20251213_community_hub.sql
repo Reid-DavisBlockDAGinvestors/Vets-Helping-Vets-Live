@@ -124,43 +124,69 @@ ALTER TABLE community_media ENABLE ROW LEVEL SECURITY;
 ALTER TABLE community_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE community_notifications ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
+-- RLS Policies (use DROP IF EXISTS to allow re-running)
 -- Posts: Anyone can read, authenticated users can create
+DROP POLICY IF EXISTS "Posts are viewable by everyone" ON community_posts;
 CREATE POLICY "Posts are viewable by everyone" ON community_posts FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can create posts" ON community_posts;
 CREATE POLICY "Users can create posts" ON community_posts FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own posts" ON community_posts;
 CREATE POLICY "Users can update own posts" ON community_posts FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete own posts" ON community_posts;
 CREATE POLICY "Users can delete own posts" ON community_posts FOR DELETE USING (auth.uid() = user_id);
 
 -- Comments: Same pattern
+DROP POLICY IF EXISTS "Comments are viewable by everyone" ON community_comments;
 CREATE POLICY "Comments are viewable by everyone" ON community_comments FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can create comments" ON community_comments;
 CREATE POLICY "Users can create comments" ON community_comments FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own comments" ON community_comments;
 CREATE POLICY "Users can update own comments" ON community_comments FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete own comments" ON community_comments;
 CREATE POLICY "Users can delete own comments" ON community_comments FOR DELETE USING (auth.uid() = user_id);
 
 -- Likes
+DROP POLICY IF EXISTS "Likes are viewable by everyone" ON community_likes;
 CREATE POLICY "Likes are viewable by everyone" ON community_likes FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can create likes" ON community_likes;
 CREATE POLICY "Users can create likes" ON community_likes FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete own likes" ON community_likes;
 CREATE POLICY "Users can delete own likes" ON community_likes FOR DELETE USING (auth.uid() = user_id);
 
 -- Follows
+DROP POLICY IF EXISTS "Follows are viewable by everyone" ON community_follows;
 CREATE POLICY "Follows are viewable by everyone" ON community_follows FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can create follows" ON community_follows;
 CREATE POLICY "Users can create follows" ON community_follows FOR INSERT WITH CHECK (auth.uid() = follower_id);
+DROP POLICY IF EXISTS "Users can delete own follows" ON community_follows;
 CREATE POLICY "Users can delete own follows" ON community_follows FOR DELETE USING (auth.uid() = follower_id);
 
 -- Profiles: Public read, own write
+DROP POLICY IF EXISTS "Profiles are viewable by everyone" ON community_profiles;
 CREATE POLICY "Profiles are viewable by everyone" ON community_profiles FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can update own profile" ON community_profiles;
 CREATE POLICY "Users can update own profile" ON community_profiles FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can create own profile" ON community_profiles;
 CREATE POLICY "Users can create own profile" ON community_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Notifications: Only own
+DROP POLICY IF EXISTS "Users can view own notifications" ON community_notifications;
 CREATE POLICY "Users can view own notifications" ON community_notifications FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own notifications" ON community_notifications;
 CREATE POLICY "Users can update own notifications" ON community_notifications FOR UPDATE USING (auth.uid() = user_id);
 
 -- Service role has full access
+DROP POLICY IF EXISTS "Service role full access posts" ON community_posts;
 CREATE POLICY "Service role full access posts" ON community_posts FOR ALL USING (auth.role() = 'service_role');
+DROP POLICY IF EXISTS "Service role full access comments" ON community_comments;
 CREATE POLICY "Service role full access comments" ON community_comments FOR ALL USING (auth.role() = 'service_role');
+DROP POLICY IF EXISTS "Service role full access likes" ON community_likes;
 CREATE POLICY "Service role full access likes" ON community_likes FOR ALL USING (auth.role() = 'service_role');
+DROP POLICY IF EXISTS "Service role full access follows" ON community_follows;
 CREATE POLICY "Service role full access follows" ON community_follows FOR ALL USING (auth.role() = 'service_role');
+DROP POLICY IF EXISTS "Service role full access media" ON community_media;
 CREATE POLICY "Service role full access media" ON community_media FOR ALL USING (auth.role() = 'service_role');
+DROP POLICY IF EXISTS "Service role full access profiles" ON community_profiles;
 CREATE POLICY "Service role full access profiles" ON community_profiles FOR ALL USING (auth.role() = 'service_role');
+DROP POLICY IF EXISTS "Service role full access notifications" ON community_notifications;
 CREATE POLICY "Service role full access notifications" ON community_notifications FOR ALL USING (auth.role() = 'service_role');

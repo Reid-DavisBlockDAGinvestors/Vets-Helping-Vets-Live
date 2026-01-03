@@ -6,8 +6,8 @@ import { SECURITY_THRESHOLDS, type SettingsTab } from './types'
 
 const CHAIN_OPTIONS = [
   { value: '1043', label: 'BlockDAG (1043)', version: 'v6' },
-  { value: '11155111', label: 'Sepolia (11155111)', version: 'v7' },
-  { value: '1', label: 'Ethereum (1)', version: 'v7' },
+  { value: '11155111', label: 'Sepolia (11155111)', version: 'v8' },
+  { value: '1', label: 'Ethereum (1)', version: 'v8' },
 ]
 
 export function ContractSettingsPanel() {
