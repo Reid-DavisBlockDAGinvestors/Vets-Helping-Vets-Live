@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { getCategoryById, CATEGORIES } from '@/lib/categories'
 import type { Campaign, EditFormData } from './types'
+import { ImmediatePayoutToggle } from './ImmediatePayoutToggle'
 
 interface EditModalProps {
   campaign: Campaign | null
@@ -224,6 +225,29 @@ export function EditModal({
               </div>
             )}
           </div>
+
+          {/* Fund Distribution Settings - Only show for minted campaigns with on-chain data */}
+          {campaign.status === 'minted' && campaign.campaign_id !== null && campaign.contract_address && campaign.chain_id && (
+            <div className="border-t border-white/10 pt-4">
+              <h3 className="text-sm font-medium text-white/70 mb-3">💰 Fund Distribution</h3>
+              <ImmediatePayoutToggle
+                submissionId={campaign.id}
+                chainId={campaign.chain_id}
+                contractAddress={campaign.contract_address}
+                campaignId={campaign.campaign_id}
+                initialEnabled={campaign.immediate_payout_enabled ?? false}
+                contractVersion={campaign.contract_version || 'v8'}
+              />
+              {campaign.total_distributed !== null && campaign.total_distributed > 0 && (
+                <div className="mt-3 p-2 bg-white/5 rounded text-sm">
+                  <span className="text-white/60">Total Distributed:</span>
+                  <span className="ml-2 text-green-400 font-mono">
+                    {campaign.total_distributed.toFixed(6)} {campaign.chain_id === 1043 ? 'BDAG' : 'ETH'}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Creator Info */}
           <div className="border-t border-white/10 pt-4">

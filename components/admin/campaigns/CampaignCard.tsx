@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ipfsToHttp } from '@/lib/ipfs'
 import { getCategoryById } from '@/lib/categories'
 import { StatusBadge, UpdateStatusBadge } from './StatusBadge'
+import { DistributionStatusBadge } from './DistributionStatusBadge'
 import type { Campaign, CampaignUpdate } from './types'
 
 // Chain explorer URLs
@@ -199,6 +200,19 @@ export function CampaignCard({
                   <div className="text-white">{campaign.onchainStats.progressPercent}%</div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Fund Distribution Status - Only for minted campaigns */}
+          {campaign.status === 'minted' && campaign.chain_id && (
+            <div className="rounded-lg bg-white/5 border border-white/10 p-3">
+              <div className="text-sm font-medium text-white/70 mb-2">💰 Fund Distribution</div>
+              <DistributionStatusBadge
+                immediatePayoutEnabled={campaign.immediate_payout_enabled}
+                chainId={campaign.chain_id}
+                totalDistributed={campaign.total_distributed}
+                lastDistributionAt={campaign.last_distribution_at}
+              />
             </div>
           )}
 

@@ -91,6 +91,10 @@ export interface Campaign {
   pendingUpdates: number
   approvedUpdates: number
   video_url: string | null // YouTube video URL for campaign story
+  // Fund distribution
+  immediate_payout_enabled: boolean | null
+  total_distributed: number | null
+  last_distribution_at: string | null
 }
 
 /**

@@ -51,7 +51,7 @@ export function ApprovalModal({
         creator_wallet: campaign.creator_wallet || '',
         benchmarks: '',
         targetNetwork: AVAILABLE_NETWORKS[0], // Default to BlockDAG testnet
-        immediatePayoutEnabled: false, // V7 feature
+        immediatePayoutEnabled: false, // Will be updated when network changes
         title: campaign.title || '',
         story: campaign.story || '',
         category: campaign.category || '',
@@ -60,6 +60,17 @@ export function ApprovalModal({
       setShowFullStory(false)
     }
   }, [campaign])
+  
+  // Auto-enable immediate payout for mainnet chains
+  useEffect(() => {
+    if (form.targetNetwork) {
+      const isMainnet = !form.targetNetwork.isTestnet
+      // Default to TRUE for mainnet, keep current value for testnet (allows manual override)
+      if (isMainnet && !form.immediatePayoutEnabled) {
+        setForm(f => ({ ...f, immediatePayoutEnabled: true }))
+      }
+    }
+  }, [form.targetNetwork?.chainId])
 
   if (!isOpen || !campaign) return null
 

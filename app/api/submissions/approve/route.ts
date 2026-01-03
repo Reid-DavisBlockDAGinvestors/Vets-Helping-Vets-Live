@@ -345,7 +345,15 @@ export async function POST(req: NextRequest) {
           // V8: createCampaign(category, uri, goalNative, goalUsd, maxEditions, priceNative, priceUsd, nonprofit, submitter, immediatePayoutEnabled)
           let tx: any
           const versionNum = parseInt(contractVersion.slice(1))
-          const immediatePayoutEnabled = body.updates?.immediate_payout_enabled ?? false
+          
+          // IMMEDIATE PAYOUT: Default to TRUE for mainnet chains (real money), FALSE for testnets
+          // Mainnet chains: Ethereum (1), Polygon (137), Base (8453), Arbitrum (42161)
+          // Testnets: Sepolia (11155111), BlockDAG (1043), etc.
+          const MAINNET_CHAINS = [1, 137, 8453, 42161]
+          const isMainnetChain = MAINNET_CHAINS.includes(targetChainId)
+          const immediatePayoutEnabled = body.updates?.immediate_payout_enabled ?? isMainnetChain
+          
+          logger.info(`[createCampaign] Immediate payout: ${immediatePayoutEnabled} (chain ${targetChainId}, isMainnet: ${isMainnetChain})`)
           
           if (versionNum >= 8) {
             // V8+ signature - includes USD prices for auditing
