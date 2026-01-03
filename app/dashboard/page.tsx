@@ -30,6 +30,7 @@ function getExplorerUrl(chainId?: number): string {
 type OwnedNFT = {
   tokenId: number
   campaignId: number
+  submissionId: string | null
   editionNumber: number
   totalEditions: number
   editionsMinted: number
@@ -252,7 +253,7 @@ export default function DashboardPage() {
                   {ownedNfts.map((nft) => (
                     <Link
                       key={`${nft.contractAddress || 'v5'}-${nft.tokenId}`}
-                      href={`/story/${nft.campaignId}`}
+                      href={`/story/${nft.submissionId || nft.campaignId}`}
                       className="group block rounded-2xl bg-white/5 border border-white/10 overflow-hidden hover:border-white/20 hover:bg-white/10 transition-all"
                     >
                       <div className="relative h-48 overflow-hidden bg-gradient-to-br from-blue-900/50 to-purple-900/50">

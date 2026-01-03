@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 import { createClient } from '@supabase/supabase-js'
-import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
+import { PatriotPledgeV5ABI } from '@/lib/onchain'
+import { V7_ABI } from '@/lib/contracts'
+import { getProviderForChain, ChainId } from '@/lib/chains'
 import { ethers } from 'ethers'
 
 export const dynamic = 'force-dynamic'
@@ -17,8 +19,9 @@ function getFreshSupabaseAdmin() {
   )
 }
 
-// BDAG to USD conversion rate (configurable via env)
+// USD conversion rates
 const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
+const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '3100')
 
 export async function GET(req: NextRequest) {
   try {
@@ -105,13 +108,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'FUNDRAISER_QUERY_FAILED', details: error.message }, { status: 500 })
     }
 
-    const provider = getProvider()
-    // Cache contract instances by address
+    // Cache contract instances by address+chain
     const contractCache: Record<string, ethers.Contract> = {}
-    const getContractForAddress = (addr: string) => {
-      const key = addr.toLowerCase()
+    const getContractForChain = (addr: string, chainId: number) => {
+      const key = `${addr.toLowerCase()}-${chainId}`
       if (!contractCache[key]) {
-        contractCache[key] = new ethers.Contract(addr, PatriotPledgeV5ABI, provider)
+        const provider = getProviderForChain(chainId as ChainId)
+        const isEthChain = chainId === 1 || chainId === 11155111
+        const abi = isEthChain ? V7_ABI : PatriotPledgeV5ABI
+        contractCache[key] = new ethers.Contract(addr, abi, provider)
       }
       return contractCache[key]
     }
@@ -145,12 +150,16 @@ export async function GET(req: NextRequest) {
       grossRaisedUSD = editionsMinted * pricePerNFT
       
       // Try on-chain data as secondary source (may fail if RPC is down)
+      const chainId = sub.chain_id || 1043 // Default to BlockDAG
+      const isEthChain = chainId === 1 || chainId === 11155111
+      const usdRate = isEthChain ? ETH_USD_RATE : BDAG_USD_RATE
+      
       try {
-        const contract = getContractForAddress(subContractAddr)
+        const contract = getContractForChain(subContractAddr, chainId)
         const camp = await (contract as any).getCampaign(BigInt(campaignId))
         const grossRaisedWei = BigInt(camp.grossRaised ?? 0n)
-        const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
-        const chainRaisedUSD = grossRaisedBDAG * BDAG_USD_RATE
+        const grossRaisedNative = Number(grossRaisedWei) / 1e18
+        const chainRaisedUSD = grossRaisedNative * usdRate
         const chainEditions = Number(camp.editionsMinted ?? 0n)
         const chainMax = Number(camp.maxEditions ?? 0n)
         
@@ -161,10 +170,10 @@ export async function GET(req: NextRequest) {
         }
         if (chainMax > 0) maxEditions = chainMax
         
-        logger.debug(`[fundraisers] Campaign ${campaignId}: DB sold=${sub.sold_count}, chain=${chainEditions}`)
+        logger.debug(`[fundraisers] Campaign ${campaignId} (chain ${chainId}): DB sold=${sub.sold_count}, chain=${chainEditions}`)
       } catch (err: any) {
         // On-chain fetch failed - use database values (already set above)
-        logger.debug(`[fundraisers] Using DB data for campaign ${campaignId} (chain unavailable)`)
+        logger.debug(`[fundraisers] Using DB data for campaign ${campaignId} (chain ${chainId} unavailable)`)
       }
 
       // Price per NFT = Goal ÷ Max Editions (this is always correct for V5 model)
