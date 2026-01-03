@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { sendPurchaseReceipt, sendCreatorPurchaseNotification } from '@/lib/mailer'
 import { logger } from '@/lib/logger'
+import { CHAIN_CONFIGS, type ChainId } from '@/lib/chains'
 
 export const runtime = 'nodejs'
 
@@ -47,6 +48,13 @@ export async function POST(req: NextRequest) {
     // Multi-chain support: use amountCrypto if provided, fallback to amountBDAG
     const effectiveCryptoAmount = amountCrypto ?? amountBDAG ?? 0
     const effectiveTipAmount = tipCrypto ?? tipBDAG ?? 0
+
+    // Derive chain info from chainId
+    const effectiveChainId = (chainId || 1043) as ChainId
+    const chainConfig = CHAIN_CONFIGS[effectiveChainId]
+    const chainName = chainConfig?.name || (effectiveChainId === 1043 ? 'BlockDAG' : 'Ethereum')
+    const isTestnet = chainConfig?.isTestnet ?? true
+    const nativeCurrency = chainConfig?.nativeCurrency?.symbol || (effectiveChainId === 1043 ? 'BDAG' : 'ETH')
 
     // Get request metadata for fraud prevention
     const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || null
@@ -94,19 +102,27 @@ export async function POST(req: NextRequest) {
           campaign_id: effectiveId,
           token_id: typeof editionMinted === 'number' ? editionMinted : (mintedTokenIds?.[0]) || null,
           tx_hash: txHash,
-          amount_bdag: amountBDAG || null,
+          amount_bdag: effectiveChainId === 1043 ? effectiveCryptoAmount : null,
           amount_usd: amountUSD || null,
-          tip_bdag: tipBDAG || 0,
+          tip_bdag: effectiveChainId === 1043 ? effectiveTipAmount : 0,
           tip_usd: tipUSD || 0,
           quantity: quantity || 1,
           email: buyerEmail || null,
           user_id: userId || null,
-          payment_method: paymentMethod || 'crypto_bdag',
+          payment_method: paymentMethod || (effectiveChainId === 1043 ? 'crypto_bdag' : 'crypto_eth'),
           ip_address: ipAddress,
           user_agent: userAgent,
           referrer: referrer || null,
           donor_note: donorNote || null,
-          donor_name: donorName || null
+          donor_name: donorName || null,
+          // Multi-chain fields
+          chain_id: effectiveChainId,
+          chain_name: chainName,
+          is_testnet: isTestnet,
+          amount_native: effectiveCryptoAmount || null,
+          native_currency: nativeCurrency,
+          amount_eth: effectiveChainId !== 1043 ? effectiveCryptoAmount : null,
+          tip_eth: effectiveChainId !== 1043 ? effectiveTipAmount : null
         })
       
       if (purchaseError) {

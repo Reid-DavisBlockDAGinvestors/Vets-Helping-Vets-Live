@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { CHAIN_CONFIGS, type ChainId } from '@/lib/chains'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -127,16 +128,20 @@ export async function GET(request: NextRequest) {
         // Table may not exist
       }
 
-      // Determine native currency
-      const nativeCurrency = s.chain_id === 1043 ? 'BDAG' : 'ETH'
+      // Determine native currency and chain info from chain config
+      const chainId = (s.chain_id || 1043) as ChainId
+      const chainConfig = CHAIN_CONFIGS[chainId]
+      const nativeCurrency = chainConfig?.nativeCurrency?.symbol || (chainId === 1043 ? 'BDAG' : 'ETH')
+      const chainName = chainConfig?.name || s.chain_name || 'BlockDAG Testnet'
+      const isTestnet = chainConfig?.isTestnet ?? s.is_testnet ?? true
 
       return {
         id: s.id,
         title: s.title,
         status: s.status,
-        chain_id: s.chain_id || 1043,
-        chain_name: s.chain_name || 'BlockDAG Testnet',
-        is_testnet: s.is_testnet ?? true,
+        chain_id: chainId,
+        chain_name: chainName,
+        is_testnet: isTestnet,
         creator_wallet: s.creator_wallet,
         contract_version: s.contract_version || 'v6',
         campaign_id: s.campaign_id,

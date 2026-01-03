@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { getProviderForChain, getContractAddress, type ChainId } from '@/lib/chains'
-import { PatriotPledgeV5ABI } from '@/lib/onchain'
+import { getProviderForChain, getContractAddress, type ChainId, CHAIN_CONFIGS } from '@/lib/chains'
+import { V5_ABI, V6_ABI, V7_ABI } from '@/lib/contracts'
 import { ethers } from 'ethers'
 import { logger } from '@/lib/logger'
+
+// Get the appropriate ABI for a contract version
+function getAbiForVersion(version: string): string[] {
+  if (version === 'v7') return V7_ABI
+  if (version === 'v6') return V6_ABI
+  return V5_ABI
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -100,7 +107,8 @@ export async function GET(req: NextRequest) {
           continue
         }
 
-        const contract = new ethers.Contract(contractAddress, PatriotPledgeV5ABI, provider)
+        const abi = getAbiForVersion(version)
+        const contract = new ethers.Contract(contractAddress, abi, provider)
 
         // For each campaign, get its editions
         for (const camp of groupCampaigns) {
@@ -121,10 +129,20 @@ export async function GET(req: NextRequest) {
                 let isFrozen = false
                 let isSoulbound = false
                 try {
-                  isFrozen = await contract.frozenTokens(tokenIdBn)
+                  // V7 uses isTokenFrozen, V5/V6 use frozenTokens
+                  if (version === 'v7') {
+                    isFrozen = await contract.isTokenFrozen(tokenIdBn)
+                  } else {
+                    isFrozen = await contract.frozenTokens(tokenIdBn)
+                  }
                 } catch { /* Not all contracts have this */ }
                 try {
-                  isSoulbound = await contract.soulbound(tokenIdBn)
+                  // V7 uses isTokenSoulbound, V5/V6 use soulbound
+                  if (version === 'v7') {
+                    isSoulbound = await contract.isTokenSoulbound(tokenIdBn)
+                  } else {
+                    isSoulbound = await contract.soulbound(tokenIdBn)
+                  }
                 } catch { /* Not all contracts have this */ }
 
                 // Apply filters
@@ -136,6 +154,10 @@ export async function GET(req: NextRequest) {
                 }
                 if (filterOwner && owner.toLowerCase() !== filterOwner) continue
 
+                // Derive chain name from chain config
+                const chainConfig = CHAIN_CONFIGS[chainId]
+                const chainName = chainConfig?.name || camp.chain_name || 'BlockDAG'
+
                 tokens.push({
                   tokenId,
                   campaignId: camp.campaign_id,
@@ -146,7 +168,7 @@ export async function GET(req: NextRequest) {
                   isFrozen,
                   isSoulbound,
                   chainId,
-                  chainName: camp.chain_name || 'BlockDAG',
+                  chainName,
                   contractVersion: version
                 })
               } catch (e) {
