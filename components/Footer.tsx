@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p>© {new Date().getFullYear()} PatriotPledge NFTs · vetshelpingvets.life</p>
-            <p className="mt-1">1% nonprofit fee for operations · Transparent and auditable</p>
+            <p className="mt-1">1% platform fee + 1% nonprofit fee · 98% to recipients · Transparent and auditable</p>
           </div>
           <SocialLinks />
         </div>

@@ -22,6 +22,6 @@ test.describe('Home page', () => {
     await page.goto('/')
     await expect(page.getByText(/Verified Recipients/i)).toBeVisible()
     await expect(page.getByText(/Blockchain Transparency/i)).toBeVisible()
-    await expect(page.getByText(/1% Platform Fee/i)).toBeVisible()
+    await expect(page.getByText(/Low 2% Total Fees/i)).toBeVisible()
   })
 })

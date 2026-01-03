@@ -116,7 +116,7 @@ function wrapEmail(content: string): string {
               <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center;">
                 <p style="color: #64748b; font-size: 12px; margin: 0;">
                   © ${new Date().getFullYear()} PatriotPledge NFTs - vetshelpingvets.life<br>
-                  1% nonprofit fee for operations · Transparent and auditable
+                  1% platform fee + 1% nonprofit fee · 98% to recipients · Transparent and auditable
                 </p>
                 <p style="margin-top: 10px;">
                   <a href="${SITE_URL}" style="color: #3b82f6; text-decoration: none; font-size: 12px;">Visit Website</a>

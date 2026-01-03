@@ -487,8 +487,8 @@ export default async function HomePage() {
           </div>
           <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-6 text-center">
             <div className="text-4xl mb-3">💯</div>
-            <h3 className="font-semibold text-white mb-2">1% Platform Fee</h3>
-            <p className="text-sm text-white/50">99% of your donation goes directly to the campaign recipient</p>
+            <h3 className="font-semibold text-white mb-2">Low 2% Total Fees</h3>
+            <p className="text-sm text-white/50">1% platform fee + 1% nonprofit fee · 98% goes to campaign recipient</p>
           </div>
         </div>
       </section>
