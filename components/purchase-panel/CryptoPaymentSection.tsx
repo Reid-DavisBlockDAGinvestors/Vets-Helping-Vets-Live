@@ -3,11 +3,12 @@
 /**
  * CryptoPaymentSection Component
  * 
- * Cryptocurrency payment UI for BDAG purchases
+ * Cryptocurrency payment UI for BDAG and ETH purchases
  * Following ISP - focused on crypto payment display only
  */
 
 import { openBugReport } from '@/components/BugReportButton'
+import { useLivePrice, formatPrice } from '@/hooks/useLivePrice'
 
 export interface CryptoPaymentSectionProps {
   wallet: {
@@ -42,6 +43,13 @@ export function CryptoPaymentSection({
   onPurchase,
   network = 'bdag'
 }: CryptoPaymentSectionProps) {
+  // Get live price for ETH (Sepolia uses mainnet ETH price)
+  const chainId = network === 'sepolia' ? 11155111 : 1043
+  const { price: livePrice, loading: priceLoading, refresh: refreshPrice } = useLivePrice(chainId, {
+    refreshInterval: 60000, // Refresh every minute
+    enabled: network === 'sepolia', // Only fetch live price for ETH networks
+  })
+  
   const isOnCorrectNetwork = network === 'sepolia' ? wallet.isOnSepolia : wallet.isOnBlockDAG
   const networkName = network === 'sepolia' ? 'Sepolia' : 'BlockDAG'
   const currencySymbol = network === 'sepolia' ? 'ETH' : 'BDAG'
@@ -110,6 +118,31 @@ export function CryptoPaymentSection({
           </span>
         </div>
         <p className="text-xs text-white/40 mt-1">≈ ${totalAmount} USD</p>
+        
+        {/* Live Rate Display for ETH */}
+        {network === 'sepolia' && livePrice && (
+          <div className="mt-2 pt-2 border-t border-purple-500/20 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-white/50">Live Rate:</span>
+              <span className="text-xs text-emerald-400 font-medium">
+                {formatPrice(livePrice.priceUsd, 'ETH')}
+              </span>
+              {livePrice.source === 'coingecko' && (
+                <span className="text-[10px] text-white/30 bg-white/5 px-1.5 py-0.5 rounded">
+                  CoinGecko
+                </span>
+              )}
+            </div>
+            <button
+              onClick={refreshPrice}
+              disabled={priceLoading}
+              className="text-xs text-white/40 hover:text-white/60 transition-colors"
+              title="Refresh price"
+            >
+              {priceLoading ? '⏳' : '🔄'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Status Messages */}
