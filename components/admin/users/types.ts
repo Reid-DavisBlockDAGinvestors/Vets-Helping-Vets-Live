@@ -55,4 +55,15 @@ export interface PurchaseStats {
 
 export type SortBy = 'created_at' | 'purchases_count' | 'total_spent_usd'
 export type SortOrder = 'asc' | 'desc'
-export type DetailTab = 'purchased' | 'created' | 'history'
+export type DetailTab = 'purchased' | 'created' | 'history' | 'actions'
+
+export interface UserAuthDetails {
+  email_confirmed_at: string | null
+  recovery_sent_at: string | null
+  last_sign_in_at: string | null
+  created_at: string
+  banned_until: string | null
+  is_banned: boolean
+  mfa_enabled: boolean
+  providers: string[]
+}

@@ -1,6 +1,7 @@
 'use client'
 
 import type { UserData, Purchase, Campaign, PurchaseStats, DetailTab } from './types'
+import { UserActionsPanel } from './UserActionsPanel'
 
 interface UserDetailModalProps {
   user: UserData
@@ -116,6 +117,14 @@ export function UserDetailModal({
             >
               📜 Purchase History ({purchases.length})
             </TabButton>
+            <TabButton 
+              active={detailTab === 'actions'} 
+              onClick={() => onTabChange('actions')}
+              color="red"
+              testId="tab-actions"
+            >
+              ⚙️ Actions
+            </TabButton>
           </div>
 
           {loading ? (
@@ -130,6 +139,9 @@ export function UserDetailModal({
               )}
               {detailTab === 'history' && (
                 <PurchaseHistory purchases={purchases} />
+              )}
+              {detailTab === 'actions' && (
+                <UserActionsPanel user={user} />
               )}
             </>
           )}
@@ -159,6 +171,7 @@ function TabButton({ active, onClick, color, testId, children }: { active: boole
   const activeClass = 
     color === 'blue' ? 'bg-blue-600' :
     color === 'orange' ? 'bg-orange-600' :
+    color === 'red' ? 'bg-red-600' :
     'bg-green-600'
 
   return (

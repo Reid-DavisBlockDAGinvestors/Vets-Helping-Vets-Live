@@ -269,6 +269,30 @@ export async function POST(request: NextRequest) {
         })
       }
       
+      case 'ban_user': {
+        const { data, error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+          ban_duration: '876000h' // ~100 years = permanent ban
+        })
+        if (error) throw error
+        return NextResponse.json({ 
+          success: true, 
+          message: `User ${email} has been banned.`,
+          user_id: data.user.id
+        })
+      }
+      
+      case 'unban_user': {
+        const { data, error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+          ban_duration: 'none'
+        })
+        if (error) throw error
+        return NextResponse.json({ 
+          success: true, 
+          message: `User ${email} has been unbanned.`,
+          user_id: data.user.id
+        })
+      }
+      
       default:
         return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 })
     }
