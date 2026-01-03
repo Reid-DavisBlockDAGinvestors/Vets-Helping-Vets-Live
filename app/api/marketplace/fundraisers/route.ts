@@ -158,13 +158,30 @@ export async function GET(req: NextRequest) {
       
       try {
         const contractVersion = sub.contract_version || ''
+        const isV8 = contractVersion === 'v8'
         const contract = getContractForChain(subContractAddr, chainId, contractVersion)
-        const camp = await (contract as any).getCampaign(BigInt(campaignId))
-        const grossRaisedWei = BigInt(camp.grossRaised ?? 0n)
+        const campResult = await (contract as any).getCampaign(BigInt(campaignId))
+        
+        // V8 returns a struct (tuple) - ethers returns it as object with named fields
+        // V7/V5/V6 return individual values - ethers returns array with named indices
+        // For V8: campResult is the struct directly
+        // For V7: campResult is array-like with named properties
+        let grossRaisedWei: bigint, chainEditions: number, chainMax: number
+        
+        if (isV8) {
+          // V8 struct: { id, category, baseURI, goalNative, goalUsd, grossRaised, netRaised, tipsReceived, editionsMinted, maxEditions, ... }
+          grossRaisedWei = BigInt(campResult.grossRaised ?? campResult[5] ?? 0n)
+          chainEditions = Number(campResult.editionsMinted ?? campResult[8] ?? 0n)
+          chainMax = Number(campResult.maxEditions ?? campResult[9] ?? 0n)
+        } else {
+          // V7/V5/V6: array-like with indices
+          grossRaisedWei = BigInt(campResult.grossRaised ?? campResult[3] ?? 0n)
+          chainEditions = Number(campResult.editionsMinted ?? campResult[5] ?? 0n)
+          chainMax = Number(campResult.maxEditions ?? campResult[6] ?? 0n)
+        }
+        
         const grossRaisedNative = Number(grossRaisedWei) / 1e18
         const chainRaisedUSD = grossRaisedNative * usdRate
-        const chainEditions = Number(camp.editionsMinted ?? 0n)
-        const chainMax = Number(camp.maxEditions ?? 0n)
         
         // Only use chain data if it shows MORE sales (chain is authoritative for actual mints)
         if (chainEditions > editionsMinted) {
@@ -173,7 +190,7 @@ export async function GET(req: NextRequest) {
         }
         if (chainMax > 0) maxEditions = chainMax
         
-        logger.debug(`[fundraisers] Campaign ${campaignId} (chain ${chainId}): DB sold=${sub.sold_count}, chain=${chainEditions}`)
+        logger.debug(`[fundraisers] Campaign ${campaignId} (chain ${chainId}, v=${contractVersion}): DB sold=${sub.sold_count}, chain=${chainEditions}, max=${chainMax}`)
       } catch (err: any) {
         // On-chain fetch failed - use database values (already set above)
         logger.debug(`[fundraisers] Using DB data for campaign ${campaignId} (chain ${chainId} unavailable)`)
