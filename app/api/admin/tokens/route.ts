@@ -78,9 +78,20 @@ export async function GET(req: NextRequest) {
 
     const { data: cachedTokens, error: tokensError } = await tokensQuery
 
+    // Debug logging
+    logger.info(`[admin/tokens] Query result: ${cachedTokens?.length || 0} tokens, error: ${tokensError?.message || 'none'}`)
+    
     if (tokensError) {
       logger.error('[admin/tokens] Database query failed:', tokensError)
       return NextResponse.json({ error: 'Failed to fetch tokens', details: tokensError.message }, { status: 500 })
+    }
+    
+    // If no tokens found, try a direct count query to debug
+    if (!cachedTokens || cachedTokens.length === 0) {
+      const { count, error: countError } = await supabaseAdmin
+        .from('tokens')
+        .select('*', { count: 'exact', head: true })
+      logger.info(`[admin/tokens] Direct count: ${count}, error: ${countError?.message || 'none'}`)
     }
 
     // Get campaign titles for display
