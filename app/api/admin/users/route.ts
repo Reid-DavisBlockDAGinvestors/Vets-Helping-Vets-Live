@@ -5,6 +5,7 @@ import { ethers } from 'ethers'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 // GET - Get all platform users with their stats
 export async function GET(req: NextRequest) {

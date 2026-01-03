@@ -3,6 +3,8 @@ import { PatriotPledgeV5ABI } from '@/lib/onchain'
 import { V7_ABI, V8_ABI } from '@/lib/contracts'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { ethers } from 'ethers'
+
+export const runtime = 'nodejs'
 import { getProviderForChain, ChainId } from '@/lib/chains'
 import { logger } from '@/lib/logger'
 

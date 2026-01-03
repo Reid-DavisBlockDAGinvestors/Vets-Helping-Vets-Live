@@ -7,6 +7,7 @@ import { debugGuard } from '@/lib/debugGuard'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 /**
  * Debug endpoint to check NFT token data on-chain

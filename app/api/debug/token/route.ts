@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
+
+export const runtime = 'nodejs'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { createClient } from '@supabase/supabase-js'
 import { ipfsToHttp } from '@/lib/ipfs'

@@ -15,6 +15,8 @@
 import { NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 import { ethers } from 'ethers'
+
+export const runtime = 'nodejs'
 import { getProvider } from '@/lib/onchain'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getAllDeployedContracts, V5_ABI, V6_ABI } from '@/lib/contracts'

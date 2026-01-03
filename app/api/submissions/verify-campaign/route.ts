@@ -5,6 +5,7 @@ import { ethers } from 'ethers'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 /**
  * Verify and fix campaign_id for a submission

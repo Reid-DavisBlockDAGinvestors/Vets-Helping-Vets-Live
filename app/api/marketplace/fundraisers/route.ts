@@ -8,6 +8,7 @@ import { ethers } from 'ethers'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+export const runtime = 'nodejs'
 export const fetchCache = 'force-no-store'
 
 // Create fresh Supabase client for each request to avoid caching issues

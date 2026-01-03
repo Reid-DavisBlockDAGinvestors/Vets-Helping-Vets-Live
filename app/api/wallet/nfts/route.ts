@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 import { ethers } from 'ethers'
+
+export const runtime = 'nodejs'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getMintableContracts, ContractVersion } from '@/lib/contracts'
 import { getProviderForChain, ChainId, CHAIN_CONFIGS } from '@/lib/chains'

@@ -5,6 +5,7 @@ import { ethers } from 'ethers'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 /**
  * Link an on-chain campaign to a Supabase submission by matching metadata_uri

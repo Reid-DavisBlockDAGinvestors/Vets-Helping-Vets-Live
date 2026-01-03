@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { ethers } from 'ethers'
+
+export const runtime = 'nodejs'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { logger } from '@/lib/logger'
 

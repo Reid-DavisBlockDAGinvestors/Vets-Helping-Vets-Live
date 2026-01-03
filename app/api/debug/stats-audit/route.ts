@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ethers } from 'ethers'
+
+export const runtime = 'nodejs'
 import { getProvider } from '@/lib/onchain'
 import { getAllDeployedContracts, V5_ABI, V6_ABI } from '@/lib/contracts'
 import { debugGuard } from '@/lib/debugGuard'

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
 import { ethers } from 'ethers'
+
+export const runtime = 'nodejs'
 import { verifyAdminAuth } from '@/lib/adminAuth'
 import { debugGuard } from '@/lib/debugGuard'
 

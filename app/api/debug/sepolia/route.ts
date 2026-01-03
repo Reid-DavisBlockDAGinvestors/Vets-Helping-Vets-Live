@@ -4,6 +4,7 @@ import { ethers } from 'ethers'
 import { getContractInfo, getContractAddress } from '@/lib/contracts'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 /**
  * Debug endpoint to check Sepolia configuration

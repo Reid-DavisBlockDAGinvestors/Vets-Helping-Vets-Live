@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { ethers } from 'ethers'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 // BDAG to USD conversion rate (configurable via env)
 const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
