@@ -89,7 +89,8 @@ export const V7_ABI = [
   // V7 Campaign management - DIFFERENT SIGNATURE than V5/V6
   'function createCampaign(string category, string baseURI, uint256 goal, uint256 maxEditions, uint256 pricePerEdition, address nonprofit, address submitter, bool immediatePayoutEnabled) external returns (uint256)',
   'function totalCampaigns() view returns (uint256)',
-  'function getCampaign(uint256 campaignId) view returns (string category, string baseURI, uint256 goal, uint256 grossRaised, uint256 netRaised, uint256 editionsMinted, uint256 maxEditions, uint256 pricePerEdition, bool active, bool closed)',
+  // V7 getCampaign returns 13 fields including nonprofit, submitter, immediatePayoutEnabled
+  'function getCampaign(uint256 campaignId) view returns (string category, string baseURI, uint256 goal, uint256 grossRaised, uint256 netRaised, uint256 editionsMinted, uint256 maxEditions, uint256 pricePerEdition, address nonprofit, address submitter, bool active, bool closed, bool immediatePayoutEnabled)',
   'function campaigns(uint256 campaignId) view returns (string category, string baseURI, uint256 goal, uint256 grossRaised, uint256 netRaised, uint256 tipsReceived, uint256 editionsMinted, uint256 maxEditions, uint256 pricePerEdition, address nonprofit, address submitter, bool active, bool closed, bool refunded, bool immediatePayoutEnabled)',
   
   // Edition minting - uses ETH on Sepolia/Mainnet
