@@ -9,8 +9,13 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const maxDuration = 120 // Extended timeout for blockchain operations
 
-// BDAG/USD conversion rate
+// Currency/USD conversion rates
 const BDAG_USD_RATE = parseFloat(process.env.BDAG_USD_RATE || '0.05')
+const ETH_USD_RATE = parseFloat(process.env.ETH_USD_RATE || '2300') // ~$2300/ETH
+
+// Chain ID constants
+const SEPOLIA_CHAIN_ID = 11155111
+const ETHEREUM_CHAIN_ID = 1
 
 /**
  * Verify and fix a campaign's on-chain status
@@ -198,13 +203,34 @@ export async function POST(req: NextRequest) {
     // Prepare campaign parameters
     const category = sub.category || 'general'
     const goalUsd = sub.goal || 100
-    const goalBdag = goalUsd / BDAG_USD_RATE
-    const goalWei = ethers.parseEther(goalBdag.toFixed(6))
     const maxEditions = sub.num_copies || 100
     const priceUsd = sub.price_per_copy || 1
-    const priceBdag = priceUsd / BDAG_USD_RATE
-    const priceWei = ethers.parseEther(priceBdag.toFixed(6))
     const feeRateBps = 100 // 1%
+    
+    // Chain-aware currency conversion
+    // For ETH-based chains (Sepolia, Mainnet), convert USD to ETH
+    // For BDAG chains, convert USD to BDAG
+    const chainId = sub.chain_id || sub.target_chain_id || 1043 // Default to BlockDAG
+    const isEthChain = chainId === SEPOLIA_CHAIN_ID || chainId === ETHEREUM_CHAIN_ID
+    
+    let goalWei: bigint
+    let priceWei: bigint
+    
+    if (isEthChain) {
+      // Convert USD to ETH (e.g., $10 / $2300 = 0.00434783 ETH)
+      const goalEth = goalUsd / ETH_USD_RATE
+      const priceEth = priceUsd / ETH_USD_RATE
+      goalWei = ethers.parseEther(goalEth.toFixed(18))
+      priceWei = ethers.parseEther(priceEth.toFixed(18))
+      logger.debug(`[verify-campaign] ETH chain (${chainId}): goal=${goalEth}ETH, price=${priceEth}ETH`)
+    } else {
+      // Convert USD to BDAG (e.g., $10 / $0.05 = 200 BDAG)
+      const goalBdag = goalUsd / BDAG_USD_RATE
+      const priceBdag = priceUsd / BDAG_USD_RATE
+      goalWei = ethers.parseEther(goalBdag.toFixed(6))
+      priceWei = ethers.parseEther(priceBdag.toFixed(6))
+      logger.debug(`[verify-campaign] BDAG chain (${chainId}): goal=${goalBdag}BDAG, price=${priceBdag}BDAG`)
+    }
 
     logger.debug(`[verify-campaign] Creating campaign on-chain: goal=${goalUsd}USD, editions=${maxEditions}, price=${priceUsd}USD`)
 
