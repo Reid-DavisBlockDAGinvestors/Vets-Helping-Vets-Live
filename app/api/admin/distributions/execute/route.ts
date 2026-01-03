@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ethers } from 'ethers'
 import { getSignerForChain, getContractAddress, CHAIN_CONFIGS, type ChainId } from '@/lib/chains'
-import { V5_ABI, V6_ABI, V7_ABI } from '@/lib/contracts'
+import { V5_ABI, V6_ABI, V7_ABI, V8_ABI } from '@/lib/contracts'
 import { logger } from '@/lib/logger'
 import { sendDistributionNotifications } from '@/lib/email'
 
@@ -11,6 +11,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 // Get the appropriate ABI for a contract version
 function getAbiForVersion(version: string): string[] {
+  if (version === 'v8') return V8_ABI
   if (version === 'v7') return V7_ABI
   if (version === 'v6') return V6_ABI
   return V5_ABI
