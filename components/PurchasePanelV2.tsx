@@ -63,10 +63,10 @@ export default function PurchasePanelV2({
   const auth = usePurchaseAuth()
   const config = usePurchaseConfig(pricePerNft, quantity, tipAmount, customAmount, remainingCopies)
   
-  // Live price for ETH (Sepolia uses mainnet ETH price)
-  const { price: liveEthPrice } = useLivePrice(11155111, { 
+  // Live price for ETH (always fetch so it's ready when user switches to Sepolia)
+  const { price: liveEthPrice, loading: priceLoading } = useLivePrice(11155111, { 
     refreshInterval: 60000, 
-    enabled: selectedNetwork === 'sepolia' 
+    enabled: true // Always fetch live ETH price
   })
   const ethRate = liveEthPrice?.priceUsd || 3100 // Fallback to $3100
   
