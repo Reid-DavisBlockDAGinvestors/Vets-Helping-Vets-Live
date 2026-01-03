@@ -456,10 +456,23 @@ function initializeRegistry(): void {
   // V8 - Sepolia testnet (deployed Jan 3, 2026)
   // Improvements: struct-based getCampaign, chain-agnostic naming, USD price storage, per-campaign pause
   registerContract({
-    version: 'v8',
-    address: process.env.CONTRACT_ADDRESS_V8 || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V8 || '0x042652292B8f1670b257707C1aDA4D19de9E9399',
+    version: 'v8-sepolia',
+    address: process.env.CONTRACT_ADDRESS_V8_SEPOLIA || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V8_SEPOLIA || '0x042652292B8f1670b257707C1aDA4D19de9E9399',
     name: 'PatriotPledgeNFTV8',
     chainId: 11155111, // Sepolia
+    isActive: true,
+    isMintable: true,
+    features: { ...DEFAULT_FEATURES, immediatePayout: true },
+    abi: V8_ABI
+  })
+
+  // V8 - Ethereum Mainnet (deployed Jan 3, 2026)
+  // Production deployment with all V8 improvements
+  registerContract({
+    version: 'v8',
+    address: process.env.CONTRACT_ADDRESS_V8_MAINNET || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V8_MAINNET || '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e',
+    name: 'PatriotPledgeNFTV8',
+    chainId: 1, // Ethereum Mainnet
     isActive: true,
     isMintable: true,
     features: { ...DEFAULT_FEATURES, immediatePayout: true },

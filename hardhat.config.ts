@@ -40,14 +40,14 @@ module.exports = {
       gas: 5000000,
     },
     
-    // Ethereum Mainnet (Production - V7)
+    // Ethereum Mainnet (Production - V8)
     ethereum: {
       url: process.env.ETHEREUM_RPC || `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY || ''}`,
       accounts: getPrivateKey('ETH_DEPLOYER_KEY') ? [getPrivateKey('ETH_DEPLOYER_KEY')] : [],
       chainId: 1,
       gasPrice: 'auto',
-      // Security: Set max gas to prevent accidents
-      gas: 5000000,
+      // V8 contract requires ~4.5M gas for deployment
+      gas: 6000000,
     },
     
     // Polygon Mainnet (Future)
