@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getRelayerSigner } from '@/lib/onchain'
 import { sendCampaignApproved } from '@/lib/mailer'
-import { getActiveContractVersion, getContractByVersion, getContractAddress, getContractInfo } from '@/lib/contracts'
+import { getActiveContractVersion, getContractByVersion, getContractAddress, getContractInfo, getContractInfoByChainId, V8_ABI } from '@/lib/contracts'
 import { logger } from '@/lib/logger'
 
 // Chain info mapping for multi-chain support
@@ -150,7 +150,22 @@ export async function POST(req: NextRequest) {
     let signer: any
     const { ethers } = await import('ethers')
     
-    if (targetChainId === 11155111) {
+    if (targetChainId === 1) {
+      // Ethereum Mainnet
+      const mainnetRpc = process.env.ETHEREUM_RPC || process.env.NEXT_PUBLIC_ETHEREUM_RPC || 'https://eth.llamarpc.com'
+      const mainnetKey = process.env.ETH_DEPLOYER_KEY || process.env.ETHEREUM_DEPLOYER_KEY
+      
+      if (!mainnetKey) {
+        return NextResponse.json({ 
+          error: 'MISSING_MAINNET_KEY', 
+          details: 'ETH_DEPLOYER_KEY not configured for Ethereum Mainnet deployment' 
+        }, { status: 500 })
+      }
+      
+      const provider = new ethers.JsonRpcProvider(mainnetRpc)
+      signer = new ethers.Wallet(mainnetKey, provider)
+      logger.info(`[approve] Using Ethereum Mainnet signer: ${signer.address}`)
+    } else if (targetChainId === 11155111) {
       // Sepolia network
       const sepoliaRpc = process.env.ETHEREUM_SEPOLIA_RPC || process.env.NEXT_PUBLIC_ETHEREUM_SEPOLIA_RPC || 'https://ethereum-sepolia-rpc.publicnode.com'
       const sepoliaKey = process.env.ETH_DEPLOYER_KEY || process.env.SEPOLIA_DEPLOYER_KEY
@@ -171,10 +186,27 @@ export async function POST(req: NextRequest) {
       logger.info(`[approve] Using BlockDAG signer`)
     }
     
-    // Use the TARGET contract version, not the default active one
+    // Use chain-aware contract lookup for V8+ (same version on multiple chains)
     const contractVersion = targetContractVersion as any
-    const contractAddress = getContractAddress(contractVersion)
-    const contract = getContractByVersion(contractVersion, signer)
+    let contractAddress: string
+    let contractAbi: any
+    
+    // For V8, use chain-aware lookup since V8 exists on both Sepolia and Mainnet
+    if (targetContractVersion === 'v8') {
+      const chainContractInfo = getContractInfoByChainId(targetChainId)
+      if (!chainContractInfo) {
+        return NextResponse.json({ 
+          error: 'CONTRACT_NOT_FOUND', 
+          details: `No V8 contract registered for chain ${targetChainId}` 
+        }, { status: 400 })
+      }
+      contractAddress = chainContractInfo.address
+      contractAbi = chainContractInfo.abi
+    } else {
+      contractAddress = getContractAddress(contractVersion)
+      const info = getContractInfo(contractVersion)
+      contractAbi = info?.abi
+    }
     
     if (!contractAddress) {
       return NextResponse.json({ 
@@ -183,12 +215,15 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
     
+    // Create contract instance with chain-specific address and ABI
+    const contract = new ethers.Contract(contractAddress, contractAbi, signer)
+    
     logger.info(`[approve] Using contract ${contractVersion} at ${contractAddress} on chain ${targetChainId}`)
     
     // IDEMPOTENCY CHECK: Search on-chain for existing campaign with same metadata URI
     // This prevents duplicate campaigns from RPC retries
     try {
-      const checkContract = getContractByVersion(contractVersion, signer)
+      const checkContract = new ethers.Contract(contractAddress, contractAbi, signer)
       const totalOnChain = Number(await checkContract.totalCampaigns())
       logger.debug(`[approve] Idempotency check: searching ${totalOnChain} campaigns for URI match`)
       
