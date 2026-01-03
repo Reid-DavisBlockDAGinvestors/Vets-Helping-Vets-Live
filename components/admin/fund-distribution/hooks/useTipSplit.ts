@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { supabase } from '@/lib/supabase'
 import type { TipSplit } from '../types'
 
 interface UseTipSplitResult {
@@ -27,7 +28,16 @@ export function useTipSplit(): UseTipSplitResult {
     setError(null)
 
     try {
-      const response = await fetch(`/api/admin/distributions/tip-split?campaignId=${campaignId}`)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Not authenticated')
+      }
+
+      const response = await fetch(`/api/admin/distributions/tip-split?campaignId=${campaignId}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
       
       if (!response.ok) {
         throw new Error(`Failed to fetch tip split: ${response.statusText}`)
@@ -50,9 +60,17 @@ export function useTipSplit(): UseTipSplitResult {
     setError(null)
 
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Not authenticated')
+      }
+
       const response = await fetch('/api/admin/distributions/tip-split', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({
           campaignId,
           submitterPercent: split.submitterPercent,
