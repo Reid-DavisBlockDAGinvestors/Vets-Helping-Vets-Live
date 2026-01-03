@@ -339,32 +339,39 @@ export default function PurchasePanelV2({
         {/* Crypto Tab */}
         {activeTab === 'crypto' && (
           <div className="space-y-4">
-            {/* Network Selector */}
+            {/* Network Selector - Only show Ethereum for Mainnet campaigns */}
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Select Network</label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => setSelectedNetwork('bdag')}
-                  data-testid="network-bdag-btn"
-                  className={`rounded-lg py-3 px-3 text-sm font-medium transition-all flex items-center justify-center gap-1 ${
-                    selectedNetwork === 'bdag' 
-                      ? 'bg-blue-600 text-white ring-2 ring-blue-400' 
-                      : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
-                  }`}
-                >
-                  <span>🔷</span> BlockDAG
-                </button>
-                <button
-                  onClick={() => setSelectedNetwork('sepolia')}
-                  data-testid="network-sepolia-btn"
-                  className={`rounded-lg py-3 px-3 text-sm font-medium transition-all flex items-center justify-center gap-1 ${
-                    selectedNetwork === 'sepolia' 
-                      ? 'bg-purple-600 text-white ring-2 ring-purple-400' 
-                      : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
-                  }`}
-                >
-                  <span>🧪</span> Sepolia
-                </button>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                {isEthereumMainnet ? 'Payment Network' : 'Select Network'}
+              </label>
+              <div className={`grid gap-2 ${isEthereumMainnet ? 'grid-cols-1' : 'grid-cols-3'}`}>
+                {/* Only show testnet options for non-mainnet campaigns */}
+                {!isEthereumMainnet && (
+                  <>
+                    <button
+                      onClick={() => setSelectedNetwork('bdag')}
+                      data-testid="network-bdag-btn"
+                      className={`rounded-lg py-3 px-3 text-sm font-medium transition-all flex items-center justify-center gap-1 ${
+                        selectedNetwork === 'bdag' 
+                          ? 'bg-blue-600 text-white ring-2 ring-blue-400' 
+                          : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                      }`}
+                    >
+                      <span>🔷</span> BlockDAG
+                    </button>
+                    <button
+                      onClick={() => setSelectedNetwork('sepolia')}
+                      data-testid="network-sepolia-btn"
+                      className={`rounded-lg py-3 px-3 text-sm font-medium transition-all flex items-center justify-center gap-1 ${
+                        selectedNetwork === 'sepolia' 
+                          ? 'bg-purple-600 text-white ring-2 ring-purple-400' 
+                          : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                      }`}
+                    >
+                      <span>🧪</span> Sepolia
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => setSelectedNetwork('ethereum')}
                   data-testid="network-ethereum-btn"
@@ -374,16 +381,18 @@ export default function PurchasePanelV2({
                       : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
                   }`}
                 >
-                  <span>⟠</span> Ethereum
+                  <span>⟠</span> Ethereum{isEthereumMainnet ? ' Mainnet' : ''}
                 </button>
               </div>
-              {/* Network Warning */}
+              {/* Network Info */}
               <p className="text-xs mt-2">
-                {selectedNetwork === 'ethereum' 
-                  ? <span className="text-green-400">✓ Ethereum Mainnet - uses real ETH</span>
-                  : selectedNetwork === 'sepolia' 
-                    ? <span className="text-yellow-400/80">⚠️ Sepolia is a testnet - uses test ETH only</span>
-                    : <span className="text-yellow-400/80">⚠️ BlockDAG Awakening is a testnet - uses test BDAG only</span>}
+                {isEthereumMainnet 
+                  ? <span className="text-green-400">✓ This campaign only accepts Ethereum Mainnet payments</span>
+                  : selectedNetwork === 'ethereum' 
+                    ? <span className="text-green-400">✓ Ethereum Mainnet - uses real ETH</span>
+                    : selectedNetwork === 'sepolia' 
+                      ? <span className="text-yellow-400/80">⚠️ Sepolia is a testnet - uses test ETH only</span>
+                      : <span className="text-yellow-400/80">⚠️ BlockDAG Awakening is a testnet - uses test BDAG only</span>}
               </p>
             </div>
 
