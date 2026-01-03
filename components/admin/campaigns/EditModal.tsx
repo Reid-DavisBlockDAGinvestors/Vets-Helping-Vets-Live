@@ -42,7 +42,8 @@ export function EditModal({
     },
     verification_status: '',
     nft_price: 0,
-    nft_editions: 0
+    nft_editions: 0,
+    video_url: ''
   })
 
   useEffect(() => {
@@ -66,7 +67,8 @@ export function EditModal({
         },
         verification_status: campaign.verification_status || 'pending',
         nft_price: campaign.nft_price || 0,
-        nft_editions: campaign.nft_editions || campaign.num_copies || 100
+        nft_editions: campaign.nft_editions || campaign.num_copies || 100,
+        video_url: campaign.video_url || ''
       })
     }
   }, [campaign])
@@ -200,6 +202,27 @@ export function EditModal({
               className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:border-blue-500 focus:outline-none resize-none"
               data-testid="edit-story-textarea"
             />
+          </div>
+
+          {/* YouTube Video URL */}
+          <div>
+            <label className="block text-sm text-white/70 mb-1">📹 YouTube Video URL (optional)</label>
+            <input
+              type="url"
+              value={formData.video_url}
+              onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:border-blue-500 focus:outline-none"
+              placeholder="https://youtube.com/watch?v=... or https://youtu.be/..."
+              data-testid="edit-video-url-input"
+            />
+            <p className="text-xs text-white/40 mt-1">
+              Add a YouTube link to display on the campaign story page
+            </p>
+            {formData.video_url && (
+              <div className="mt-2 p-2 rounded bg-green-500/10 border border-green-500/30">
+                <p className="text-xs text-green-400">✓ Video will be embedded on the story page</p>
+              </div>
+            )}
           </div>
 
           {/* Creator Info */}

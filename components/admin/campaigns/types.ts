@@ -90,6 +90,7 @@ export interface Campaign {
   updates: CampaignUpdate[]
   pendingUpdates: number
   approvedUpdates: number
+  video_url: string | null // YouTube video URL for campaign story
 }
 
 /**
@@ -150,6 +151,7 @@ export interface EditFormData {
   verification_status: string
   nft_price: number
   nft_editions: number
+  video_url: string // YouTube video URL for campaign story
 }
 
 /**

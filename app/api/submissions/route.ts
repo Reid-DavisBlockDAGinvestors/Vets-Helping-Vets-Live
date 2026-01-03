@@ -192,6 +192,8 @@ export async function PUT(req: NextRequest) {
       'nft_price', 'nft_editions', 'nft_editions_remaining',
       'num_copies', 'price_per_copy', // legacy field names
       'campaign_id', 'tx_hash', 'minted_at', 'contract_address', 'visible_on_marketplace',
+      // Media
+      'video_url', // YouTube video URL for campaign story
       // Admin notes
       'admin_notes', 'reviewed_by', 'reviewed_at'
     ]

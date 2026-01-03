@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import PurchasePanelV2 from '@/components/PurchasePanelV2'
 import ShareButtons from '@/components/ShareButtons'
+import YouTubeEmbed from '@/components/YouTubeEmbed'
 import { ipfsToHttp } from '@/lib/ipfs'
 import { getCategoryById } from '@/lib/categories'
 import { logger } from '@/lib/logger'
@@ -208,6 +209,7 @@ export default async function StoryViewer({ params }: { params: { id: string } }
   const category = submission?.category || onchain?.category || 'general'
   const goalUsd = submission?.goal ? Number(submission.goal) : null
   const benchmarks: string[] = Array.isArray(submission?.benchmarks) ? submission.benchmarks : []
+  const videoUrl = submission?.video_url || '' // YouTube video URL
   
   // Check if campaign is pending blockchain confirmation
   // Only block purchases if we can't load on-chain data AND verification failed
@@ -454,6 +456,16 @@ export default async function StoryViewer({ params }: { params: { id: string } }
                 </div>
               ) : (
                 <p className="text-white/50 italic">No story provided yet.</p>
+              )}
+              
+              {/* YouTube Video */}
+              {videoUrl && (
+                <div className="mt-6 pt-6 border-t border-white/10">
+                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                    <span>📹</span> Campaign Video
+                  </h3>
+                  <YouTubeEmbed url={videoUrl} />
+                </div>
               )}
             </div>
           </div>

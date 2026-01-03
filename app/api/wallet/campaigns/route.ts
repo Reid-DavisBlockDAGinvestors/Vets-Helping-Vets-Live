@@ -135,6 +135,8 @@ export async function GET(req: NextRequest) {
           // Contract info for multi-contract support
           contractAddress: sub.contract_address,
           contractVersion: sub.contract_version || 'v5',
+          // Media
+          videoUrl: sub.video_url || null,
           // On-chain data
           raised: onchainData?.grossRaised || 0,
           nftSalesUSD: onchainData?.nftSalesUSD || 0,

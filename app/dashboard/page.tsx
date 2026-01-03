@@ -68,6 +68,7 @@ type CreatedCampaign = {
   contractVersion?: string
   chainId?: number
   chainName?: string
+  videoUrl?: string // YouTube video URL
 }
 
 export default function DashboardPage() {
@@ -405,6 +406,11 @@ export default function DashboardPage() {
                                       </svg>
                                     </a>
                                   </div>
+                                )}
+                                {campaign.videoUrl && (
+                                  <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-300 flex items-center gap-1">
+                                    📹 Video
+                                  </span>
                                 )}
                               </div>
                             </div>
