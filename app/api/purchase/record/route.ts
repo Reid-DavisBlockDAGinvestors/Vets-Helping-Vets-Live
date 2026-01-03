@@ -130,6 +130,48 @@ export async function POST(req: NextRequest) {
       } else {
         logger.debug(`[purchase/record] Recorded purchase for wallet ${walletAddress}, campaign ${effectiveId}`)
       }
+
+      // Cache token(s) in tokens table for fast admin queries
+      const tokensToCache = mintedTokenIds?.length ? mintedTokenIds : 
+        (typeof editionMinted === 'number' ? [editionMinted] : [])
+      
+      if (tokensToCache.length > 0) {
+        // Get submission for contract info
+        const { data: submission } = await supabaseAdmin
+          .from('submissions')
+          .select('contract_address, contract_version, max_editions')
+          .eq('campaign_id', effectiveId)
+          .single()
+
+        for (let i = 0; i < tokensToCache.length; i++) {
+          const tokenIdToCache = tokensToCache[i]
+          const { error: tokenCacheError } = await supabaseAdmin
+            .from('tokens')
+            .upsert({
+              token_id: tokenIdToCache,
+              campaign_id: effectiveId,
+              chain_id: effectiveChainId,
+              contract_address: submission?.contract_address || '',
+              contract_version: submission?.contract_version || 'v5',
+              owner_wallet: walletAddress.toLowerCase(),
+              edition_number: i + 1, // Edition number within this purchase
+              total_editions: submission?.max_editions || null,
+              is_frozen: false,
+              is_soulbound: false,
+              metadata_uri: null, // Can be updated later
+              mint_tx_hash: txHash,
+              minted_at: new Date().toISOString()
+            }, {
+              onConflict: 'token_id,chain_id,contract_address'
+            })
+
+          if (tokenCacheError) {
+            logger.error(`[purchase/record] Failed to cache token ${tokenIdToCache}:`, tokenCacheError)
+          } else {
+            logger.debug(`[purchase/record] Cached token ${tokenIdToCache} in tokens table`)
+          }
+        }
+      }
     }
 
     // Update the submission's sold_count (default 1 for edition mint)
