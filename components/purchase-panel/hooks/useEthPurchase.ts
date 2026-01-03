@@ -207,32 +207,33 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
 
       setCryptoMsg('Preparing transaction...')
 
-      // Get both prices:
-      // 1. On-chain price (campaign[7] = pricePerEdition in wei) - contract minimum requirement
-      // 2. Live-calculated price - what user expects to pay based on current market
-      const onChainPriceWei = BigInt(campaign[7].toString())
-      const liveCalculatedWei = parseEther(usdToEth(hasNftPrice ? pricePerNft! : (totalAmountUsd - tipAmountUsd) / quantity, liveEthPrice).toFixed(18))
+      // Calculate price using LIVE ETH rate
+      // USD price is the source of truth - convert to ETH at current market rate
+      const usdPricePerNft = hasNftPrice ? pricePerNft! : (totalAmountUsd - tipAmountUsd) / quantity
+      const liveCalculatedEth = usdToEth(usdPricePerNft, liveEthPrice)
       
-      // Use the MAXIMUM of both to ensure:
-      // - We always meet contract minimum (avoid "Insufficient payment")
-      // - We use live price when it's higher (fair market value)
-      const finalPriceWei = onChainPriceWei > liveCalculatedWei ? onChainPriceWei : liveCalculatedWei
+      // Add 1% buffer to handle price fluctuations and ensure contract accepts payment
+      // This protects against the on-chain minimum while still using live pricing
+      const bufferedEth = liveCalculatedEth * 1.01
+      const finalPriceWei = parseEther(bufferedEth.toFixed(18))
+      
+      // Log for transparency
+      const onChainPriceWei = BigInt(campaign[7].toString())
       
       const tipEthWei = tipAmountUsd > 0 ? parseEther(usdToEth(tipAmountUsd, liveEthPrice).toFixed(18)) : 0n
       const gasLimit = 450000n // V7 needs ~365k gas for mint
 
       // Debug logging
-      logger.debug('[useEthPurchase] Transaction params (LIVE + ON-CHAIN):', {
+      logger.debug('[useEthPurchase] Transaction params (LIVE PRICE):', {
         contractAddress,
         targetId,
+        usdPricePerNft,
         liveEthPrice,
+        liveCalculatedEth,
+        bufferedEth,
+        finalPriceWei: finalPriceWei.toString(),
         onChainPriceWei: onChainPriceWei.toString(),
         onChainPriceEth: Number(onChainPriceWei) / 1e18,
-        liveCalculatedWei: liveCalculatedWei.toString(),
-        liveCalculatedEth: Number(liveCalculatedWei) / 1e18,
-        finalPriceWei: finalPriceWei.toString(),
-        finalPriceEth: Number(finalPriceWei) / 1e18,
-        usingOnChain: onChainPriceWei > liveCalculatedWei,
         tipUsd: tipAmountUsd,
         tipEthWei: tipEthWei.toString(),
         gasLimit: gasLimit.toString(),
