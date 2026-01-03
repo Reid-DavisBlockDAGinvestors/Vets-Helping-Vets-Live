@@ -10,3 +10,4 @@ export { PatriotPledgeNFTV4__factory } from "./PatriotPledgeNFTV4__factory";
 export { PatriotPledgeNFTV5__factory } from "./PatriotPledgeNFTV5__factory";
 export { PatriotPledgeNFTV6__factory } from "./PatriotPledgeNFTV6__factory";
 export { PatriotPledgeNFTV7__factory } from "./PatriotPledgeNFTV7__factory";
+export { PatriotPledgeNFTV8__factory } from "./PatriotPledgeNFTV8__factory";

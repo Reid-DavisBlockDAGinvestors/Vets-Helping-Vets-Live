@@ -149,6 +149,10 @@ declare module "hardhat/types/runtime" {
       name: "PatriotPledgeNFTV7",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.PatriotPledgeNFTV7__factory>;
+    getContractFactory(
+      name: "PatriotPledgeNFTV8",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.PatriotPledgeNFTV8__factory>;
 
     getContractAt(
       name: "Ownable",
@@ -320,6 +324,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.PatriotPledgeNFTV7>;
+    getContractAt(
+      name: "PatriotPledgeNFTV8",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.PatriotPledgeNFTV8>;
 
     deployContract(
       name: "Ownable",
@@ -457,6 +466,10 @@ declare module "hardhat/types/runtime" {
       name: "PatriotPledgeNFTV7",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.PatriotPledgeNFTV7>;
+    deployContract(
+      name: "PatriotPledgeNFTV8",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.PatriotPledgeNFTV8>;
 
     deployContract(
       name: "Ownable",
@@ -628,6 +641,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.PatriotPledgeNFTV7>;
+    deployContract(
+      name: "PatriotPledgeNFTV8",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.PatriotPledgeNFTV8>;
 
     // default types
     getContractFactory(

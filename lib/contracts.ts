@@ -167,6 +167,113 @@ export const V7_ABI = [
   'function setCampaignImmediatePayout(uint256 campaignId, bool enabled) external',
 ]
 
+// V8 ABI - Struct-based getCampaign, chain-agnostic naming, USD price storage
+export const V8_ABI = [
+  // V8 Campaign management - includes USD prices
+  'function createCampaign(string category, string baseURI, uint256 goalNative, uint256 goalUsd, uint256 maxEditions, uint256 priceNative, uint256 priceUsd, address nonprofit, address submitter, bool immediatePayoutEnabled) external returns (uint256)',
+  'function totalCampaigns() view returns (uint256)',
+  
+  // V8 getCampaign returns struct (prevents ABI mismatch)
+  'function getCampaign(uint256 campaignId) view returns (tuple(uint256 id, string category, string baseURI, uint256 goalNative, uint256 goalUsd, uint256 grossRaised, uint256 netRaised, uint256 tipsReceived, uint256 editionsMinted, uint256 maxEditions, uint256 priceNative, uint256 priceUsd, address nonprofit, address submitter, bool active, bool paused, bool closed, bool refunded, bool immediatePayoutEnabled))',
+  
+  // V8 Chain-agnostic minting (replaces mintWithBDAG)
+  'function mint(uint256 campaignId) external payable returns (uint256)',
+  'function mintWithTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
+  'function batchMint(uint256 campaignId, uint256 quantity) external payable returns (uint256[])',
+  'function batchMintWithTip(uint256 campaignId, uint256 quantity, uint256 tipAmount) external payable returns (uint256[])',
+  
+  // Legacy aliases for V7 compatibility
+  'function mintWithBDAG(uint256 campaignId) external payable returns (uint256)',
+  'function mintWithBDAGAndTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
+  
+  // Living NFT - metadata updates
+  'function updateCampaignMetadata(uint256 campaignId, string newBaseURI) external',
+  
+  // Campaign lifecycle
+  'function deactivateCampaign(uint256 campaignId) external',
+  'function reactivateCampaign(uint256 campaignId) external',
+  'function closeCampaign(uint256 campaignId) external',
+  'function reopenCampaign(uint256 campaignId) external',
+  
+  // V8 NEW: Per-campaign pause
+  'function pauseCampaign(uint256 campaignId) external',
+  'function unpauseCampaign(uint256 campaignId) external',
+  
+  // Campaign updates
+  'function updateCampaignGoal(uint256 campaignId, uint256 newGoalNative, uint256 newGoalUsd) external',
+  'function updateCampaignPrice(uint256 campaignId, uint256 newPriceNative, uint256 newPriceUsd) external',
+  'function updateCampaignMaxEditions(uint256 campaignId, uint256 newMax) external',
+  'function updateCampaignSubmitter(uint256 campaignId, address newSubmitter) external',
+  'function updateCampaignNonprofit(uint256 campaignId, address newNonprofit) external',
+  'function setCampaignImmediatePayout(uint256 campaignId, bool enabled) external',
+  
+  // Edition info
+  'function getEditionInfo(uint256 tokenId) view returns (uint256 campaignId, uint256 editionNumber, uint256 totalEditions)',
+  'function getCampaignEditions(uint256 campaignId) view returns (uint256[])',
+  'function tokenToCampaign(uint256 tokenId) view returns (uint256)',
+  'function tokenEditionNumber(uint256 tokenId) view returns (uint256)',
+  
+  // Standard ERC721 + Enumerable
+  'function totalSupply() view returns (uint256)',
+  'function tokenByIndex(uint256 index) view returns (uint256)',
+  'function ownerOf(uint256 tokenId) view returns (address)',
+  'function tokenURI(uint256 tokenId) view returns (string)',
+  'function balanceOf(address owner) view returns (uint256)',
+  'function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)',
+  
+  // Admin token URI
+  'function setTokenURI(uint256 tokenId, string uri) external',
+  'function batchSetTokenURI(uint256[] tokenIds, string uri) external',
+  
+  // Token freezing
+  'function setTokenFrozen(uint256 tokenId, bool frozen) external',
+  'function frozenTokens(uint256 tokenId) view returns (bool)',
+  
+  // Blacklist
+  'function setBlacklisted(address addr, bool status) external',
+  'function blacklisted(address addr) view returns (bool)',
+  
+  // Soulbound
+  'function setTokenSoulbound(uint256 tokenId, bool soulbound) external',
+  'function soulbound(uint256 tokenId) view returns (bool)',
+  
+  // Pausable
+  'function pause() external',
+  'function unpause() external',
+  'function paused() view returns (bool)',
+  
+  // Treasury and fees
+  'function platformTreasury() view returns (address)',
+  'function platformFeeBps() view returns (uint16)',
+  'function setPlatformFee(uint16 newFeeBps) external',
+  'function setPlatformTreasury(address newTreasury) external',
+  'function owner() view returns (address)',
+  
+  // Royalties (EIP-2981)
+  'function royaltyInfo(uint256 tokenId, uint256 salePrice) view returns (address receiver, uint256 royaltyAmount)',
+  'function setDefaultRoyalty(address receiver, uint96 feeNumerator) external',
+  'function setTokenRoyalty(uint256 tokenId, address receiver, uint96 feeNumerator) external',
+  
+  // Fund Distribution
+  'function withdraw(address to, uint256 amount) external',
+  'function distributePendingFunds(uint256 campaignId) external',
+  'function emergencyWithdraw() external',
+  'function campaignDistributed(uint256 campaignId) view returns (uint256)',
+  
+  // Bug bounty
+  'function bugBountyPool() view returns (uint256)',
+  'function fundBugBounty() external payable',
+  'function payBugBounty(address recipient, uint256 amount, string reportId) external',
+  
+  // Admin minting
+  'function mintEditionToDonor(uint256 campaignId, address donor, uint256 amountPaid) external returns (uint256)',
+  'function recordContribution(uint256 campaignId, uint256 gross, uint256 net, uint256 tip, bool isOnchain) external',
+  
+  // Version
+  'function VERSION() view returns (uint256)',
+  'function deploymentChainId() view returns (uint256)',
+]
+
 // V6 ABI - Extended with new features
 export const V6_ABI = [
   ...V5_ABI,
@@ -340,13 +447,26 @@ function initializeRegistry(): void {
     address: process.env.CONTRACT_ADDRESS_V7 || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V7 || '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e',
     name: 'PatriotPledgeNFTV7',
     chainId: 11155111, // Sepolia
+    isActive: false, // Deprecated in favor of V8
+    isMintable: true,
+    features: { ...DEFAULT_FEATURES, immediatePayout: true },
+    abi: V7_ABI
+  })
+
+  // V8 - Sepolia testnet (deployed Jan 3, 2026)
+  // Improvements: struct-based getCampaign, chain-agnostic naming, USD price storage, per-campaign pause
+  registerContract({
+    version: 'v8',
+    address: process.env.CONTRACT_ADDRESS_V8 || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_V8 || '0x042652292B8f1670b257707C1aDA4D19de9E9399',
+    name: 'PatriotPledgeNFTV8',
+    chainId: 11155111, // Sepolia
     isActive: true,
     isMintable: true,
     features: { ...DEFAULT_FEATURES, immediatePayout: true },
-    abi: V7_ABI // V7 has different createCampaign signature
+    abi: V8_ABI
   })
 
-  // Auto-load any additional contracts from environment (V8+)
+  // Auto-load any additional contracts from environment (V9+)
   for (let i = 8; i <= 100; i++) {
     const contract = loadContractFromEnv(i)
     if (contract) {

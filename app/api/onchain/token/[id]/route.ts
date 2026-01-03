@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PatriotPledgeV5ABI } from '@/lib/onchain'
-import { V7_ABI } from '@/lib/contracts'
+import { V7_ABI, V8_ABI } from '@/lib/contracts'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { ethers } from 'ethers'
 import { getProviderForChain, ChainId } from '@/lib/chains'
@@ -16,6 +16,7 @@ const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '3100')
 const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
 const V6_CONTRACT = process.env.CONTRACT_ADDRESS || process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
 const V7_CONTRACT = '0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e'
+const V8_CONTRACT = '0x042652292B8f1670b257707C1aDA4D19de9E9399'
 
 export async function GET(req: NextRequest, context: { params: { id: string } }) {
   try {
@@ -43,7 +44,10 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       contractVersion = submission?.contract_version || 'v5'
     } else {
       // Determine version from address
-      if (contractAddress.toLowerCase() === V7_CONTRACT.toLowerCase()) {
+      if (contractAddress.toLowerCase() === V8_CONTRACT.toLowerCase()) {
+        chainId = 11155111
+        contractVersion = 'v8'
+      } else if (contractAddress.toLowerCase() === V7_CONTRACT.toLowerCase()) {
         chainId = 11155111
         contractVersion = 'v7'
       }
@@ -60,7 +64,8 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
 
     // Get the appropriate provider and ABI for the chain
     const isEthChain = chainId === 1 || chainId === 11155111
-    const abi = isEthChain ? V7_ABI : PatriotPledgeV5ABI
+    const isV8 = contractVersion === 'v8' || parseInt(contractVersion?.slice(1) || '0') >= 8
+    const abi = isV8 ? V8_ABI : (isEthChain ? V7_ABI : PatriotPledgeV5ABI)
     const usdRate = isEthChain ? ETH_USD_RATE : BDAG_USD_RATE
     
     logger.debug(`[OnchainToken] Querying campaign ${campaignId} on chain ${chainId} (${contractVersion}), contract ${contractAddress}`)
@@ -77,7 +82,7 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
 
     // Fetch metadata from baseURI
     let metadata: any = null
-    const uri = camp.baseURI || camp[1] // getCampaign returns tuple
+    const uri = camp.baseURI || camp[1] // getCampaign returns tuple or struct
     if (uri) {
       try {
         const mres = await fetch(uri)
@@ -93,23 +98,49 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       return usd.toString()
     }
 
-    return NextResponse.json({
+    // V8 returns struct with different property names (priceNative, goalNative)
+    // V7 returns array with positional access
+    // V5/V6 return tuple with named properties
+    const response: any = {
       contractAddress,
       chainId,
       campaignId,
       tokenId: campaignId, // Legacy compat
       uri,
       metadata,
-      category: camp.category || camp[0],
-      goal: fromWeiToUSD(camp.goal ?? camp[2]),
-      raised: fromWeiToUSD(camp.netRaised ?? camp[4]),
-      grossRaised: fromWeiToUSD(camp.grossRaised ?? camp[3]),
-      editionsMinted: Number(camp.editionsMinted ?? camp[5] ?? 0),
-      maxEditions: Number(camp.maxEditions ?? camp[6] ?? 0),
-      pricePerEdition: fromWeiToUSD(camp.pricePerEdition ?? camp[7]),
-      active: camp.active ?? camp[8] ?? true,
-      closed: camp.closed ?? camp[9] ?? false,
-    })
+      contractVersion,
+    }
+    
+    if (isV8) {
+      // V8 struct-based response - use direct property access
+      response.category = camp.category
+      response.goal = fromWeiToUSD(camp.goalNative)
+      response.goalUsd = Number(camp.goalUsd) / 100 // V8 stores USD in cents
+      response.raised = fromWeiToUSD(camp.netRaised)
+      response.grossRaised = fromWeiToUSD(camp.grossRaised)
+      response.editionsMinted = Number(camp.editionsMinted ?? 0)
+      response.maxEditions = Number(camp.maxEditions ?? 0)
+      response.pricePerEdition = fromWeiToUSD(camp.priceNative)
+      response.priceUsd = Number(camp.priceUsd) / 100 // V8 stores USD in cents
+      response.active = camp.active
+      response.paused = camp.paused
+      response.closed = camp.closed
+      response.refunded = camp.refunded
+      response.immediatePayoutEnabled = camp.immediatePayoutEnabled
+    } else {
+      // V7/V6/V5 - mixed access (named properties or array indices)
+      response.category = camp.category || camp[0]
+      response.goal = fromWeiToUSD(camp.goal ?? camp[2])
+      response.raised = fromWeiToUSD(camp.netRaised ?? camp[4])
+      response.grossRaised = fromWeiToUSD(camp.grossRaised ?? camp[3])
+      response.editionsMinted = Number(camp.editionsMinted ?? camp[5] ?? 0)
+      response.maxEditions = Number(camp.maxEditions ?? camp[6] ?? 0)
+      response.pricePerEdition = fromWeiToUSD(camp.pricePerEdition ?? camp[7])
+      response.active = camp.active ?? camp[10] ?? true
+      response.closed = camp.closed ?? camp[11] ?? false
+    }
+
+    return NextResponse.json(response)
   } catch (e: any) {
     return NextResponse.json({ error: 'CAMPAIGN_FETCH_FAILED', details: e?.message || String(e) }, { status: 500 })
   }

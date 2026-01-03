@@ -7,8 +7,8 @@ import type { ApprovalModalProps, ApprovalFormData, TargetNetwork } from '../typ
 // Available networks for campaign deployment
 const AVAILABLE_NETWORKS: TargetNetwork[] = [
   { chainId: 1043, chainName: 'BlockDAG Testnet', contractVersion: 'v6', isTestnet: true },
-  { chainId: 11155111, chainName: 'Sepolia (ETH Testnet)', contractVersion: 'v7', isTestnet: true },
-  { chainId: 1, chainName: 'Ethereum Mainnet', contractVersion: 'v7', isTestnet: false },
+  { chainId: 11155111, chainName: 'Sepolia (ETH Testnet)', contractVersion: 'v8', isTestnet: true },
+  { chainId: 1, chainName: 'Ethereum Mainnet', contractVersion: 'v8', isTestnet: false },
 ]
 
 /**
@@ -290,8 +290,8 @@ export function ApprovalModal({
               </p>
             </div>
 
-            {/* Immediate Payout Option - V7 Feature */}
-            {form.targetNetwork?.contractVersion === 'v7' && (
+            {/* Immediate Payout Option - V7/V8 Feature */}
+            {(form.targetNetwork?.contractVersion === 'v7' || form.targetNetwork?.contractVersion === 'v8') && (
               <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input

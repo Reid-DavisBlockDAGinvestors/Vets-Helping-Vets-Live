@@ -304,13 +304,34 @@ export async function POST(req: NextRequest) {
           
           logger.debug(`[createCampaign] Attempt ${attempt + 1}: nonce=${nonce}, gasPrice=${gasPrice}`)
           
-          // V7 has different createCampaign signature than V6
+          // Contract version determines createCampaign signature
           // V6: createCampaign(category, uri, goal, maxEditions, price, feeRate, submitter)
           // V7: createCampaign(category, uri, goal, maxEditions, price, nonprofit, submitter, immediatePayoutEnabled)
+          // V8: createCampaign(category, uri, goalNative, goalUsd, maxEditions, priceNative, priceUsd, nonprofit, submitter, immediatePayoutEnabled)
           let tx: any
-          if (contractVersion === 'v7' || parseInt(contractVersion.slice(1)) >= 7) {
-            // V7+ signature - nonprofit can be same as submitter for now
-            const immediatePayoutEnabled = body.updates?.immediate_payout_enabled ?? false
+          const versionNum = parseInt(contractVersion.slice(1))
+          const immediatePayoutEnabled = body.updates?.immediate_payout_enabled ?? false
+          
+          if (versionNum >= 8) {
+            // V8+ signature - includes USD prices for auditing
+            const goalUsdCents = BigInt(Math.floor(goalUSD * 100)) // Convert to cents
+            const priceUsdCents = BigInt(Math.floor(priceUSD * 100)) // Convert to cents
+            logger.debug(`[createCampaign] Using V8 signature: goalNative=${goalWei}, goalUsd=${goalUsdCents}, priceNative=${priceWei}, priceUsd=${priceUsdCents}`)
+            tx = await contract.createCampaign(
+              category,
+              uri,
+              goalWei,        // goalNative
+              goalUsdCents,   // goalUsd (in cents)
+              maxEditions,
+              priceWei,       // priceNative
+              priceUsdCents,  // priceUsd (in cents)
+              creatorWallet,  // nonprofit address
+              creatorWallet,  // submitter address
+              immediatePayoutEnabled,
+              { nonce, gasPrice }
+            )
+          } else if (versionNum >= 7) {
+            // V7 signature
             logger.debug(`[createCampaign] Using V7 signature: nonprofit=${creatorWallet}, submitter=${creatorWallet}, immediatePayout=${immediatePayoutEnabled}`)
             tx = await contract.createCampaign(
               category,
@@ -362,12 +383,14 @@ export async function POST(req: NextRequest) {
           logger.debug(`[createCampaign] Tx confirmed in block ${receipt.blockNumber}`)
           
           // Parse CampaignCreated event from receipt logs
-          // Support both V6 and V7 event signatures
+          // Support V6, V7, and V8 event signatures
           const iface = new (await import('ethers')).Interface([
             // V6 signature
             'event CampaignCreated(uint256 indexed campaignId, address indexed nonprofit, string category, uint256 goal, uint256 maxEditions, uint256 pricePerEdition)',
             // V7 signature (has submitter and immediatePayoutEnabled)
-            'event CampaignCreated(uint256 indexed campaignId, address indexed nonprofit, address indexed submitter, string category, uint256 goal, uint256 maxEditions, uint256 pricePerEdition, bool immediatePayoutEnabled)'
+            'event CampaignCreated(uint256 indexed campaignId, address indexed nonprofit, address indexed submitter, string category, uint256 goal, uint256 maxEditions, uint256 pricePerEdition, bool immediatePayoutEnabled)',
+            // V8 signature (has goalUsd and priceUsd)
+            'event CampaignCreated(uint256 indexed campaignId, address indexed nonprofit, address indexed submitter, string category, uint256 goalNative, uint256 goalUsd, uint256 maxEditions, uint256 priceNative, uint256 priceUsd, bool immediatePayoutEnabled)'
           ])
           
           let actualCampaignId: number | null = null

@@ -23,22 +23,86 @@ import type {
   TypedContractMethod,
 } from "../common";
 
-export interface PatriotPledgeNFTV7Interface extends Interface {
+export declare namespace PatriotPledgeNFTV8 {
+  export type CampaignViewStruct = {
+    id: BigNumberish;
+    category: string;
+    baseURI: string;
+    goalNative: BigNumberish;
+    goalUsd: BigNumberish;
+    grossRaised: BigNumberish;
+    netRaised: BigNumberish;
+    tipsReceived: BigNumberish;
+    editionsMinted: BigNumberish;
+    maxEditions: BigNumberish;
+    priceNative: BigNumberish;
+    priceUsd: BigNumberish;
+    nonprofit: AddressLike;
+    submitter: AddressLike;
+    active: boolean;
+    paused: boolean;
+    closed: boolean;
+    refunded: boolean;
+    immediatePayoutEnabled: boolean;
+  };
+
+  export type CampaignViewStructOutput = [
+    id: bigint,
+    category: string,
+    baseURI: string,
+    goalNative: bigint,
+    goalUsd: bigint,
+    grossRaised: bigint,
+    netRaised: bigint,
+    tipsReceived: bigint,
+    editionsMinted: bigint,
+    maxEditions: bigint,
+    priceNative: bigint,
+    priceUsd: bigint,
+    nonprofit: string,
+    submitter: string,
+    active: boolean,
+    paused: boolean,
+    closed: boolean,
+    refunded: boolean,
+    immediatePayoutEnabled: boolean
+  ] & {
+    id: bigint;
+    category: string;
+    baseURI: string;
+    goalNative: bigint;
+    goalUsd: bigint;
+    grossRaised: bigint;
+    netRaised: bigint;
+    tipsReceived: bigint;
+    editionsMinted: bigint;
+    maxEditions: bigint;
+    priceNative: bigint;
+    priceUsd: bigint;
+    nonprofit: string;
+    submitter: string;
+    active: boolean;
+    paused: boolean;
+    closed: boolean;
+    refunded: boolean;
+    immediatePayoutEnabled: boolean;
+  };
+}
+
+export interface PatriotPledgeNFTV8Interface extends Interface {
   getFunction(
     nameOrSignature:
       | "BPS_DENOMINATOR"
       | "MAX_BATCH_SIZE"
       | "MAX_FEE_BPS"
-      | "adminBurn"
+      | "VERSION"
       | "approve"
       | "balanceOf"
-      | "batchFixTokenCampaignLink"
-      | "batchFreezeTokens"
+      | "batchMint"
+      | "batchMintWithTip"
       | "batchSetTokenURI"
-      | "blacklistAddress"
       | "blacklisted"
       | "bugBountyPool"
-      | "burn"
       | "campaignDistributed"
       | "campaignEditions"
       | "campaigns"
@@ -52,50 +116,44 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
       | "emergencyWithdraw"
       | "emitBatchMetadataUpdate"
       | "emitMetadataUpdate"
-      | "feeConfig"
-      | "fixTokenCampaignLink"
-      | "freezeToken"
       | "frozenTokens"
-      | "fundBugBountyPool"
+      | "fundBugBounty"
       | "getApproved"
       | "getCampaign"
       | "getCampaignEditions"
       | "getEditionInfo"
-      | "getFeeConfig"
       | "isApprovedForAll"
-      | "makeSoulbound"
       | "markCampaignRefunded"
-      | "mintBatchWithBDAG"
-      | "mintBatchWithBDAGAndTip"
-      | "mintBatchWithImmediatePayout"
-      | "mintBatchWithImmediatePayoutAndTip"
+      | "mint"
       | "mintEditionToDonor"
       | "mintWithBDAG"
       | "mintWithBDAGAndTip"
-      | "mintWithImmediatePayout"
-      | "mintWithImmediatePayoutAndTip"
+      | "mintWithTip"
       | "name"
       | "owner"
       | "ownerOf"
       | "pause"
+      | "pauseCampaign"
       | "paused"
       | "payBugBounty"
+      | "platformFeeBps"
       | "platformTreasury"
       | "reactivateCampaign"
       | "recordContribution"
-      | "removeBlacklist"
-      | "removeSoulbound"
       | "renounceOwnership"
       | "reopenCampaign"
       | "royaltyInfo"
       | "safeTransferFrom(address,address,uint256)"
       | "safeTransferFrom(address,address,uint256,bytes)"
       | "setApprovalForAll"
+      | "setBlacklisted"
       | "setCampaignImmediatePayout"
       | "setDefaultRoyalty"
-      | "setFeeConfig"
+      | "setPlatformFee"
       | "setPlatformTreasury"
+      | "setTokenFrozen"
       | "setTokenRoyalty"
+      | "setTokenSoulbound"
       | "setTokenURI"
       | "soulbound"
       | "supportsInterface"
@@ -109,9 +167,8 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
       | "totalSupply"
       | "transferFrom"
       | "transferOwnership"
-      | "unfreezeToken"
       | "unpause"
-      | "updateCampaignCategory"
+      | "unpauseCampaign"
       | "updateCampaignGoal"
       | "updateCampaignMaxEditions"
       | "updateCampaignMetadata"
@@ -132,18 +189,22 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
       | "CampaignClosed"
       | "CampaignCreated"
       | "CampaignMetadataUpdated"
+      | "CampaignPaused"
       | "CampaignRefunded"
+      | "CampaignReopened"
+      | "CampaignUnpaused"
       | "CampaignUpdated"
       | "ContributionRecorded"
       | "DefaultRoyaltyUpdated"
       | "EditionMinted"
       | "EmergencyWithdraw"
-      | "FeeConfigUpdated"
       | "FundsDistributed"
       | "ImmediatePayoutSent"
       | "MetadataUpdate"
       | "OwnershipTransferred"
       | "Paused"
+      | "PlatformFeeUpdated"
+      | "PriceUpdated"
       | "TokenBurned"
       | "TokenFrozen"
       | "TokenSoulbound"
@@ -165,10 +226,7 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     functionFragment: "MAX_FEE_BPS",
     values?: undefined
   ): string;
-  encodeFunctionData(
-    functionFragment: "adminBurn",
-    values: [BigNumberish]
-  ): string;
+  encodeFunctionData(functionFragment: "VERSION", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "approve",
     values: [AddressLike, BigNumberish]
@@ -178,20 +236,16 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "batchFixTokenCampaignLink",
-    values: [BigNumberish[], BigNumberish]
+    functionFragment: "batchMint",
+    values: [BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "batchFreezeTokens",
-    values: [BigNumberish[], boolean]
+    functionFragment: "batchMintWithTip",
+    values: [BigNumberish, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "batchSetTokenURI",
     values: [BigNumberish[], string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "blacklistAddress",
-    values: [AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "blacklisted",
@@ -201,7 +255,6 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     functionFragment: "bugBountyPool",
     values?: undefined
   ): string;
-  encodeFunctionData(functionFragment: "burn", values: [BigNumberish]): string;
   encodeFunctionData(
     functionFragment: "campaignDistributed",
     values: [BigNumberish]
@@ -223,6 +276,8 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     values: [
       string,
       string,
+      BigNumberish,
+      BigNumberish,
       BigNumberish,
       BigNumberish,
       BigNumberish,
@@ -263,21 +318,12 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     functionFragment: "emitMetadataUpdate",
     values: [BigNumberish]
   ): string;
-  encodeFunctionData(functionFragment: "feeConfig", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "fixTokenCampaignLink",
-    values: [BigNumberish, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "freezeToken",
-    values: [BigNumberish]
-  ): string;
   encodeFunctionData(
     functionFragment: "frozenTokens",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "fundBugBountyPool",
+    functionFragment: "fundBugBounty",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -297,37 +343,14 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "getFeeConfig",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
     functionFragment: "isApprovedForAll",
     values: [AddressLike, AddressLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "makeSoulbound",
-    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "markCampaignRefunded",
     values: [BigNumberish]
   ): string;
-  encodeFunctionData(
-    functionFragment: "mintBatchWithBDAG",
-    values: [BigNumberish, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "mintBatchWithBDAGAndTip",
-    values: [BigNumberish, BigNumberish, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "mintBatchWithImmediatePayout",
-    values: [BigNumberish, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "mintBatchWithImmediatePayoutAndTip",
-    values: [BigNumberish, BigNumberish, BigNumberish]
-  ): string;
+  encodeFunctionData(functionFragment: "mint", values: [BigNumberish]): string;
   encodeFunctionData(
     functionFragment: "mintEditionToDonor",
     values: [BigNumberish, AddressLike, BigNumberish]
@@ -341,11 +364,7 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     values: [BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "mintWithImmediatePayout",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "mintWithImmediatePayoutAndTip",
+    functionFragment: "mintWithTip",
     values: [BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "name", values?: undefined): string;
@@ -355,10 +374,18 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "pause", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "pauseCampaign",
+    values: [BigNumberish]
+  ): string;
   encodeFunctionData(functionFragment: "paused", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "payBugBounty",
     values: [AddressLike, BigNumberish, string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "platformFeeBps",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "platformTreasury",
@@ -371,14 +398,6 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
   encodeFunctionData(
     functionFragment: "recordContribution",
     values: [BigNumberish, BigNumberish, BigNumberish, BigNumberish, boolean]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "removeBlacklist",
-    values: [AddressLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "removeSoulbound",
-    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
@@ -405,6 +424,10 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     values: [AddressLike, boolean]
   ): string;
   encodeFunctionData(
+    functionFragment: "setBlacklisted",
+    values: [AddressLike, boolean]
+  ): string;
+  encodeFunctionData(
     functionFragment: "setCampaignImmediatePayout",
     values: [BigNumberish, boolean]
   ): string;
@@ -413,16 +436,24 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "setFeeConfig",
-    values: [BigNumberish, boolean]
+    functionFragment: "setPlatformFee",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "setPlatformTreasury",
     values: [AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "setTokenFrozen",
+    values: [BigNumberish, boolean]
+  ): string;
+  encodeFunctionData(
     functionFragment: "setTokenRoyalty",
     values: [BigNumberish, AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setTokenSoulbound",
+    values: [BigNumberish, boolean]
   ): string;
   encodeFunctionData(
     functionFragment: "setTokenURI",
@@ -473,18 +504,14 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     functionFragment: "transferOwnership",
     values: [AddressLike]
   ): string;
-  encodeFunctionData(
-    functionFragment: "unfreezeToken",
-    values: [BigNumberish]
-  ): string;
   encodeFunctionData(functionFragment: "unpause", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "updateCampaignCategory",
-    values: [BigNumberish, string]
+    functionFragment: "unpauseCampaign",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "updateCampaignGoal",
-    values: [BigNumberish, BigNumberish]
+    values: [BigNumberish, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "updateCampaignMaxEditions",
@@ -500,7 +527,7 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "updateCampaignPrice",
-    values: [BigNumberish, BigNumberish]
+    values: [BigNumberish, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "updateCampaignSubmitter",
@@ -523,23 +550,16 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     functionFragment: "MAX_FEE_BPS",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "adminBurn", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "VERSION", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "approve", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "balanceOf", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "batchMint", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "batchFixTokenCampaignLink",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "batchFreezeTokens",
+    functionFragment: "batchMintWithTip",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "batchSetTokenURI",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "blacklistAddress",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -550,7 +570,6 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     functionFragment: "bugBountyPool",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "burn", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "campaignDistributed",
     data: BytesLike
@@ -600,21 +619,12 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     functionFragment: "emitMetadataUpdate",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "feeConfig", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "fixTokenCampaignLink",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "freezeToken",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "frozenTokens",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "fundBugBountyPool",
+    functionFragment: "fundBugBounty",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -634,37 +644,14 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "getFeeConfig",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "isApprovedForAll",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "makeSoulbound",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "markCampaignRefunded",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(
-    functionFragment: "mintBatchWithBDAG",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "mintBatchWithBDAGAndTip",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "mintBatchWithImmediatePayout",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "mintBatchWithImmediatePayoutAndTip",
-    data: BytesLike
-  ): Result;
+  decodeFunctionResult(functionFragment: "mint", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "mintEditionToDonor",
     data: BytesLike
@@ -678,20 +665,24 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "mintWithImmediatePayout",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "mintWithImmediatePayoutAndTip",
+    functionFragment: "mintWithTip",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "name", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "ownerOf", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "pause", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "pauseCampaign",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "paused", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "payBugBounty",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "platformFeeBps",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -704,14 +695,6 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "recordContribution",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "removeBlacklist",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "removeSoulbound",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -739,6 +722,10 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "setBlacklisted",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "setCampaignImmediatePayout",
     data: BytesLike
   ): Result;
@@ -747,7 +734,7 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "setFeeConfig",
+    functionFragment: "setPlatformFee",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -755,7 +742,15 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "setTokenFrozen",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "setTokenRoyalty",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setTokenSoulbound",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -801,13 +796,9 @@ export interface PatriotPledgeNFTV7Interface extends Interface {
     functionFragment: "transferOwnership",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(
-    functionFragment: "unfreezeToken",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "unpause", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "updateCampaignCategory",
+    functionFragment: "unpauseCampaign",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -959,9 +950,11 @@ export namespace CampaignCreatedEvent {
     nonprofit: AddressLike,
     submitter: AddressLike,
     category: string,
-    goal: BigNumberish,
+    goalNative: BigNumberish,
+    goalUsd: BigNumberish,
     maxEditions: BigNumberish,
-    pricePerEdition: BigNumberish,
+    priceNative: BigNumberish,
+    priceUsd: BigNumberish,
     immediatePayoutEnabled: boolean
   ];
   export type OutputTuple = [
@@ -969,9 +962,11 @@ export namespace CampaignCreatedEvent {
     nonprofit: string,
     submitter: string,
     category: string,
-    goal: bigint,
+    goalNative: bigint,
+    goalUsd: bigint,
     maxEditions: bigint,
-    pricePerEdition: bigint,
+    priceNative: bigint,
+    priceUsd: bigint,
     immediatePayoutEnabled: boolean
   ];
   export interface OutputObject {
@@ -979,9 +974,11 @@ export namespace CampaignCreatedEvent {
     nonprofit: string;
     submitter: string;
     category: string;
-    goal: bigint;
+    goalNative: bigint;
+    goalUsd: bigint;
     maxEditions: bigint;
-    pricePerEdition: bigint;
+    priceNative: bigint;
+    priceUsd: bigint;
     immediatePayoutEnabled: boolean;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
@@ -1003,7 +1000,43 @@ export namespace CampaignMetadataUpdatedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace CampaignPausedEvent {
+  export type InputTuple = [campaignId: BigNumberish];
+  export type OutputTuple = [campaignId: bigint];
+  export interface OutputObject {
+    campaignId: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace CampaignRefundedEvent {
+  export type InputTuple = [campaignId: BigNumberish];
+  export type OutputTuple = [campaignId: bigint];
+  export interface OutputObject {
+    campaignId: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace CampaignReopenedEvent {
+  export type InputTuple = [campaignId: BigNumberish];
+  export type OutputTuple = [campaignId: bigint];
+  export interface OutputObject {
+    campaignId: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace CampaignUnpausedEvent {
   export type InputTuple = [campaignId: BigNumberish];
   export type OutputTuple = [campaignId: bigint];
   export interface OutputObject {
@@ -1109,29 +1142,12 @@ export namespace EmergencyWithdrawEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export namespace FeeConfigUpdatedEvent {
-  export type InputTuple = [
-    platformFeeBps: BigNumberish,
-    immediatePayout: boolean
-  ];
-  export type OutputTuple = [platformFeeBps: bigint, immediatePayout: boolean];
-  export interface OutputObject {
-    platformFeeBps: bigint;
-    immediatePayout: boolean;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
 export namespace FundsDistributedEvent {
   export type InputTuple = [
     campaignId: BigNumberish,
     submitter: AddressLike,
     submitterAmount: BigNumberish,
     platformFee: BigNumberish,
-    nonprofitFee: BigNumberish,
     tipAmount: BigNumberish
   ];
   export type OutputTuple = [
@@ -1139,7 +1155,6 @@ export namespace FundsDistributedEvent {
     submitter: string,
     submitterAmount: bigint,
     platformFee: bigint,
-    nonprofitFee: bigint,
     tipAmount: bigint
   ];
   export interface OutputObject {
@@ -1147,7 +1162,6 @@ export namespace FundsDistributedEvent {
     submitter: string;
     submitterAmount: bigint;
     platformFee: bigint;
-    nonprofitFee: bigint;
     tipAmount: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
@@ -1211,6 +1225,44 @@ export namespace PausedEvent {
   export type OutputTuple = [account: string];
   export interface OutputObject {
     account: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace PlatformFeeUpdatedEvent {
+  export type InputTuple = [oldFeeBps: BigNumberish, newFeeBps: BigNumberish];
+  export type OutputTuple = [oldFeeBps: bigint, newFeeBps: bigint];
+  export interface OutputObject {
+    oldFeeBps: bigint;
+    newFeeBps: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace PriceUpdatedEvent {
+  export type InputTuple = [
+    campaignId: BigNumberish,
+    oldPriceNative: BigNumberish,
+    newPriceNative: BigNumberish,
+    newPriceUsd: BigNumberish
+  ];
+  export type OutputTuple = [
+    campaignId: bigint,
+    oldPriceNative: bigint,
+    newPriceNative: bigint,
+    newPriceUsd: bigint
+  ];
+  export interface OutputObject {
+    campaignId: bigint;
+    oldPriceNative: bigint;
+    newPriceNative: bigint;
+    newPriceUsd: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -1313,11 +1365,11 @@ export namespace UnpausedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export interface PatriotPledgeNFTV7 extends BaseContract {
-  connect(runner?: ContractRunner | null): PatriotPledgeNFTV7;
+export interface PatriotPledgeNFTV8 extends BaseContract {
+  connect(runner?: ContractRunner | null): PatriotPledgeNFTV8;
   waitForDeployment(): Promise<this>;
 
-  interface: PatriotPledgeNFTV7Interface;
+  interface: PatriotPledgeNFTV8Interface;
 
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
@@ -1362,7 +1414,7 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
 
   MAX_FEE_BPS: TypedContractMethod<[], [bigint], "view">;
 
-  adminBurn: TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
+  VERSION: TypedContractMethod<[], [bigint], "view">;
 
   approve: TypedContractMethod<
     [to: AddressLike, tokenId: BigNumberish],
@@ -1372,16 +1424,16 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
 
   balanceOf: TypedContractMethod<[owner: AddressLike], [bigint], "view">;
 
-  batchFixTokenCampaignLink: TypedContractMethod<
-    [tokenIds: BigNumberish[], campaignId: BigNumberish],
-    [void],
-    "nonpayable"
+  batchMint: TypedContractMethod<
+    [campaignId: BigNumberish, quantity: BigNumberish],
+    [bigint[]],
+    "payable"
   >;
 
-  batchFreezeTokens: TypedContractMethod<
-    [tokenIds: BigNumberish[], freeze: boolean],
-    [void],
-    "nonpayable"
+  batchMintWithTip: TypedContractMethod<
+    [campaignId: BigNumberish, quantity: BigNumberish, tipAmount: BigNumberish],
+    [bigint[]],
+    "payable"
   >;
 
   batchSetTokenURI: TypedContractMethod<
@@ -1390,17 +1442,9 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "nonpayable"
   >;
 
-  blacklistAddress: TypedContractMethod<
-    [addr: AddressLike],
-    [void],
-    "nonpayable"
-  >;
-
   blacklisted: TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
 
   bugBountyPool: TypedContractMethod<[], [bigint], "view">;
-
-  burn: TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
 
   campaignDistributed: TypedContractMethod<
     [arg0: BigNumberish],
@@ -1427,8 +1471,11 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
         bigint,
         bigint,
         bigint,
+        bigint,
+        bigint,
         string,
         string,
+        boolean,
         boolean,
         boolean,
         boolean,
@@ -1436,16 +1483,19 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
       ] & {
         category: string;
         baseURI: string;
-        goal: bigint;
+        goalNative: bigint;
+        goalUsd: bigint;
         grossRaised: bigint;
         netRaised: bigint;
         tipsReceived: bigint;
         editionsMinted: bigint;
         maxEditions: bigint;
-        pricePerEdition: bigint;
+        priceNative: bigint;
+        priceUsd: bigint;
         nonprofit: string;
         submitter: string;
         active: boolean;
+        paused: boolean;
         closed: boolean;
         refunded: boolean;
         immediatePayoutEnabled: boolean;
@@ -1464,9 +1514,11 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     [
       category: string,
       baseURI: string,
-      goal: BigNumberish,
+      goalNative: BigNumberish,
+      goalUsd: BigNumberish,
       maxEditions: BigNumberish,
-      pricePerEdition: BigNumberish,
+      priceNative: BigNumberish,
+      priceUsd: BigNumberish,
       nonprofit: AddressLike,
       submitter: AddressLike,
       immediatePayoutEnabled: boolean
@@ -1507,63 +1559,15 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "nonpayable"
   >;
 
-  feeConfig: TypedContractMethod<
-    [],
-    [[bigint, boolean] & { platformFeeBps: bigint; immediatePayout: boolean }],
-    "view"
-  >;
-
-  fixTokenCampaignLink: TypedContractMethod<
-    [tokenId: BigNumberish, campaignId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
-  freezeToken: TypedContractMethod<
-    [tokenId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
   frozenTokens: TypedContractMethod<[arg0: BigNumberish], [boolean], "view">;
 
-  fundBugBountyPool: TypedContractMethod<[], [void], "payable">;
+  fundBugBounty: TypedContractMethod<[], [void], "payable">;
 
   getApproved: TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
 
   getCampaign: TypedContractMethod<
     [campaignId: BigNumberish],
-    [
-      [
-        string,
-        string,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        string,
-        string,
-        boolean,
-        boolean,
-        boolean
-      ] & {
-        category: string;
-        baseURI: string;
-        goal: bigint;
-        grossRaised: bigint;
-        netRaised: bigint;
-        editionsMinted: bigint;
-        maxEditions: bigint;
-        pricePerEdition: bigint;
-        nonprofit: string;
-        submitter: string;
-        active: boolean;
-        closed: boolean;
-        immediatePayoutEnabled: boolean;
-      }
-    ],
+    [PatriotPledgeNFTV8.CampaignViewStructOutput],
     "view"
   >;
 
@@ -1585,22 +1589,10 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "view"
   >;
 
-  getFeeConfig: TypedContractMethod<
-    [],
-    [[bigint, boolean] & { platformFeeBps: bigint; immediatePayout: boolean }],
-    "view"
-  >;
-
   isApprovedForAll: TypedContractMethod<
     [owner: AddressLike, operator: AddressLike],
     [boolean],
     "view"
-  >;
-
-  makeSoulbound: TypedContractMethod<
-    [tokenId: BigNumberish],
-    [void],
-    "nonpayable"
   >;
 
   markCampaignRefunded: TypedContractMethod<
@@ -1609,29 +1601,7 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "nonpayable"
   >;
 
-  mintBatchWithBDAG: TypedContractMethod<
-    [campaignId: BigNumberish, quantity: BigNumberish],
-    [bigint[]],
-    "payable"
-  >;
-
-  mintBatchWithBDAGAndTip: TypedContractMethod<
-    [campaignId: BigNumberish, quantity: BigNumberish, tipAmount: BigNumberish],
-    [bigint[]],
-    "payable"
-  >;
-
-  mintBatchWithImmediatePayout: TypedContractMethod<
-    [campaignId: BigNumberish, quantity: BigNumberish],
-    [bigint[]],
-    "payable"
-  >;
-
-  mintBatchWithImmediatePayoutAndTip: TypedContractMethod<
-    [campaignId: BigNumberish, quantity: BigNumberish, tipAmount: BigNumberish],
-    [bigint[]],
-    "payable"
-  >;
+  mint: TypedContractMethod<[campaignId: BigNumberish], [bigint], "payable">;
 
   mintEditionToDonor: TypedContractMethod<
     [campaignId: BigNumberish, donor: AddressLike, amountPaid: BigNumberish],
@@ -1651,13 +1621,7 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "payable"
   >;
 
-  mintWithImmediatePayout: TypedContractMethod<
-    [campaignId: BigNumberish],
-    [bigint],
-    "payable"
-  >;
-
-  mintWithImmediatePayoutAndTip: TypedContractMethod<
+  mintWithTip: TypedContractMethod<
     [campaignId: BigNumberish, tipAmount: BigNumberish],
     [bigint],
     "payable"
@@ -1671,6 +1635,12 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
 
   pause: TypedContractMethod<[], [void], "nonpayable">;
 
+  pauseCampaign: TypedContractMethod<
+    [campaignId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   paused: TypedContractMethod<[], [boolean], "view">;
 
   payBugBounty: TypedContractMethod<
@@ -1678,6 +1648,8 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     [void],
     "nonpayable"
   >;
+
+  platformFeeBps: TypedContractMethod<[], [bigint], "view">;
 
   platformTreasury: TypedContractMethod<[], [string], "view">;
 
@@ -1695,18 +1667,6 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
       tip: BigNumberish,
       isOnchain: boolean
     ],
-    [void],
-    "nonpayable"
-  >;
-
-  removeBlacklist: TypedContractMethod<
-    [addr: AddressLike],
-    [void],
-    "nonpayable"
-  >;
-
-  removeSoulbound: TypedContractMethod<
-    [tokenId: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -1748,6 +1708,12 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "nonpayable"
   >;
 
+  setBlacklisted: TypedContractMethod<
+    [addr: AddressLike, status: boolean],
+    [void],
+    "nonpayable"
+  >;
+
   setCampaignImmediatePayout: TypedContractMethod<
     [campaignId: BigNumberish, enabled: boolean],
     [void],
@@ -1760,8 +1726,8 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "nonpayable"
   >;
 
-  setFeeConfig: TypedContractMethod<
-    [_platformFeeBps: BigNumberish, _immediatePayout: boolean],
+  setPlatformFee: TypedContractMethod<
+    [_newFeeBps: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -1772,8 +1738,20 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "nonpayable"
   >;
 
+  setTokenFrozen: TypedContractMethod<
+    [tokenId: BigNumberish, frozen: boolean],
+    [void],
+    "nonpayable"
+  >;
+
   setTokenRoyalty: TypedContractMethod<
     [tokenId: BigNumberish, receiver: AddressLike, feeNumerator: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  setTokenSoulbound: TypedContractMethod<
+    [tokenId: BigNumberish, _soulbound: boolean],
     [void],
     "nonpayable"
   >;
@@ -1828,22 +1806,20 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "nonpayable"
   >;
 
-  unfreezeToken: TypedContractMethod<
-    [tokenId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
   unpause: TypedContractMethod<[], [void], "nonpayable">;
 
-  updateCampaignCategory: TypedContractMethod<
-    [campaignId: BigNumberish, newCategory: string],
+  unpauseCampaign: TypedContractMethod<
+    [campaignId: BigNumberish],
     [void],
     "nonpayable"
   >;
 
   updateCampaignGoal: TypedContractMethod<
-    [campaignId: BigNumberish, newGoal: BigNumberish],
+    [
+      campaignId: BigNumberish,
+      newGoalNative: BigNumberish,
+      newGoalUsd: BigNumberish
+    ],
     [void],
     "nonpayable"
   >;
@@ -1867,7 +1843,11 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
   >;
 
   updateCampaignPrice: TypedContractMethod<
-    [campaignId: BigNumberish, newPrice: BigNumberish],
+    [
+      campaignId: BigNumberish,
+      newPriceNative: BigNumberish,
+      newPriceUsd: BigNumberish
+    ],
     [void],
     "nonpayable"
   >;
@@ -1898,8 +1878,8 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     nameOrSignature: "MAX_FEE_BPS"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: "adminBurn"
-  ): TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
+    nameOrSignature: "VERSION"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "approve"
   ): TypedContractMethod<
@@ -1911,18 +1891,18 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     nameOrSignature: "balanceOf"
   ): TypedContractMethod<[owner: AddressLike], [bigint], "view">;
   getFunction(
-    nameOrSignature: "batchFixTokenCampaignLink"
+    nameOrSignature: "batchMint"
   ): TypedContractMethod<
-    [tokenIds: BigNumberish[], campaignId: BigNumberish],
-    [void],
-    "nonpayable"
+    [campaignId: BigNumberish, quantity: BigNumberish],
+    [bigint[]],
+    "payable"
   >;
   getFunction(
-    nameOrSignature: "batchFreezeTokens"
+    nameOrSignature: "batchMintWithTip"
   ): TypedContractMethod<
-    [tokenIds: BigNumberish[], freeze: boolean],
-    [void],
-    "nonpayable"
+    [campaignId: BigNumberish, quantity: BigNumberish, tipAmount: BigNumberish],
+    [bigint[]],
+    "payable"
   >;
   getFunction(
     nameOrSignature: "batchSetTokenURI"
@@ -1932,17 +1912,11 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "blacklistAddress"
-  ): TypedContractMethod<[addr: AddressLike], [void], "nonpayable">;
-  getFunction(
     nameOrSignature: "blacklisted"
   ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
   getFunction(
     nameOrSignature: "bugBountyPool"
   ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "burn"
-  ): TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "campaignDistributed"
   ): TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
@@ -1968,8 +1942,11 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
         bigint,
         bigint,
         bigint,
+        bigint,
+        bigint,
         string,
         string,
+        boolean,
         boolean,
         boolean,
         boolean,
@@ -1977,16 +1954,19 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
       ] & {
         category: string;
         baseURI: string;
-        goal: bigint;
+        goalNative: bigint;
+        goalUsd: bigint;
         grossRaised: bigint;
         netRaised: bigint;
         tipsReceived: bigint;
         editionsMinted: bigint;
         maxEditions: bigint;
-        pricePerEdition: bigint;
+        priceNative: bigint;
+        priceUsd: bigint;
         nonprofit: string;
         submitter: string;
         active: boolean;
+        paused: boolean;
         closed: boolean;
         refunded: boolean;
         immediatePayoutEnabled: boolean;
@@ -2003,9 +1983,11 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     [
       category: string,
       baseURI: string,
-      goal: BigNumberish,
+      goalNative: BigNumberish,
+      goalUsd: BigNumberish,
       maxEditions: BigNumberish,
-      pricePerEdition: BigNumberish,
+      priceNative: BigNumberish,
+      priceUsd: BigNumberish,
       nonprofit: AddressLike,
       submitter: AddressLike,
       immediatePayoutEnabled: boolean
@@ -2042,27 +2024,10 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     nameOrSignature: "emitMetadataUpdate"
   ): TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: "feeConfig"
-  ): TypedContractMethod<
-    [],
-    [[bigint, boolean] & { platformFeeBps: bigint; immediatePayout: boolean }],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "fixTokenCampaignLink"
-  ): TypedContractMethod<
-    [tokenId: BigNumberish, campaignId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "freezeToken"
-  ): TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
-  getFunction(
     nameOrSignature: "frozenTokens"
   ): TypedContractMethod<[arg0: BigNumberish], [boolean], "view">;
   getFunction(
-    nameOrSignature: "fundBugBountyPool"
+    nameOrSignature: "fundBugBounty"
   ): TypedContractMethod<[], [void], "payable">;
   getFunction(
     nameOrSignature: "getApproved"
@@ -2071,37 +2036,7 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     nameOrSignature: "getCampaign"
   ): TypedContractMethod<
     [campaignId: BigNumberish],
-    [
-      [
-        string,
-        string,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        bigint,
-        string,
-        string,
-        boolean,
-        boolean,
-        boolean
-      ] & {
-        category: string;
-        baseURI: string;
-        goal: bigint;
-        grossRaised: bigint;
-        netRaised: bigint;
-        editionsMinted: bigint;
-        maxEditions: bigint;
-        pricePerEdition: bigint;
-        nonprofit: string;
-        submitter: string;
-        active: boolean;
-        closed: boolean;
-        immediatePayoutEnabled: boolean;
-      }
-    ],
+    [PatriotPledgeNFTV8.CampaignViewStructOutput],
     "view"
   >;
   getFunction(
@@ -2121,13 +2056,6 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "view"
   >;
   getFunction(
-    nameOrSignature: "getFeeConfig"
-  ): TypedContractMethod<
-    [],
-    [[bigint, boolean] & { platformFeeBps: bigint; immediatePayout: boolean }],
-    "view"
-  >;
-  getFunction(
     nameOrSignature: "isApprovedForAll"
   ): TypedContractMethod<
     [owner: AddressLike, operator: AddressLike],
@@ -2135,39 +2063,11 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "view"
   >;
   getFunction(
-    nameOrSignature: "makeSoulbound"
-  ): TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
-  getFunction(
     nameOrSignature: "markCampaignRefunded"
   ): TypedContractMethod<[campaignId: BigNumberish], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: "mintBatchWithBDAG"
-  ): TypedContractMethod<
-    [campaignId: BigNumberish, quantity: BigNumberish],
-    [bigint[]],
-    "payable"
-  >;
-  getFunction(
-    nameOrSignature: "mintBatchWithBDAGAndTip"
-  ): TypedContractMethod<
-    [campaignId: BigNumberish, quantity: BigNumberish, tipAmount: BigNumberish],
-    [bigint[]],
-    "payable"
-  >;
-  getFunction(
-    nameOrSignature: "mintBatchWithImmediatePayout"
-  ): TypedContractMethod<
-    [campaignId: BigNumberish, quantity: BigNumberish],
-    [bigint[]],
-    "payable"
-  >;
-  getFunction(
-    nameOrSignature: "mintBatchWithImmediatePayoutAndTip"
-  ): TypedContractMethod<
-    [campaignId: BigNumberish, quantity: BigNumberish, tipAmount: BigNumberish],
-    [bigint[]],
-    "payable"
-  >;
+    nameOrSignature: "mint"
+  ): TypedContractMethod<[campaignId: BigNumberish], [bigint], "payable">;
   getFunction(
     nameOrSignature: "mintEditionToDonor"
   ): TypedContractMethod<
@@ -2186,10 +2086,7 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "payable"
   >;
   getFunction(
-    nameOrSignature: "mintWithImmediatePayout"
-  ): TypedContractMethod<[campaignId: BigNumberish], [bigint], "payable">;
-  getFunction(
-    nameOrSignature: "mintWithImmediatePayoutAndTip"
+    nameOrSignature: "mintWithTip"
   ): TypedContractMethod<
     [campaignId: BigNumberish, tipAmount: BigNumberish],
     [bigint],
@@ -2208,6 +2105,9 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     nameOrSignature: "pause"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "pauseCampaign"
+  ): TypedContractMethod<[campaignId: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "paused"
   ): TypedContractMethod<[], [boolean], "view">;
   getFunction(
@@ -2217,6 +2117,9 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "platformFeeBps"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "platformTreasury"
   ): TypedContractMethod<[], [string], "view">;
@@ -2236,12 +2139,6 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     [void],
     "nonpayable"
   >;
-  getFunction(
-    nameOrSignature: "removeBlacklist"
-  ): TypedContractMethod<[addr: AddressLike], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "removeSoulbound"
-  ): TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "renounceOwnership"
   ): TypedContractMethod<[], [void], "nonpayable">;
@@ -2282,6 +2179,13 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "setBlacklisted"
+  ): TypedContractMethod<
+    [addr: AddressLike, status: boolean],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "setCampaignImmediatePayout"
   ): TypedContractMethod<
     [campaignId: BigNumberish, enabled: boolean],
@@ -2296,19 +2200,29 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "setFeeConfig"
-  ): TypedContractMethod<
-    [_platformFeeBps: BigNumberish, _immediatePayout: boolean],
-    [void],
-    "nonpayable"
-  >;
+    nameOrSignature: "setPlatformFee"
+  ): TypedContractMethod<[_newFeeBps: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "setPlatformTreasury"
   ): TypedContractMethod<[newTreasury: AddressLike], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "setTokenFrozen"
+  ): TypedContractMethod<
+    [tokenId: BigNumberish, frozen: boolean],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "setTokenRoyalty"
   ): TypedContractMethod<
     [tokenId: BigNumberish, receiver: AddressLike, feeNumerator: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "setTokenSoulbound"
+  ): TypedContractMethod<
+    [tokenId: BigNumberish, _soulbound: boolean],
     [void],
     "nonpayable"
   >;
@@ -2364,22 +2278,19 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     nameOrSignature: "transferOwnership"
   ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: "unfreezeToken"
-  ): TypedContractMethod<[tokenId: BigNumberish], [void], "nonpayable">;
-  getFunction(
     nameOrSignature: "unpause"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: "updateCampaignCategory"
-  ): TypedContractMethod<
-    [campaignId: BigNumberish, newCategory: string],
-    [void],
-    "nonpayable"
-  >;
+    nameOrSignature: "unpauseCampaign"
+  ): TypedContractMethod<[campaignId: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "updateCampaignGoal"
   ): TypedContractMethod<
-    [campaignId: BigNumberish, newGoal: BigNumberish],
+    [
+      campaignId: BigNumberish,
+      newGoalNative: BigNumberish,
+      newGoalUsd: BigNumberish
+    ],
     [void],
     "nonpayable"
   >;
@@ -2407,7 +2318,11 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
   getFunction(
     nameOrSignature: "updateCampaignPrice"
   ): TypedContractMethod<
-    [campaignId: BigNumberish, newPrice: BigNumberish],
+    [
+      campaignId: BigNumberish,
+      newPriceNative: BigNumberish,
+      newPriceUsd: BigNumberish
+    ],
     [void],
     "nonpayable"
   >;
@@ -2490,11 +2405,32 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     CampaignMetadataUpdatedEvent.OutputObject
   >;
   getEvent(
+    key: "CampaignPaused"
+  ): TypedContractEvent<
+    CampaignPausedEvent.InputTuple,
+    CampaignPausedEvent.OutputTuple,
+    CampaignPausedEvent.OutputObject
+  >;
+  getEvent(
     key: "CampaignRefunded"
   ): TypedContractEvent<
     CampaignRefundedEvent.InputTuple,
     CampaignRefundedEvent.OutputTuple,
     CampaignRefundedEvent.OutputObject
+  >;
+  getEvent(
+    key: "CampaignReopened"
+  ): TypedContractEvent<
+    CampaignReopenedEvent.InputTuple,
+    CampaignReopenedEvent.OutputTuple,
+    CampaignReopenedEvent.OutputObject
+  >;
+  getEvent(
+    key: "CampaignUnpaused"
+  ): TypedContractEvent<
+    CampaignUnpausedEvent.InputTuple,
+    CampaignUnpausedEvent.OutputTuple,
+    CampaignUnpausedEvent.OutputObject
   >;
   getEvent(
     key: "CampaignUpdated"
@@ -2532,13 +2468,6 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     EmergencyWithdrawEvent.OutputObject
   >;
   getEvent(
-    key: "FeeConfigUpdated"
-  ): TypedContractEvent<
-    FeeConfigUpdatedEvent.InputTuple,
-    FeeConfigUpdatedEvent.OutputTuple,
-    FeeConfigUpdatedEvent.OutputObject
-  >;
-  getEvent(
     key: "FundsDistributed"
   ): TypedContractEvent<
     FundsDistributedEvent.InputTuple,
@@ -2572,6 +2501,20 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
     PausedEvent.InputTuple,
     PausedEvent.OutputTuple,
     PausedEvent.OutputObject
+  >;
+  getEvent(
+    key: "PlatformFeeUpdated"
+  ): TypedContractEvent<
+    PlatformFeeUpdatedEvent.InputTuple,
+    PlatformFeeUpdatedEvent.OutputTuple,
+    PlatformFeeUpdatedEvent.OutputObject
+  >;
+  getEvent(
+    key: "PriceUpdated"
+  ): TypedContractEvent<
+    PriceUpdatedEvent.InputTuple,
+    PriceUpdatedEvent.OutputTuple,
+    PriceUpdatedEvent.OutputObject
   >;
   getEvent(
     key: "TokenBurned"
@@ -2701,7 +2644,7 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
       CampaignClosedEvent.OutputObject
     >;
 
-    "CampaignCreated(uint256,address,address,string,uint256,uint256,uint256,bool)": TypedContractEvent<
+    "CampaignCreated(uint256,address,address,string,uint256,uint256,uint256,uint256,uint256,bool)": TypedContractEvent<
       CampaignCreatedEvent.InputTuple,
       CampaignCreatedEvent.OutputTuple,
       CampaignCreatedEvent.OutputObject
@@ -2723,6 +2666,17 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
       CampaignMetadataUpdatedEvent.OutputObject
     >;
 
+    "CampaignPaused(uint256)": TypedContractEvent<
+      CampaignPausedEvent.InputTuple,
+      CampaignPausedEvent.OutputTuple,
+      CampaignPausedEvent.OutputObject
+    >;
+    CampaignPaused: TypedContractEvent<
+      CampaignPausedEvent.InputTuple,
+      CampaignPausedEvent.OutputTuple,
+      CampaignPausedEvent.OutputObject
+    >;
+
     "CampaignRefunded(uint256)": TypedContractEvent<
       CampaignRefundedEvent.InputTuple,
       CampaignRefundedEvent.OutputTuple,
@@ -2732,6 +2686,28 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
       CampaignRefundedEvent.InputTuple,
       CampaignRefundedEvent.OutputTuple,
       CampaignRefundedEvent.OutputObject
+    >;
+
+    "CampaignReopened(uint256)": TypedContractEvent<
+      CampaignReopenedEvent.InputTuple,
+      CampaignReopenedEvent.OutputTuple,
+      CampaignReopenedEvent.OutputObject
+    >;
+    CampaignReopened: TypedContractEvent<
+      CampaignReopenedEvent.InputTuple,
+      CampaignReopenedEvent.OutputTuple,
+      CampaignReopenedEvent.OutputObject
+    >;
+
+    "CampaignUnpaused(uint256)": TypedContractEvent<
+      CampaignUnpausedEvent.InputTuple,
+      CampaignUnpausedEvent.OutputTuple,
+      CampaignUnpausedEvent.OutputObject
+    >;
+    CampaignUnpaused: TypedContractEvent<
+      CampaignUnpausedEvent.InputTuple,
+      CampaignUnpausedEvent.OutputTuple,
+      CampaignUnpausedEvent.OutputObject
     >;
 
     "CampaignUpdated(uint256,string)": TypedContractEvent<
@@ -2789,18 +2765,7 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
       EmergencyWithdrawEvent.OutputObject
     >;
 
-    "FeeConfigUpdated(uint16,bool)": TypedContractEvent<
-      FeeConfigUpdatedEvent.InputTuple,
-      FeeConfigUpdatedEvent.OutputTuple,
-      FeeConfigUpdatedEvent.OutputObject
-    >;
-    FeeConfigUpdated: TypedContractEvent<
-      FeeConfigUpdatedEvent.InputTuple,
-      FeeConfigUpdatedEvent.OutputTuple,
-      FeeConfigUpdatedEvent.OutputObject
-    >;
-
-    "FundsDistributed(uint256,address,uint256,uint256,uint256,uint256)": TypedContractEvent<
+    "FundsDistributed(uint256,address,uint256,uint256,uint256)": TypedContractEvent<
       FundsDistributedEvent.InputTuple,
       FundsDistributedEvent.OutputTuple,
       FundsDistributedEvent.OutputObject
@@ -2853,6 +2818,28 @@ export interface PatriotPledgeNFTV7 extends BaseContract {
       PausedEvent.InputTuple,
       PausedEvent.OutputTuple,
       PausedEvent.OutputObject
+    >;
+
+    "PlatformFeeUpdated(uint16,uint16)": TypedContractEvent<
+      PlatformFeeUpdatedEvent.InputTuple,
+      PlatformFeeUpdatedEvent.OutputTuple,
+      PlatformFeeUpdatedEvent.OutputObject
+    >;
+    PlatformFeeUpdated: TypedContractEvent<
+      PlatformFeeUpdatedEvent.InputTuple,
+      PlatformFeeUpdatedEvent.OutputTuple,
+      PlatformFeeUpdatedEvent.OutputObject
+    >;
+
+    "PriceUpdated(uint256,uint256,uint256,uint256)": TypedContractEvent<
+      PriceUpdatedEvent.InputTuple,
+      PriceUpdatedEvent.OutputTuple,
+      PriceUpdatedEvent.OutputObject
+    >;
+    PriceUpdated: TypedContractEvent<
+      PriceUpdatedEvent.InputTuple,
+      PriceUpdatedEvent.OutputTuple,
+      PriceUpdatedEvent.OutputObject
     >;
 
     "TokenBurned(uint256,address)": TypedContractEvent<

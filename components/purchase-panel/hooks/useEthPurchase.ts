@@ -3,7 +3,7 @@
 /**
  * useEthPurchase Hook
  * 
- * Handles ETH/Sepolia cryptocurrency purchase flow for V7 contracts
+ * Handles ETH/Sepolia cryptocurrency purchase flow for V7/V8 contracts
  * Supports immediate payout and single mint per transaction
  */
 
@@ -14,13 +14,24 @@ import { logger } from '@/lib/logger'
 import type { PurchaseResult, AuthState } from '../types'
 
 // V7 Contract ABI - using legacy mint functions for compatibility
-// Legacy functions don't have onlyThisChain modifier, so they work across chains
 const V7_MINT_ABI = [
-  // Legacy mint functions (V5/V6 compatible, no onlyThisChain)
   'function mintWithBDAG(uint256 campaignId) external payable returns (uint256)',
   'function mintWithBDAGAndTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
-  // V7 getCampaign: 13 fields total - active at index 10, closed at 11
   'function getCampaign(uint256 campaignId) external view returns (string category, string baseURI, uint256 goal, uint256 grossRaised, uint256 netRaised, uint256 editionsMinted, uint256 maxEditions, uint256 pricePerEdition, address nonprofit, address submitter, bool active, bool closed, bool immediatePayoutEnabled)',
+  'function totalCampaigns() external view returns (uint256)',
+  'event EditionMinted(uint256 indexed campaignId, uint256 indexed tokenId, address indexed donor, uint256 editionNumber, uint256 amountPaid)',
+]
+
+// V8 Contract ABI - chain-agnostic naming, struct-based getCampaign
+const V8_MINT_ABI = [
+  // V8 chain-agnostic minting
+  'function mint(uint256 campaignId) external payable returns (uint256)',
+  'function mintWithTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
+  // Legacy aliases still work in V8
+  'function mintWithBDAG(uint256 campaignId) external payable returns (uint256)',
+  'function mintWithBDAGAndTip(uint256 campaignId, uint256 tipAmount) external payable returns (uint256)',
+  // V8 getCampaign returns struct
+  'function getCampaign(uint256 campaignId) external view returns (tuple(uint256 id, string category, string baseURI, uint256 goalNative, uint256 goalUsd, uint256 grossRaised, uint256 netRaised, uint256 tipsReceived, uint256 editionsMinted, uint256 maxEditions, uint256 priceNative, uint256 priceUsd, address nonprofit, address submitter, bool active, bool paused, bool closed, bool refunded, bool immediatePayoutEnabled))',
   'function totalCampaigns() external view returns (uint256)',
   'event EditionMinted(uint256 indexed campaignId, uint256 indexed tokenId, address indexed donor, uint256 editionNumber, uint256 amountPaid)',
 ]
@@ -184,7 +195,11 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
         return
       }
       
-      const contract = new Contract(contractAddress, V7_MINT_ABI, signer)
+      // Select ABI based on contract version
+      const isV8 = contractVersion === 'v8' || (contractVersion && parseInt(contractVersion.slice(1)) >= 8)
+      const selectedABI = isV8 ? V8_MINT_ABI : V7_MINT_ABI
+      const contract = new Contract(contractAddress, selectedABI, signer)
+      logger.debug(`[useEthPurchase] Using ${isV8 ? 'V8' : 'V7'} ABI for contract version: ${contractVersion}`)
 
       // Verify campaign on-chain
       const verifyConfig: Partial<IRetryConfig> = {
@@ -194,7 +209,7 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
         backoffMultiplier: 1.5,
       }
 
-      type VerifyResult = { campaign: any; totalCampaigns: number }
+      type VerifyResult = { campaign: any; totalCampaigns: number; isV8: boolean }
       const verifyResult = await withRetry<VerifyResult>(
         async () => {
           const totalCampaigns = await contract.totalCampaigns()
@@ -202,7 +217,7 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
             throw new Error(`CAMPAIGN_NOT_FOUND:${totalCampaigns}`)
           }
           const campaign = await contract.getCampaign(BigInt(targetId))
-          return { campaign, totalCampaigns: Number(totalCampaigns) }
+          return { campaign, totalCampaigns: Number(totalCampaigns), isV8 }
         },
         verifyConfig,
         (status) => {
@@ -221,14 +236,27 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
         return
       }
 
-      const { campaign } = verifyResult.data!
-      // V7 campaign structure: active is at index 10, closed at index 11
-      if (!campaign[10]) {
+      const { campaign, isV8: campaignIsV8 } = verifyResult.data!
+      
+      // V8 returns struct, V7 returns array - extract values accordingly
+      // V8 struct: { active, paused, closed, priceNative, ... }
+      // V7 array: [category, baseURI, goal, grossRaised, netRaised, editionsMinted, maxEditions, pricePerEdition, nonprofit, submitter, active(10), closed(11), immediatePayoutEnabled(12)]
+      const campaignActive = campaignIsV8 ? campaign.active : campaign[10]
+      const campaignPaused = campaignIsV8 ? campaign.paused : false // V7 doesn't have pause
+      const campaignClosed = campaignIsV8 ? campaign.closed : campaign[11]
+      const onChainPriceWei = campaignIsV8 ? BigInt(campaign.priceNative.toString()) : BigInt(campaign[7].toString())
+      
+      if (!campaignActive) {
         setCryptoMsg(`Campaign #${targetId} is not active.`)
         setLoading(false)
         return
       }
-      if (campaign[11]) {
+      if (campaignPaused) {
+        setCryptoMsg(`Campaign #${targetId} is paused.`)
+        setLoading(false)
+        return
+      }
+      if (campaignClosed) {
         setCryptoMsg(`Campaign #${targetId} is closed.`)
         setLoading(false)
         return
@@ -240,10 +268,6 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
       // USD price is the source of truth - convert to ETH at current market rate
       const usdPricePerNft = hasNftPrice ? pricePerNft! : (totalAmountUsd - tipAmountUsd) / quantity
       const liveCalculatedEth = usdToEth(usdPricePerNft, liveEthPrice)
-      
-      // Get on-chain price and compare with live-calculated price
-      // Use the MAXIMUM to ensure payment is always sufficient
-      const onChainPriceWei = BigInt(campaign[7].toString())
       const liveCalculatedWei = parseEther(liveCalculatedEth.toFixed(18))
       
       // Add 1% buffer to live price for fluctuations
@@ -283,24 +307,30 @@ export function useEthPurchase(props: UseEthPurchaseProps): UseEthPurchaseReturn
 
         let tx
         try {
-          // Log the exact call being made
           const campaignIdBigInt = BigInt(targetId)
-          logger.debug('[useEthPurchase] Calling mintWithBDAG:', {
+          
+          // V8 uses chain-agnostic mint(), V7 uses legacy mintWithBDAG
+          const useMint = isV8
+          const mintFn = useMint ? 'mint' : 'mintWithBDAG'
+          const mintWithTipFn = useMint ? 'mintWithTip' : 'mintWithBDAGAndTip'
+          
+          logger.debug(`[useEthPurchase] Calling ${mintFn}:`, {
             campaignId: campaignIdBigInt.toString(),
             value: finalPriceWei.toString(),
+            isV8: useMint,
           })
 
           if (isLast && tipEthWei > 0n) {
-            // Last NFT includes tip - use legacy mintWithBDAGAndTip
+            // Last NFT includes tip
             const valueWithTip = finalPriceWei + tipEthWei
-            logger.debug('[useEthPurchase] Using mintWithBDAGAndTip with tip:', tipEthWei.toString())
-            tx = await contract.mintWithBDAGAndTip(campaignIdBigInt, tipEthWei, {
+            logger.debug(`[useEthPurchase] Using ${mintWithTipFn} with tip:`, tipEthWei.toString())
+            tx = await contract[mintWithTipFn](campaignIdBigInt, tipEthWei, {
               value: valueWithTip,
               gasLimit,
             })
           } else {
-            // Regular mint without tip - use legacy mintWithBDAG
-            tx = await contract.mintWithBDAG(campaignIdBigInt, {
+            // Regular mint without tip
+            tx = await contract[mintFn](campaignIdBigInt, {
               value: finalPriceWei,
               gasLimit,
             })

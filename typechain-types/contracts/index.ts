@@ -10,3 +10,4 @@ export type { PatriotPledgeNFTV4 } from "./PatriotPledgeNFTV4";
 export type { PatriotPledgeNFTV5 } from "./PatriotPledgeNFTV5";
 export type { PatriotPledgeNFTV6 } from "./PatriotPledgeNFTV6";
 export type { PatriotPledgeNFTV7 } from "./PatriotPledgeNFTV7";
+export type { PatriotPledgeNFTV8 } from "./PatriotPledgeNFTV8";
