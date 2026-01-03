@@ -48,8 +48,8 @@ export type { ERC165 } from "./@openzeppelin/contracts/utils/introspection/ERC16
 export { ERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/ERC165__factory";
 export type { IERC165 } from "./@openzeppelin/contracts/utils/introspection/IERC165";
 export { IERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/IERC165__factory";
-export type { Math } from "./@openzeppelin/contracts/utils/math/Math";
-export { Math__factory } from "./factories/@openzeppelin/contracts/utils/math/Math__factory";
+export type { SafeCast } from "./@openzeppelin/contracts/utils/math/SafeCast";
+export { SafeCast__factory } from "./factories/@openzeppelin/contracts/utils/math/SafeCast__factory";
 export type { Pausable } from "./@openzeppelin/contracts/utils/Pausable";
 export { Pausable__factory } from "./factories/@openzeppelin/contracts/utils/Pausable__factory";
 export type { ReentrancyGuard } from "./@openzeppelin/contracts/utils/ReentrancyGuard";
@@ -76,3 +76,5 @@ export type { PatriotPledgeNFTV7 } from "./contracts/PatriotPledgeNFTV7";
 export { PatriotPledgeNFTV7__factory } from "./factories/contracts/PatriotPledgeNFTV7__factory";
 export type { PatriotPledgeNFTV8 } from "./contracts/PatriotPledgeNFTV8";
 export { PatriotPledgeNFTV8__factory } from "./factories/contracts/PatriotPledgeNFTV8__factory";
+export type { PatriotPledgeNFTV9 } from "./contracts/PatriotPledgeNFTV9";
+export { PatriotPledgeNFTV9__factory } from "./factories/contracts/PatriotPledgeNFTV9__factory";

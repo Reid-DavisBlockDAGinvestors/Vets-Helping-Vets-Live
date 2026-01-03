@@ -1,5 +1,8 @@
 require('dotenv').config({ path: '.env.local' });
 require("@nomicfoundation/hardhat-toolbox");
+// Foundry integration - uncomment after installing Foundry CLI
+// Install: curl -L https://foundry.paradigm.xyz | bash && foundryup
+// require("@nomicfoundation/hardhat-foundry");
 
 // Secure key retrieval - never log keys
 const getPrivateKey = (envVar: string): string | undefined => {
@@ -12,13 +15,14 @@ const getPrivateKey = (envVar: string): string | undefined => {
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
-    version: "0.8.24",
+    version: "0.8.28",
     settings: {
       optimizer: {
         enabled: true,
         runs: 200
       },
-      viaIR: true
+      viaIR: true,
+      evmVersion: "cancun"
     }
   },
   networks: {
@@ -67,14 +71,14 @@ module.exports = {
     }
   },
   
-  // Etherscan verification
+  // Etherscan verification (V2 API - unified key for all chains)
   etherscan: {
-    apiKey: {
-      mainnet: process.env.ETHERSCAN_API_KEY || '',
-      sepolia: process.env.ETHERSCAN_API_KEY || '',
-      polygon: process.env.POLYGONSCAN_API_KEY || '',
-      base: process.env.BASESCAN_API_KEY || '',
-    }
+    apiKey: process.env.ETHERSCAN_API_KEY || '',
+  },
+  
+  // Sourcify verification (optional - decentralized)
+  sourcify: {
+    enabled: false,
   },
   
   // Gas reporter for cost estimation

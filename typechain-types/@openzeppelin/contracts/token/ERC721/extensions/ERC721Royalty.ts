@@ -260,7 +260,7 @@ export interface ERC721Royalty extends BaseContract {
 
   royaltyInfo: TypedContractMethod<
     [tokenId: BigNumberish, salePrice: BigNumberish],
-    [[string, bigint]],
+    [[string, bigint] & { receiver: string; amount: bigint }],
     "view"
   >;
 
@@ -337,7 +337,7 @@ export interface ERC721Royalty extends BaseContract {
     nameOrSignature: "royaltyInfo"
   ): TypedContractMethod<
     [tokenId: BigNumberish, salePrice: BigNumberish],
-    [[string, bigint]],
+    [[string, bigint] & { receiver: string; amount: bigint }],
     "view"
   >;
   getFunction(

@@ -1681,7 +1681,7 @@ export interface PatriotPledgeNFTV8 extends BaseContract {
 
   royaltyInfo: TypedContractMethod<
     [tokenId: BigNumberish, salePrice: BigNumberish],
-    [[string, bigint]],
+    [[string, bigint] & { receiver: string; amount: bigint }],
     "view"
   >;
 
@@ -2149,7 +2149,7 @@ export interface PatriotPledgeNFTV8 extends BaseContract {
     nameOrSignature: "royaltyInfo"
   ): TypedContractMethod<
     [tokenId: BigNumberish, salePrice: BigNumberish],
-    [[string, bigint]],
+    [[string, bigint] & { receiver: string; amount: bigint }],
     "view"
   >;
   getFunction(

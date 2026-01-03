@@ -380,12 +380,12 @@ const _abi = [
     outputs: [
       {
         internalType: "address",
-        name: "",
+        name: "receiver",
         type: "address",
       },
       {
         internalType: "uint256",
-        name: "",
+        name: "amount",
         type: "uint256",
       },
     ],

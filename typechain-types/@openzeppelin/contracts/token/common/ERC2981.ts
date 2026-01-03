@@ -89,7 +89,7 @@ export interface ERC2981 extends BaseContract {
 
   royaltyInfo: TypedContractMethod<
     [tokenId: BigNumberish, salePrice: BigNumberish],
-    [[string, bigint]],
+    [[string, bigint] & { receiver: string; amount: bigint }],
     "view"
   >;
 
@@ -107,7 +107,7 @@ export interface ERC2981 extends BaseContract {
     nameOrSignature: "royaltyInfo"
   ): TypedContractMethod<
     [tokenId: BigNumberish, salePrice: BigNumberish],
-    [[string, bigint]],
+    [[string, bigint] & { receiver: string; amount: bigint }],
     "view"
   >;
   getFunction(
