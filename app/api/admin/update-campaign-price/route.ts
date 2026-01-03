@@ -3,17 +3,10 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getSignerForChain, type ChainId } from '@/lib/chains'
 import { ethers } from 'ethers'
 import { logger } from '@/lib/logger'
+import { getPrice, getCurrencyForChain, FALLBACK_RATES } from '@/lib/prices'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-
-// Currency/USD conversion rates
-const BDAG_USD_RATE = parseFloat(process.env.BDAG_USD_RATE || '0.05')
-const ETH_USD_RATE = parseFloat(process.env.ETH_USD_RATE || '3100') // ~$3100/ETH (Jan 2026)
-
-// Chain ID constants
-const SEPOLIA_CHAIN_ID = 11155111
-const ETHEREUM_CHAIN_ID = 1
 
 // V7 ABI for updateCampaignPrice
 const V7_UPDATE_PRICE_ABI = [
@@ -65,19 +58,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'contractAddress required' }, { status: 400 })
     }
 
-    // Calculate price in wei based on chain
-    const isEthChain = chainId === SEPOLIA_CHAIN_ID || chainId === ETHEREUM_CHAIN_ID
-    let priceWei: bigint
+    // Get live price for the chain's native currency
+    const currency = getCurrencyForChain(chainId)
+    let usdRate: number
     
-    if (isEthChain) {
-      const priceEth = priceUsd / ETH_USD_RATE
-      priceWei = ethers.parseEther(priceEth.toFixed(18))
-      logger.debug(`[update-campaign-price] ETH chain: $${priceUsd} = ${priceEth} ETH = ${priceWei} wei`)
-    } else {
-      const priceBdag = priceUsd / BDAG_USD_RATE
-      priceWei = ethers.parseEther(priceBdag.toFixed(6))
-      logger.debug(`[update-campaign-price] BDAG chain: $${priceUsd} = ${priceBdag} BDAG = ${priceWei} wei`)
+    try {
+      const priceData = await getPrice(currency)
+      usdRate = priceData.priceUsd
+      logger.debug(`[update-campaign-price] Live price for ${currency}: $${usdRate} (source: ${priceData.source})`)
+    } catch (e) {
+      usdRate = FALLBACK_RATES[currency] || 1
+      logger.debug(`[update-campaign-price] Using fallback rate for ${currency}: $${usdRate}`)
     }
+    
+    // Convert USD to native currency
+    const priceNative = priceUsd / usdRate
+    const decimals = currency === 'BDAG' ? 6 : 18
+    const priceWei = ethers.parseEther(priceNative.toFixed(decimals))
+    
+    logger.debug(`[update-campaign-price] $${priceUsd} = ${priceNative.toFixed(8)} ${currency} @ $${usdRate} = ${priceWei} wei`)
 
     // Get signer for the chain
     const signer = getSignerForChain(chainId as ChainId)

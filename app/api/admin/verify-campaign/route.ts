@@ -9,9 +9,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const maxDuration = 120 // Extended timeout for blockchain operations
 
-// Currency/USD conversion rates
-const BDAG_USD_RATE = parseFloat(process.env.BDAG_USD_RATE || '0.05')
-const ETH_USD_RATE = parseFloat(process.env.ETH_USD_RATE || '3100') // ~$3100/ETH (Jan 2026)
+import { getPrice, getCurrencyForChain, FALLBACK_RATES, CHAIN_CURRENCIES } from '@/lib/prices'
 
 // Chain ID constants
 const SEPOLIA_CHAIN_ID = 11155111
@@ -207,30 +205,30 @@ export async function POST(req: NextRequest) {
     const priceUsd = sub.price_per_copy || 1
     const feeRateBps = 100 // 1%
     
-    // Chain-aware currency conversion
-    // For ETH-based chains (Sepolia, Mainnet), convert USD to ETH
-    // For BDAG chains, convert USD to BDAG
+    // Chain-aware currency conversion using live price feeds
     const chainId = sub.chain_id || sub.target_chain_id || 1043 // Default to BlockDAG
-    const isEthChain = chainId === SEPOLIA_CHAIN_ID || chainId === ETHEREUM_CHAIN_ID
+    const currency = getCurrencyForChain(chainId)
     
-    let goalWei: bigint
-    let priceWei: bigint
-    
-    if (isEthChain) {
-      // Convert USD to ETH (e.g., $10 / $2300 = 0.00434783 ETH)
-      const goalEth = goalUsd / ETH_USD_RATE
-      const priceEth = priceUsd / ETH_USD_RATE
-      goalWei = ethers.parseEther(goalEth.toFixed(18))
-      priceWei = ethers.parseEther(priceEth.toFixed(18))
-      logger.debug(`[verify-campaign] ETH chain (${chainId}): goal=${goalEth}ETH, price=${priceEth}ETH`)
-    } else {
-      // Convert USD to BDAG (e.g., $10 / $0.05 = 200 BDAG)
-      const goalBdag = goalUsd / BDAG_USD_RATE
-      const priceBdag = priceUsd / BDAG_USD_RATE
-      goalWei = ethers.parseEther(goalBdag.toFixed(6))
-      priceWei = ethers.parseEther(priceBdag.toFixed(6))
-      logger.debug(`[verify-campaign] BDAG chain (${chainId}): goal=${goalBdag}BDAG, price=${priceBdag}BDAG`)
+    // Get live price (falls back to env vars if API fails)
+    let usdRate: number
+    try {
+      const priceData = await getPrice(currency)
+      usdRate = priceData.priceUsd
+      logger.debug(`[verify-campaign] Live price for ${currency}: $${usdRate} (source: ${priceData.source})`)
+    } catch (e) {
+      // Use fallback rate from env vars
+      usdRate = FALLBACK_RATES[currency] || 1
+      logger.debug(`[verify-campaign] Using fallback rate for ${currency}: $${usdRate}`)
     }
+    
+    // Convert USD to native currency
+    const goalNative = goalUsd / usdRate
+    const priceNative = priceUsd / usdRate
+    const decimals = currency === 'BDAG' ? 6 : 18
+    const goalWei = ethers.parseEther(goalNative.toFixed(decimals))
+    const priceWei = ethers.parseEther(priceNative.toFixed(decimals))
+    
+    logger.debug(`[verify-campaign] Chain ${chainId} (${currency}): goal=${goalNative.toFixed(8)} ${currency}, price=${priceNative.toFixed(8)} ${currency} @ $${usdRate}`)
 
     logger.debug(`[verify-campaign] Creating campaign on-chain: goal=${goalUsd}USD, editions=${maxEditions}, price=${priceUsd}USD`)
 
