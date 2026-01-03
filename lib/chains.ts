@@ -40,8 +40,9 @@ export const CHAIN_CONFIGS: Record<ChainId, ChainConfig> = {
     chainId: 1043,
     name: 'BlockDAG Testnet',
     shortName: 'BDAG',
-    rpcUrl: process.env.NEXT_PUBLIC_BLOCKDAG_RPC || 'https://bdag.nownodes.io',
-    rpcUrlFallback: 'https://rpc.awakening.bdagscan.com',
+    // Use public RPC as default (more reliable), NowNodes as fallback
+    rpcUrl: process.env.BLOCKDAG_RPC || process.env.NEXT_PUBLIC_BLOCKDAG_RPC || 'https://rpc.awakening.bdagscan.com',
+    rpcUrlFallback: 'https://bdag.nownodes.io',
     explorerUrl: 'https://awakening.bdagscan.com',
     nativeCurrency: {
       name: 'BlockDAG',
@@ -374,17 +375,18 @@ export function getProviderForChain(chainId: ChainId): ethers.JsonRpcProvider {
     throw new Error(`No RPC URL configured for chain ${config.name} (${chainId})`)
   }
   
-  // Special handling for NowNodes (BlockDAG) - requires API key header
+  // Create provider - use standard RPC (NowNodes handling moved to fallback)
   let provider: ethers.JsonRpcProvider
   
-  if (chainId === 1043 && config.rpcUrl.includes('nownodes.io')) {
+  // Check if using NowNodes (requires API key header)
+  if (config.rpcUrl.includes('nownodes.io')) {
     const nowNodesKey = process.env.NOWNODES_API_KEY
     if (nowNodesKey) {
       const fetchReq = new ethers.FetchRequest(config.rpcUrl)
       fetchReq.setHeader('api-key', nowNodesKey)
       provider = new ethers.JsonRpcProvider(fetchReq, undefined, { staticNetwork: true })
     } else {
-      // Fall back to public RPC
+      // Fall back to public RPC if no API key
       provider = new ethers.JsonRpcProvider(
         config.rpcUrlFallback || config.rpcUrl, 
         undefined, 
@@ -392,6 +394,7 @@ export function getProviderForChain(chainId: ChainId): ethers.JsonRpcProvider {
       )
     }
   } else {
+    // Standard RPC - no special headers needed
     provider = new ethers.JsonRpcProvider(config.rpcUrl, undefined, { staticNetwork: true })
   }
   
@@ -399,6 +402,17 @@ export function getProviderForChain(chainId: ChainId): ethers.JsonRpcProvider {
   providerCache.set(chainId, provider)
   
   return provider
+}
+
+/**
+ * Clear provider cache for a specific chain (useful after RPC errors)
+ */
+export function clearProviderCache(chainId?: ChainId): void {
+  if (chainId) {
+    providerCache.delete(chainId)
+  } else {
+    providerCache.clear()
+  }
 }
 
 /**

@@ -279,10 +279,11 @@ export function FundDistributionPanel() {
                     <p className="text-white/60 text-sm">Recipient (Submitter)</p>
                     <p className="text-white font-mono text-sm">{campaign.submitterWallet || 'Not set'}</p>
                   </div>
-                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-                    <p className="text-yellow-400 text-sm">
-                      ⚠️ <strong>V7 Off-Chain Distribution:</strong> This will create a pending distribution record. 
-                      You will need to manually transfer the funds from the contract to the submitter wallet.
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                    <p className="text-blue-400 text-sm">
+                      🔗 <strong>On-Chain Distribution:</strong> This will call the contract's withdraw function 
+                      to transfer funds directly from the contract to the submitter wallet. A transaction will be 
+                      submitted and confirmed on the blockchain.
                     </p>
                   </div>
                 </div>
