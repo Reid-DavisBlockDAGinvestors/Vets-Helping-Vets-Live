@@ -6,6 +6,32 @@ This document consolidates all TODOs, planned features, and improvements into a 
 
 ---
 
+## 🚨 ACTIVE PRIORITY ROADMAPS (Jan 3, 2026)
+
+| Priority | Roadmap | Status | Document |
+|----------|---------|--------|----------|
+| **1 (HIGHEST)** | Fund Distribution | 🔴 CRITICAL - Immediate payout disabled on Mainnet | [`FUND_DISTRIBUTION_ROADMAP.md`](docs/FUND_DISTRIBUTION_ROADMAP.md) |
+| **2 (HIGH)** | Multi-Wallet Connection | 🟠 Trust Wallet, Phantom, Base Wallet failing | [`MULTI_WALLET_CONNECTION_ROADMAP.md`](docs/MULTI_WALLET_CONNECTION_ROADMAP.md) |
+| **3 (MEDIUM)** | Testnet vs Mainnet Funds UI | 🟡 No visual distinction between real/test funds | [`TESTNET_VS_MAINNET_FUNDS_ROADMAP.md`](docs/TESTNET_VS_MAINNET_FUNDS_ROADMAP.md) |
+
+### Priority 1 Summary: Fund Distribution
+- **Issue**: `immediatePayoutEnabled` defaults to `false` in campaign creation
+- **Impact**: "A Mother's Fight" on Ethereum Mainnet NOT auto-distributing funds to submitter
+- **Fix Required**: Call `setCampaignImmediatePayout(0, true)` on V8 Mainnet contract
+- **Time Estimate**: 2-4 hours for emergency fix, 16-20 hours for full implementation
+
+### Priority 2 Summary: Wallet Connection
+- **Issue**: Trust Wallet fails to connect on mobile and desktop
+- **Solution**: Implement Web3Modal/AppKit with wagmi for 300+ wallet support
+- **Time Estimate**: 16-26 hours
+
+### Priority 3 Summary: Testnet vs Mainnet Funds
+- **Issue**: No visual distinction between real ETH and test tokens in UI
+- **Solution**: ChainBadge component, FundsDisplay component, filter support
+- **Time Estimate**: 22-33 hours
+
+---
+
 ## Current Scores & Targets
 
 | Category | Current | Target | Gap |

@@ -1,12 +1,41 @@
 # Fund Distribution Roadmap
 
-## Executive Summary
+## 🚨 PRIORITY 1 - HIGHEST PRIORITY
 
-This document outlines the complete strategy for distributing funds to campaign submitters from the admin UI. The system supports multiple chains (BlockDAG, Sepolia, Ethereum Mainnet) with different contract versions (V5, V6, V7), each with varying capabilities.
+**Status:** CRITICAL - Immediate Payout NOT Enabled on Mainnet Campaign
 
 ---
 
-## Current State (Jan 2, 2026)
+## Executive Summary
+
+This document outlines the complete strategy for distributing funds to campaign submitters. The V8 contract on Ethereum Mainnet supports **automatic immediate payout** on every NFT mint, but this feature must be explicitly enabled per campaign.
+
+---
+
+## 🔴 CRITICAL ISSUE IDENTIFIED (Jan 3, 2026)
+
+### Problem
+The `immediatePayoutEnabled` flag defaults to `false` in `app/api/submissions/approve/route.ts`:
+```typescript
+const immediatePayoutEnabled = body.updates?.immediate_payout_enabled ?? false
+```
+
+This means **"A Mother's Fight to Keep Her Family"** on Ethereum Mainnet is NOT automatically distributing funds to the submitter when NFTs are minted.
+
+### Impact
+- Funds accumulate in the contract instead of going to the submitter
+- Manual distribution required via admin panel or `distributePendingFunds()`
+- Poor UX for campaign creators expecting immediate payouts
+
+### Solution Required
+1. **Immediate Fix**: Enable immediate payout for existing Mainnet campaign
+2. **Default Change**: Make `immediatePayoutEnabled = true` the default for production chains
+3. **Admin UI**: Add toggle in campaign approval to enable/disable immediate payout
+4. **Dashboard**: Show distribution status on campaign cards
+
+---
+
+## Current State (Jan 3, 2026)
 
 ### Contract Distribution Capabilities
 
@@ -15,7 +44,24 @@ This document outlines the complete strategy for distributing funds to campaign 
 | **V5** | BlockDAG (1043) | `withdraw(to, amount)` | ❌ No | ✅ Active |
 | **V6** | BlockDAG (1043) | `withdraw(to, amount)` + `emergencyWithdraw()` | ❌ No | ✅ Active |
 | **V7** | Sepolia (11155111) | `withdraw(to, amount)` + `distributePendingFunds(campaignId)` | ✅ Yes | ✅ Testing |
-| **V7** | Ethereum (1) | Same as Sepolia V7 | ✅ Yes | ⏳ Future |
+| **V7** | Ethereum (1) | Same as Sepolia V7 | ✅ Yes | ⏳ Deprecated |
+| **V8** | Sepolia (11155111) | `withdraw()` + `distributePendingFunds()` + `_distributeFunds()` | ✅ Yes (per-campaign) | ✅ Testing |
+| **V8** | Ethereum (1) | Same as Sepolia V8 | ✅ Yes (per-campaign) | 🔴 LIVE - Payout Disabled |
+
+### V8 Contract Distribution Features
+```solidity
+// Automatic distribution on mint (when immediatePayoutEnabled = true)
+function _distributeFunds(uint256 campaignId, uint256 contribution, uint256 tipAmount) internal {
+    uint256 platformFee = (contribution * platformFeeBps) / BPS_DENOMINATOR;
+    uint256 submitterAmount = contribution - platformFee + tipAmount;
+    
+    // Sends platformFee to platformTreasury
+    // Sends submitterAmount to campaign.submitter
+}
+
+// Manual distribution for campaigns with immediatePayoutEnabled = false
+function distributePendingFunds(uint256 campaignId) external onlyOwner
+```
 
 ### What Works Now
 1. ✅ Distribution API calls contract `withdraw()` function on-chain
@@ -25,9 +71,92 @@ This document outlines the complete strategy for distributing funds to campaign 
 5. ✅ Multi-chain support (BlockDAG + Sepolia)
 
 ### Current Issues
-1. ❌ BlockDAG RPC can be unreliable (NowNodes DNS issues) - FIXED in commit ce164e5
-2. ❌ No retry logic for failed transactions
-3. ❌ No batch distribution (one campaign at a time)
+1. 🔴 **CRITICAL**: `immediatePayoutEnabled` defaults to `false` - Mainnet campaign NOT auto-distributing
+2. ❌ No UI to enable/disable immediate payout during campaign approval
+3. ❌ No way to enable immediate payout on existing campaigns from admin UI
+4. ❌ BlockDAG RPC can be unreliable (NowNodes DNS issues) - FIXED in commit ce164e5
+5. ❌ No retry logic for failed transactions
+6. ❌ No batch distribution (one campaign at a time)
+
+---
+
+## 🛠️ IMPLEMENTATION PLAN
+
+### Phase 0: EMERGENCY FIX (Do First)
+**Goal:** Enable immediate payout for existing Mainnet campaign
+
+#### Step 1: Call `setCampaignImmediatePayout` on V8 Mainnet Contract
+```typescript
+// Contract: 0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e (Ethereum Mainnet)
+// Function: setCampaignImmediatePayout(uint256 campaignId, bool enabled)
+// Arguments: campaignId = 0 (first campaign), enabled = true
+
+const contract = getContractByVersion('v8', signer)
+await contract.setCampaignImmediatePayout(0, true)
+```
+
+#### Step 2: Create Admin API to Toggle Immediate Payout
+- [ ] Create `/api/admin/campaigns/[id]/immediate-payout` endpoint
+- [ ] Accept `enabled: boolean` in request body
+- [ ] Call `contract.setCampaignImmediatePayout(campaignId, enabled)`
+- [ ] Return transaction hash
+
+#### Step 3: Add Toggle to Admin Campaign Management UI
+- [ ] Add "Immediate Payout" toggle switch in campaign detail modal
+- [ ] Show current status (enabled/disabled)
+- [ ] Require confirmation before changing
+
+### Phase 1: Default Behavior Change
+**Goal:** Make immediate payout the default for production chains
+
+#### Code Changes Required
+```typescript
+// app/api/submissions/approve/route.ts - Line 348
+// BEFORE:
+const immediatePayoutEnabled = body.updates?.immediate_payout_enabled ?? false
+
+// AFTER:
+// Default to TRUE for mainnet chains (1, 137, 8453), FALSE for testnets
+const isMainnet = [1, 137, 8453].includes(parseInt(chainId))
+const immediatePayoutEnabled = body.updates?.immediate_payout_enabled ?? isMainnet
+```
+
+#### Admin UI for Campaign Approval
+- [ ] Add checkbox: "Enable Immediate Payout" (checked by default for mainnet)
+- [ ] Add tooltip explaining: "When enabled, funds are sent directly to submitter on each NFT purchase"
+- [ ] Show warning for testnet: "Testnet campaigns default to manual distribution"
+
+### Phase 2: Distribution Dashboard
+**Goal:** Full visibility into fund distribution status
+
+#### Dashboard Components
+- [ ] **Campaign Distribution Status Card**
+  - Total raised (gross)
+  - Platform fees collected
+  - Net to submitter
+  - Amount distributed
+  - Amount pending
+  - Immediate payout status
+  
+- [ ] **Distribution History Table**
+  - Date/time
+  - Amount
+  - Recipient
+  - Transaction hash (link to explorer)
+  - Status (pending/completed/failed)
+
+- [ ] **Quick Actions**
+  - "Distribute Pending Funds" button
+  - "Toggle Immediate Payout" button
+  - "View on Explorer" link
+
+### Phase 3: Automated Distribution
+**Goal:** Reduce manual admin work
+
+- [ ] Auto-distribute when campaign reaches goal
+- [ ] Scheduled weekly distribution for non-immediate campaigns
+- [ ] Notification system for pending distributions
+- [ ] Multi-sig approval for distributions over $10,000
 
 ---
 
