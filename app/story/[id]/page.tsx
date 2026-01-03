@@ -5,6 +5,22 @@ import { ipfsToHttp } from '@/lib/ipfs'
 import { getCategoryById } from '@/lib/categories'
 import { logger } from '@/lib/logger'
 
+// Chain-aware explorer URLs
+const CHAIN_EXPLORERS: Record<number, string> = {
+  1043: 'https://awakening.bdagscan.com',
+  1: 'https://etherscan.io',
+  11155111: 'https://sepolia.etherscan.io',
+  137: 'https://polygonscan.com',
+  8453: 'https://basescan.org',
+}
+
+function getExplorerUrl(chainId?: number): string {
+  if (chainId && CHAIN_EXPLORERS[chainId]) {
+    return CHAIN_EXPLORERS[chainId]
+  }
+  return CHAIN_EXPLORERS[1043] // Default to BlockDAG
+}
+
 type OnchainItem = {
   tokenId: number
   campaignId?: number
@@ -348,8 +364,8 @@ export default async function StoryViewer({ params }: { params: { id: string } }
                 {pricePerCopy ? 'Purchase NFT' : 'Make a Donation'}
               </h2>
               <PurchasePanelV2 
-                campaignId={id} 
-                tokenId={id} 
+                campaignId={submission?.campaign_id ?? onchain?.campaignId ?? id} 
+                tokenId={submission?.token_id ?? onchain?.tokenId ?? id} 
                 pricePerNft={pricePerCopy} 
                 remainingCopies={remainingCopies} 
                 isPendingOnchain={isPendingOnchain}
@@ -366,7 +382,7 @@ export default async function StoryViewer({ params }: { params: { id: string } }
             <div className="flex-1">
               <h1 className="text-2xl md:text-3xl font-bold text-white">{title}</h1>
               <div className="mt-1 flex items-center gap-3 flex-wrap">
-                <p className="text-white/50 text-sm">Campaign #{id} on BlockDAG</p>
+                <p className="text-white/50 text-sm">Campaign #{submission?.campaign_id ?? id} on {submission?.chain_name || 'BlockDAG'}</p>
                 <Link
                   href={communityHref}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 text-white/70 text-xs font-medium hover:bg-white/10 hover:text-white transition-colors border border-white/10"
@@ -374,11 +390,11 @@ export default async function StoryViewer({ params }: { params: { id: string } }
                   💬 Discuss in Community
                 </Link>
                 <a 
-                  href={`https://awakening.bdagscan.com/address/${submission?.contract_address || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'}`}
+                  href={`${getExplorerUrl(submission?.chain_id)}/address/${submission?.contract_address || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium hover:bg-emerald-500/30 transition-colors border border-emerald-500/30"
-                  title={`View on blockchain (${submission?.contract_version || 'v5'})`}
+                  title={`View on ${submission?.chain_name || 'BlockDAG'} (${submission?.contract_version || 'v5'})`}
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -476,14 +492,14 @@ export default async function StoryViewer({ params }: { params: { id: string } }
                 <span>⛓️</span> On-Chain Verified
               </h3>
               <p className="text-sm text-white/60 mb-4">
-                This campaign is recorded on the BlockDAG blockchain for full transparency.
+                This campaign is recorded on the {submission?.chain_name || 'BlockDAG'} blockchain for full transparency.
               </p>
               <a 
-                href={`https://awakening.bdagscan.com/address/${submission?.contract_address || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'}`}
+                href={`${getExplorerUrl(submission?.chain_id)}/address/${submission?.contract_address || '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors"
-                title={`View on blockchain (${submission?.contract_version || 'v5'})`}
+                title={`View on ${submission?.chain_name || 'BlockDAG'} (${submission?.contract_version || 'v5'})`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
