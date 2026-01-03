@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getProvider, getRelayerSigner, PatriotPledgeV5ABI } from '@/lib/onchain'
-import { getActiveContractVersion, getContractByVersion, getContractAddress } from '@/lib/contracts'
+import { getActiveContractVersion, getContractByVersion, getContractAddress, getContractVersionByChainId, getContractInfoByChainId } from '@/lib/contracts'
 import { ethers } from 'ethers'
 import { logger } from '@/lib/logger'
 
@@ -232,8 +232,18 @@ export async function POST(req: NextRequest) {
 
     logger.debug(`[verify-campaign] Creating campaign on-chain: goal=${goalUsd}USD, editions=${maxEditions}, price=${priceUsd}USD`)
 
-    // Get signer and contract
-    const contractVersion = getActiveContractVersion()
+    // Get signer and contract - USE CHAIN-SPECIFIC CONTRACT SELECTION
+    const contractVersion = getContractVersionByChainId(chainId) || getActiveContractVersion()
+    const contractInfo = getContractInfoByChainId(chainId)
+    
+    if (!contractInfo) {
+      return NextResponse.json({ 
+        error: `No active contract found for chain ${chainId}` 
+      }, { status: 400 })
+    }
+    
+    logger.debug(`[verify-campaign] Using contract ${contractVersion} on chain ${chainId} (${contractInfo.address})`)
+    
     const signer = await getRelayerSigner()
     const writeContract = getContractByVersion(contractVersion, signer)
 
@@ -364,14 +374,15 @@ export async function POST(req: NextRequest) {
 
     const result = await createCampaignWithConfirmation()
 
-    // Update submission with confirmed campaign data
+    // Update submission with confirmed campaign data - use chain-specific contract address
     const { error: updateErr } = await supabaseAdmin
       .from('submissions')
       .update({
         campaign_id: result.campaignId,
         status: 'minted',
         tx_hash: result.hash,
-        contract_address: contractAddress,
+        contract_address: contractInfo.address,
+        chain_id: chainId,
         visible_on_marketplace: true
       })
       .eq('id', submissionId)

@@ -420,6 +420,31 @@ export function getHighestVersion(): number {
 }
 
 /**
+ * Get the active contract version for a specific chain ID
+ * Returns the first active, mintable contract for the given chain
+ */
+export function getContractVersionByChainId(chainId: number): ContractVersion | null {
+  for (const [version, info] of contractRegistry.entries()) {
+    if (info.chainId === chainId && info.isActive && info.isMintable && info.address) {
+      return version
+    }
+  }
+  return null
+}
+
+/**
+ * Get contract info by chain ID (returns first active contract for that chain)
+ */
+export function getContractInfoByChainId(chainId: number): ContractInfo | null {
+  for (const info of contractRegistry.values()) {
+    if (info.chainId === chainId && info.isActive && info.isMintable && info.address) {
+      return info
+    }
+  }
+  return null
+}
+
+/**
  * Create an ethers Contract instance for a specific version
  */
 export function getContractByVersion(version: ContractVersion, signerOrProvider?: ethers.Signer | ethers.Provider): ethers.Contract {
