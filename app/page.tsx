@@ -44,9 +44,9 @@ async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
       return []
     }
     
-    // Filter by status in code
+    // Filter by status in code (only 'minted' is valid)
     const mintedSubs = (allSubs || []).filter((s: any) => 
-      s.status === 'minted' || s.status === 'pending_onchain'
+      s.status === 'minted'
     )
     
     // Filter visible in JavaScript (handles boolean and string 'true')
@@ -126,7 +126,7 @@ async function getAllCampaignStats(): Promise<HomeStats> {
   const { data: allSubs, error } = await supabase
     .from('submissions')
     .select('sold_count, goal, num_copies, chain_id, tips_distributed, status, visible_on_marketplace')
-    .or('status.eq.minted,status.eq.pending_onchain')
+    .eq('status', 'minted')
   
   if (error || !allSubs) {
     logger.error('[getAllCampaignStats] Database error:', error?.message)
