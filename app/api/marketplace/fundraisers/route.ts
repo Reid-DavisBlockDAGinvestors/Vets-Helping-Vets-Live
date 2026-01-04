@@ -206,8 +206,8 @@ export async function GET(req: NextRequest) {
       const calculatedNftSales = editionsMinted * pricePerEdition
       const nftSalesUSD = Math.min(calculatedNftSales, grossRaisedUSD) // Can't exceed total raised
       
-      // Calculate tips = gross raised - NFT sales (tips are extra amounts above NFT price)
-      const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
+      // Calculate gifts = gross raised - NFT sales (gifts are extra amounts above NFT price)
+      const giftsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
       
       // Total raised = gross raised from blockchain (most accurate)
       const raised = grossRaisedUSD
@@ -238,7 +238,7 @@ export async function GET(req: NextRequest) {
         goal,
         raised,
         nftSalesUSD,
-        tipsUSD,
+        giftsUSD,
         progress,
         editionsMinted,
         maxEditions,

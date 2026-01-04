@@ -37,7 +37,7 @@ export type NFTItem = {
   goal: number
   raised: number
   nftSalesUSD?: number
-  tipsUSD?: number
+  giftsUSD?: number
   snippet: string
   sold?: number
   total?: number
@@ -160,7 +160,7 @@ export default function NFTCard({ item }: { item: NFTItem }) {
                 {item.raised > 0 && (
                   <div className="flex gap-2 text-[10px] opacity-80">
                     <span className="text-emerald-300">NFT: ${(item.nftSalesUSD || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                    <span className="text-purple-300">Tips: ${(item.tipsUSD || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                    <span className="text-purple-300">Gifts: ${(item.giftsUSD || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                   </div>
                 )}
               </div>

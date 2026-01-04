@@ -273,8 +273,8 @@ export default async function StoryViewer({ params }: { params: { id: string } }
     : 0
   const nftSalesUSD = Math.min(calculatedNftSales, grossRaisedUSD) // Can't exceed total raised
   
-  // Tips = gross raised - NFT sales (extra amounts above NFT price)
-  const tipsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
+  // Gifts = gross raised - NFT sales (extra amounts above NFT price)
+  const giftsUSD = Math.max(0, grossRaisedUSD - nftSalesUSD)
   
   // Total raised = gross raised from blockchain
   const raised = grossRaisedUSD
@@ -433,7 +433,7 @@ export default async function StoryViewer({ params }: { params: { id: string } }
               {raised > 0 && (
                 <div className="flex gap-3 justify-end mt-1 text-xs">
                   <span className="text-emerald-400">NFT: ${nftSalesUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                  <span className="text-purple-400">Tips: ${tipsUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                  <span className="text-purple-400">Gifts: ${giftsUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                 </div>
               )}
             </div>
