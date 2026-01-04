@@ -29,9 +29,35 @@ interface ExtendedNFTItem extends NFTItem {
 const ETH_USD = Number(process.env.ETH_USD_RATE || '3100')
 const BDAG_USD = Number(process.env.BDAG_USD_RATE || '0.05')
 
-async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
+// Aggregate tips from purchases table by campaign_id
+async function getTipsPerCampaign(): Promise<Map<number, number>> {
+  const supabase = getFreshSupabase()
+  const { data: purchases, error } = await supabase
+    .from('purchases')
+    .select('campaign_id, tip_usd')
+  
+  if (error || !purchases) {
+    logger.error('[getTipsPerCampaign] Error:', error?.message)
+    return new Map()
+  }
+  
+  const tipsMap = new Map<number, number>()
+  for (const p of purchases) {
+    const cid = Number(p.campaign_id)
+    const tip = Number(p.tip_usd || 0)
+    tipsMap.set(cid, (tipsMap.get(cid) || 0) + tip)
+  }
+  
+  logger.debug(`[getTipsPerCampaign] Found tips for ${tipsMap.size} campaigns`)
+  return tipsMap
+}
+
+async function loadOnchain(limit = 24, tipsMap?: Map<number, number>): Promise<ExtendedNFTItem[]> {
   try {
     const supabase = getFreshSupabase()
+    
+    // Get tips from purchases if not provided
+    const tips = tipsMap || await getTipsPerCampaign()
     
     // Get all submissions with minted status
     const { data: allSubs, error } = await supabase
@@ -72,7 +98,8 @@ async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
       const soldCount = Number(s.sold_count || 0)
       const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
       const nftSalesUSD = soldCount * pricePerCopy
-      const giftsUSD = Number(s.tips_distributed || 0)
+      // Get tips from purchases table (aggregated by campaign_id)
+      const giftsUSD = tips.get(Number(s.campaign_id)) || 0
       const totalRaised = nftSalesUSD + giftsUSD
       
       const pct = goal > 0 ? Math.min(100, Math.round((totalRaised / goal) * 100)) : 0
@@ -147,9 +174,12 @@ function calculateStatsFromCampaigns(campaigns: ExtendedNFTItem[]): HomeStats {
 }
 
 // Load ALL visible campaigns for stats (no limit)
-async function loadAllCampaignsForStats(): Promise<ExtendedNFTItem[]> {
+async function loadAllCampaignsForStats(tipsMap?: Map<number, number>): Promise<ExtendedNFTItem[]> {
   try {
     const supabase = getFreshSupabase()
+    
+    // Get tips from purchases if not provided
+    const tips = tipsMap || await getTipsPerCampaign()
     
     const { data: allSubs, error } = await supabase
       .from('submissions')
@@ -177,7 +207,8 @@ async function loadAllCampaignsForStats(): Promise<ExtendedNFTItem[]> {
       const soldCount = Number(s.sold_count || 0)
       const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
       const nftSalesUSD = soldCount * pricePerCopy
-      const giftsUSD = Number(s.tips_distributed || 0)
+      // Get tips from purchases table (aggregated by campaign_id)
+      const giftsUSD = tips.get(Number(s.campaign_id)) || 0
       const totalRaised = nftSalesUSD + giftsUSD
       
       return {
@@ -218,11 +249,14 @@ const FEATURES = [
 ]
 
 export default async function HomePage() {
+  // Fetch tips once and pass to both functions for efficiency
+  const tipsMap = await getTipsPerCampaign()
+  
   // Fetch campaigns for display (limited to 24)
-  const all = await loadOnchain(24)
+  const all = await loadOnchain(24, tipsMap)
   
   // Load ALL visible campaigns for accurate stats (not limited)
-  const allCampaigns = await loadAllCampaignsForStats()
+  const allCampaigns = await loadAllCampaignsForStats(tipsMap)
   const stats = calculateStatsFromCampaigns(allCampaigns)
   
   // Featured campaign: prioritize mainnet campaigns, then first available
