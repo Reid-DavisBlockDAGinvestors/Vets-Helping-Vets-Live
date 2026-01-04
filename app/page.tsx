@@ -20,16 +20,19 @@ interface ExtendedNFTItem extends NFTItem {
 async function loadOnchain(limit = 12): Promise<ExtendedNFTItem[]> {
   try {
     // First, get campaigns from database with full metadata
-    // Note: is_featured/featured_order may not exist yet - query base columns first
+    // Filter by visible_on_marketplace = true (same as marketplace API)
     const { data: submissions, error: dbError } = await supabaseAdmin
       .from('submissions')
-      .select('id, campaign_id, slug, short_code, title, story, image_uri, goal, status, category, creator_name, num_copies, price_per_copy, contract_address, chain_id, chain_name, video_url')
+      .select('id, campaign_id, slug, short_code, title, story, image_uri, goal, status, category, creator_name, num_copies, price_per_copy, contract_address, chain_id, chain_name, video_url, visible_on_marketplace')
       .in('status', ['minted', 'approved'])
+      .eq('visible_on_marketplace', true)
       .order('created_at', { ascending: false })
       .limit(limit)
     
     if (dbError) {
       logger.error('[loadOnchain] Database error:', dbError.message)
+      // Return empty on DB error rather than crashing
+      return []
     }
 
     logger.debug(`[loadOnchain] Found ${submissions?.length || 0} submissions from DB`)
