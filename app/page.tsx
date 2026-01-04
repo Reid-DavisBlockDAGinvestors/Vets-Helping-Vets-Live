@@ -11,14 +11,22 @@ export const revalidate = 0
 
 const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
 
-async function loadOnchain(limit = 12): Promise<NFTItem[]> {
+// Extended NFT item with video support
+interface ExtendedNFTItem extends NFTItem {
+  videoUrl?: string | null
+  isFeatured?: boolean
+}
+
+async function loadOnchain(limit = 12): Promise<ExtendedNFTItem[]> {
   try {
-    // First, get campaigns from database with full metadata - prioritize minted ones
+    // First, get campaigns from database with full metadata - prioritize featured, then minted
     const { data: submissions, error: dbError } = await supabaseAdmin
       .from('submissions')
-      .select('id, campaign_id, slug, short_code, title, story, image_uri, goal, status, category, creator_name, num_copies, price_per_copy, contract_address')
+      .select('id, campaign_id, slug, short_code, title, story, image_uri, goal, status, category, creator_name, num_copies, price_per_copy, contract_address, chain_id, chain_name, video_url, is_featured, featured_order')
       .in('status', ['minted', 'approved'])
-      .order('status', { ascending: false }) // 'minted' comes before 'approved' alphabetically reversed
+      .order('is_featured', { ascending: false, nullsFirst: false })
+      .order('featured_order', { ascending: true })
+      .order('status', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(limit)
 
@@ -93,10 +101,15 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
         goal,
         raised,
         nftSalesUSD,
-        tipsUSD,
+        giftsUSD: tipsUSD,
         sold: editionsMinted,
         total: maxEditions || numCopies,
-        snippet: s.story?.slice(0, 150) || ''
+        snippet: s.story?.slice(0, 150) || '',
+        chainId: s.chain_id || 1043,
+        chainName: s.chain_name || 'BlockDAG',
+        isTestnet: ![1, 137, 8453, 42161, 10].includes(s.chain_id || 1043),
+        videoUrl: s.video_url || null,
+        isFeatured: s.is_featured || false
       }
     }))
 
@@ -142,21 +155,27 @@ async function loadStats(): Promise<HomeStats> {
 }
 
 const FEATURES = [
-  { icon: '🔒', title: 'Transparent', desc: 'Every dollar tracked on blockchain. See exactly where funds go.' },
-  { icon: '⚡', title: 'Direct Support', desc: 'Funds go directly to recipients. No middlemen, no delays.' },
-  { icon: '🎨', title: 'Dynamic NFTs', desc: 'Your contribution becomes a living digital collectible.' },
-  { icon: '✅', title: 'Verified Stories', desc: 'KYC verification ensures authentic campaigns.' },
+  { icon: '🔒', title: 'Full Transparency', desc: 'Every dollar tracked on blockchain. See exactly where your support goes.' },
+  { icon: '⚡', title: 'Direct Impact', desc: 'Funds go directly to recipients. No middlemen, no delays.' },
+  { icon: '🌐', title: 'Multi-Chain', desc: 'Support campaigns on Ethereum, BlockDAG, and more networks.' },
+  { icon: '✅', title: 'Verified Stories', desc: 'Every campaign creator undergoes verification for authenticity.' },
 ]
 
 export default async function HomePage() {
   const [all, stats] = await Promise.all([loadOnchain(24), loadStats()])
   
+  // Featured campaign: admin-selected or first mainnet campaign
+  const featuredCampaign = all.find(i => (i as ExtendedNFTItem).isFeatured) || 
+    all.find(i => !i.isTestnet) || 
+    all[0]
+  
   // Success stories: campaigns that reached their goal
   const successStories = all.filter(i => i.goal > 0 && i.raised >= i.goal).slice(0, 3)
   const successIds = new Set(successStories.map(s => s.id))
+  const featuredId = featuredCampaign?.id
   
-  // Featured: exclude fully funded campaigns (they go in Success Stories)
-  const highlights = all.filter(i => !successIds.has(i.id) && (i.goal === 0 || i.raised < i.goal)).slice(0, 6)
+  // Other campaigns: exclude featured and fully funded
+  const highlights = all.filter(i => !successIds.has(i.id) && i.id !== featuredId && (i.goal === 0 || i.raised < i.goal)).slice(0, 6)
   
   // Format stats for display
   const formatCurrency = (n: number) => {
@@ -193,16 +212,16 @@ export default async function HomePage() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs sm:text-sm mb-6 sm:mb-8">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-white/70">Powered by BlockDAG Blockchain</span>
+              <span className="text-white/70">Powered by Multi-Chain Technology</span>
             </div>
             
             {/* Main headline */}
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-white via-white to-white/70 bg-clip-text text-transparent leading-tight mb-4 sm:mb-6">
-              Empowering Veterans Through <span className="bg-gradient-to-r from-red-400 via-white to-blue-400 bg-clip-text">Transparent</span> Giving
+              Be Your Brother&apos;s Keeper — <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text">Transparent</span> Giving
             </h1>
             
             <p className="text-base sm:text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-8 sm:mb-10 px-2">
-              The most advanced fundraising platform ever built. Direct support, full transparency, and dynamic NFTs that evolve as campaigns progress.
+              Support your community with full blockchain transparency. From veterans to disaster relief, medical emergencies to education — every dollar is tracked and verified.
             </p>
             
             {/* CTA Buttons */}
@@ -268,143 +287,145 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Video Section - See How It Works */}
-      <section className="container py-16" id="how-it-works">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">See How It Works</h2>
-          <p className="text-white/50 max-w-2xl mx-auto">Learn how to set up your wallet and support campaigns using BDAG tokens</p>
-        </div>
-
-        {/* Important Notice */}
-        <div className="rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 p-6 mb-8">
-          <div className="flex items-start gap-4">
-            <div className="text-3xl">⚠️</div>
-            <div>
-              <h3 className="text-lg font-semibold text-amber-400 mb-2">Testnet Phase - BDAG Only</h3>
-              <p className="text-white/70">
-                PatriotPledge NFTs is currently in <strong className="text-white">testnet phase</strong>. We are <strong className="text-white">not accepting credit cards, PayPal, Cash App, or Venmo</strong> at this time. 
-                All transactions are conducted using <strong className="text-amber-400">BDAG tokens</strong> native on the BlockDAG Awakening Testnet.
-              </p>
+      {/* Featured Campaign Section */}
+      {featuredCampaign && (
+        <section className="container py-16" id="featured">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20 text-sm text-green-400 mb-4">
+              <span>{featuredCampaign.isTestnet ? '🧪' : '💎'}</span>
+              <span>{featuredCampaign.isTestnet ? 'Featured Campaign' : 'LIVE on Ethereum'}</span>
             </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Support This Campaign</h2>
           </div>
-        </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left Column - Instructions */}
-          <div className="space-y-6">
-            {/* Step 1: MetaMask Setup */}
-            <div className="rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold">1</div>
-                <h3 className="text-xl font-semibold text-white">Set Up MetaMask with Awakening Testnet</h3>
-              </div>
-              <div className="space-y-4 text-white/70">
-                <p>First, install <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">MetaMask</a> browser extension if you haven&apos;t already.</p>
-                
-                <div className="bg-black/30 rounded-xl p-4">
-                  <p className="text-sm text-white/50 mb-3">Add the Awakening Testnet with these settings:</p>
-                  <div className="space-y-2 font-mono text-sm">
-                    <div className="flex justify-between items-center py-1 border-b border-white/10">
-                      <span className="text-white/50">Network Name:</span>
-                      <span className="text-white">BlockDAG Awakening</span>
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Left: Campaign Card */}
+            <Link href={`/story/${featuredCampaign.id}`} className="group block">
+              <div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-white/20 transition-all">
+                <div className="relative h-64 md:h-80 overflow-hidden">
+                  {featuredCampaign.image ? (
+                    <img 
+                      src={featuredCampaign.image.startsWith('ipfs://') ? featuredCampaign.image.replace('ipfs://', 'https://ipfs.io/ipfs/') : featuredCampaign.image} 
+                      alt={featuredCampaign.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-900/50 to-purple-900/50 flex items-center justify-center">
+                      <span className="text-6xl opacity-30">🎖️</span>
                     </div>
-                    <div className="flex justify-between items-center py-1 border-b border-white/10">
-                      <span className="text-white/50">RPC URL:</span>
-                      <span className="text-green-400 text-xs">https://rpc.awakening.bdagscan.com</span>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  
+                  {/* Chain Badge */}
+                  <div className="absolute top-4 right-4">
+                    <span className={`rounded-full px-3 py-1.5 text-sm font-semibold backdrop-blur-sm border ${
+                      featuredCampaign.isTestnet 
+                        ? 'bg-orange-500/40 text-orange-200 border-orange-500/40' 
+                        : 'bg-green-500/40 text-green-200 border-green-500/40'
+                    }`}>
+                      {featuredCampaign.isTestnet ? '🧪' : '💎'} {featuredCampaign.chainName || (featuredCampaign.isTestnet ? 'Testnet' : 'Ethereum')}
+                    </span>
+                  </div>
+                  
+                  {/* Progress */}
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <div className="flex justify-between text-white text-sm mb-2">
+                      <span className={`font-bold text-lg ${featuredCampaign.isTestnet ? 'text-orange-400' : 'text-green-400'}`}>
+                        {featuredCampaign.isTestnet ? '~' : ''}${featuredCampaign.raised.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </span>
+                      <span className="text-white/70">{featuredCampaign.progress}%</span>
                     </div>
-                    <div className="flex justify-between items-center py-1 border-b border-white/10">
-                      <span className="text-white/50">Chain ID:</span>
-                      <span className="text-white">1043</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1 border-b border-white/10">
-                      <span className="text-white/50">Currency Symbol:</span>
-                      <span className="text-white">BDAG</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1">
-                      <span className="text-white/50">Block Explorer:</span>
-                      <span className="text-blue-400 text-xs">https://awakening.bdagscan.com</span>
+                    <div className={`h-2 rounded-full overflow-hidden ${featuredCampaign.isTestnet ? 'bg-orange-500/20' : 'bg-green-500/20'}`}>
+                      <div 
+                        className={`h-full rounded-full ${featuredCampaign.isTestnet ? 'bg-gradient-to-r from-orange-400 to-yellow-500' : 'bg-gradient-to-r from-green-400 to-emerald-500'}`}
+                        style={{ width: `${Math.min(100, featuredCampaign.progress)}%` }}
+                      />
                     </div>
                   </div>
                 </div>
                 
-                <p className="text-sm">
-                  <strong className="text-white">How to add:</strong> Open MetaMask → Click network dropdown → &quot;Add Network&quot; → &quot;Add a network manually&quot; → Enter the details above → Save
-                </p>
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-white group-hover:text-blue-300 transition-colors mb-2">
+                    {featuredCampaign.title}
+                  </h3>
+                  <p className="text-white/60 text-sm line-clamp-2 mb-4">{featuredCampaign.snippet}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/50 text-sm">Goal: ${featuredCampaign.goal.toLocaleString()}</span>
+                    <span className="text-blue-400 font-medium group-hover:text-blue-300 flex items-center gap-1">
+                      Support Now
+                      <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
+            </Link>
 
-            {/* Step 2: Get BDAG */}
-            <div className="rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">2</div>
-                <h3 className="text-xl font-semibold text-white">Get BDAG Tokens</h3>
-              </div>
-              <div className="space-y-3 text-white/70">
-                <p>You&apos;ll need BDAG tokens to purchase NFTs. During testnet:</p>
-                <ul className="list-disc list-inside space-y-2 ml-2">
-                  <li>Get free testnet BDAG from the <a href="https://awakening.bdagscan.com/faucet" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">BlockDAG Explorer Faucet</a></li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Step 3: Buy NFT */}
-            <div className="rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold">3</div>
-                <h3 className="text-xl font-semibold text-white">Purchase an NFT</h3>
-              </div>
-              <div className="space-y-3 text-white/70">
-                <ol className="list-decimal list-inside space-y-2 ml-2">
-                  <li><strong className="text-white">Browse campaigns</strong> on the <Link href="/marketplace" className="text-blue-400 hover:underline">Marketplace</Link></li>
-                  <li><strong className="text-white">Click &quot;View Story&quot;</strong> on a campaign you want to support</li>
-                  <li><strong className="text-white">Connect your wallet</strong> by clicking &quot;Connect Wallet&quot;</li>
-                  <li><strong className="text-white">Select quantity</strong> and optionally add a tip</li>
-                  <li><strong className="text-white">Click &quot;Purchase with BDAG&quot;</strong> and confirm in MetaMask</li>
-                  <li><strong className="text-white">Your NFT will appear</strong> in your MetaMask NFT tab!</li>
-                </ol>
-                <p className="text-sm mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <span className="text-green-400">✓</span> Your NFT automatically appears in MetaMask after purchase. You can also view it on the <a href="https://awakening.bdagscan.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">BlockDAG Explorer</a>.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Video */}
-          <div className="lg:sticky lg:top-24 h-fit">
-            <div className="rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 p-6">
-              <h3 className="text-xl font-semibold text-white mb-4">📺 Video Tutorial</h3>
-              <div className="aspect-video rounded-xl bg-black/50 overflow-hidden" data-testid="demo-video">
-                <iframe
-                  src="https://www.youtube.com/embed/xkYcSQdnMXs"
-                  title="PatriotPledge NFTs Tutorial - How to Set Up MetaMask and Purchase NFTs"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  className="w-full h-full"
-                />
-              </div>
+            {/* Right: Video or Info */}
+            <div className="space-y-6">
+              {(featuredCampaign as ExtendedNFTItem).videoUrl ? (
+                <div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5">
+                  <div className="aspect-video">
+                    <iframe
+                      src={(featuredCampaign as ExtendedNFTItem).videoUrl?.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                      title={`${featuredCampaign.title} Video`}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      className="w-full h-full"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 p-8">
+                  <h3 className="text-xl font-bold text-white mb-4">How It Works</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm shrink-0">1</div>
+                      <div>
+                        <h4 className="font-semibold text-white">Connect Wallet</h4>
+                        <p className="text-sm text-white/60">Click the campaign and connect your MetaMask wallet</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white font-bold text-sm shrink-0">2</div>
+                      <div>
+                        <h4 className="font-semibold text-white">Purchase NFT</h4>
+                        <p className="text-sm text-white/60">Choose quantity and confirm the transaction</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-sm shrink-0">3</div>
+                      <div>
+                        <h4 className="font-semibold text-white">Make an Impact</h4>
+                        <p className="text-sm text-white/60">98% goes directly to the campaign creator</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               
-              {/* Quick Links */}
-              <div className="mt-6 pt-6 border-t border-white/10">
-                <h4 className="text-sm font-semibold text-white/70 mb-3">Quick Links</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all text-sm text-white/70 hover:text-white">
-                    <span>🦊</span> Get MetaMask
-                  </a>
-                  <a href="https://awakening.bdagscan.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all text-sm text-white/70 hover:text-white">
-                    <span>🔍</span> Block Explorer
-                  </a>
-                  <a href="https://t.me/BlockDAGBuildathon" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all text-sm text-white/70 hover:text-white">
-                    <span>💬</span> Telegram
-                  </a>
-                  <Link href="/marketplace" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all text-sm text-white/70 hover:text-white">
-                    <span>🛒</span> Marketplace
+              {/* Quick Actions */}
+              <div className="rounded-2xl bg-white/5 border border-white/10 p-6">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link 
+                    href={`/story/${featuredCampaign.id}`}
+                    className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold text-center hover:from-blue-500 hover:to-purple-500 transition-all"
+                  >
+                    Support This Campaign
+                  </Link>
+                  <Link 
+                    href="/tutorials"
+                    className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white/70 font-medium text-center hover:bg-white/10 hover:text-white transition-all"
+                  >
+                    📚 How To Guide
                   </Link>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* CTA Section - Ready to Make a Difference */}
       <section className="container py-20">
@@ -431,20 +452,20 @@ export default async function HomePage() {
                 href="/marketplace" 
                 className="px-8 py-4 rounded-xl bg-white/10 border border-white/20 text-white font-semibold text-lg hover:bg-white/20 transition-all"
               >
-                Support a Veteran
+                Support a Cause
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Featured Campaigns */}
+      {/* More Campaigns */}
       {highlights.length > 0 && (
         <section className="container py-16">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-white">Featured Campaigns</h2>
-              <p className="text-white/50 mt-1">Support verified veterans and their families</p>
+              <h2 className="text-3xl font-bold text-white">More Campaigns</h2>
+              <p className="text-white/50 mt-1">Discover verified causes from veterans, families, and communities</p>
             </div>
             <Link 
               href="/marketplace" 

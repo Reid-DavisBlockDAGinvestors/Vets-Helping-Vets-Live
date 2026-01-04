@@ -344,8 +344,8 @@ export default async function StoryViewer({ params }: { params: { id: string } }
       <div className="container">
         {/* Top Section: Image + Donation Side by Side */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
-          {/* Large Image */}
-          <div className="lg:col-span-3">
+          {/* Large Image + Video */}
+          <div className="lg:col-span-3 space-y-4">
             <div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5">
               {image ? (
                 <img 
@@ -359,6 +359,13 @@ export default async function StoryViewer({ params }: { params: { id: string } }
                 </div>
               )}
             </div>
+            
+            {/* Video prominently displayed under image */}
+            {videoUrl && (
+              <div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5">
+                <YouTubeEmbed url={videoUrl} />
+              </div>
+            )}
           </div>
 
           {/* Donation Panel - Right Side */}
@@ -481,13 +488,17 @@ export default async function StoryViewer({ params }: { params: { id: string } }
                 <p className="text-white/50 italic">No story provided yet.</p>
               )}
               
-              {/* YouTube Video */}
+              {/* Video link (video is shown prominently above) */}
               {videoUrl && (
                 <div className="mt-6 pt-6 border-t border-white/10">
-                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                    <span>📹</span> Campaign Video
-                  </h3>
-                  <YouTubeEmbed url={videoUrl} />
+                  <a 
+                    href={videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors border border-red-500/30"
+                  >
+                    <span>📹</span> Watch Campaign Video on YouTube
+                  </a>
                 </div>
               )}
             </div>
