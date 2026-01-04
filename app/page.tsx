@@ -109,7 +109,15 @@ async function loadOnchain(limit = 12): Promise<NFTItem[]> {
   }
 }
 
-async function loadStats(): Promise<{ raised: number; campaigns: number; nfts: number }> {
+interface HomeStats {
+  raised: number
+  campaigns: number
+  nfts: number
+  mainnetRaised: number
+  testnetRaised: number
+}
+
+async function loadStats(): Promise<HomeStats> {
   try {
     // UNIFIED STATS: Use the same calculation as /api/analytics/summary
     // Both use lib/stats.ts calculatePlatformStats() for consistency
@@ -118,15 +126,18 @@ async function loadStats(): Promise<{ raised: number; campaigns: number; nfts: n
     const stats = await calculatePlatformStats()
     
     logger.debug(`[HomePage Stats] Unified stats: $${stats.totalRaisedUSD}, ${stats.totalNFTsMinted} NFTs, ${stats.totalCampaigns} campaigns`)
+    logger.debug(`[HomePage Stats] Mainnet: $${stats.mainnetRaisedUSD}, Testnet: $${stats.testnetRaisedUSD}`)
 
     return {
       raised: stats.totalRaisedUSD,
       campaigns: stats.totalCampaigns,
-      nfts: stats.totalNFTsMinted
+      nfts: stats.totalNFTsMinted,
+      mainnetRaised: stats.mainnetRaisedUSD,
+      testnetRaised: stats.testnetRaisedUSD
     }
   } catch (e: any) {
     console.error('[HomePage Stats] Error:', e?.message)
-    return { raised: 0, campaigns: 0, nfts: 0 }
+    return { raised: 0, campaigns: 0, nfts: 0, mainnetRaised: 0, testnetRaised: 0 }
   }
 }
 
@@ -154,11 +165,18 @@ export default async function HomePage() {
     return `$${n.toFixed(0)}`
   }
   
+  // Stats with mainnet/testnet distinction
+  const hasMainnet = stats.mainnetRaised > 0
   const STATS = [
-    { value: formatCurrency(stats.raised), label: 'Raised' },
-    { value: String(stats.campaigns), label: 'Campaigns' },
-    { value: String(stats.nfts), label: 'NFTs Minted' },
-    { value: '100%', label: 'Transparent' },
+    { 
+      value: formatCurrency(stats.raised), 
+      label: hasMainnet ? 'Total Raised' : 'Test Value',
+      sublabel: hasMainnet ? `💎 ${formatCurrency(stats.mainnetRaised)} live` : '🧪 Testnet',
+      isMainnet: hasMainnet
+    },
+    { value: String(stats.campaigns), label: 'Campaigns', sublabel: null, isMainnet: null },
+    { value: String(stats.nfts), label: 'NFTs Minted', sublabel: null, isMainnet: null },
+    { value: '100%', label: 'Transparent', sublabel: null, isMainnet: null },
   ]
 
   return (
@@ -212,10 +230,15 @@ export default async function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {STATS.map((stat, i) => (
               <div key={i} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+                <div className={`text-3xl md:text-4xl font-bold ${stat.isMainnet === true ? 'text-green-400' : stat.isMainnet === false ? 'text-orange-400' : 'bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent'}`}>
                   {stat.value}
                 </div>
                 <div className="text-sm text-white/50 mt-1">{stat.label}</div>
+                {stat.sublabel && (
+                  <div className={`text-xs mt-0.5 ${stat.isMainnet ? 'text-green-400/70' : 'text-orange-400/70'}`}>
+                    {stat.sublabel}
+                  </div>
+                )}
               </div>
             ))}
           </div>

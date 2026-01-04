@@ -84,6 +84,13 @@ export async function GET(_req: NextRequest) {
       donorRetention, // % of wallets that purchased from 2+ campaigns
       totalUniqueWallets,
       repeatDonors,
+      // Mainnet/Testnet breakdown
+      mainnetRaised: platformStats.mainnetRaisedUSD,
+      testnetRaised: platformStats.testnetRaisedUSD,
+      mainnetNFTs: platformStats.mainnetNFTsMinted,
+      testnetNFTs: platformStats.testnetNFTsMinted,
+      mainnetCampaigns: platformStats.mainnetCampaigns,
+      testnetCampaigns: platformStats.testnetCampaigns,
       // Detailed breakdown
       onchainRaisedUSD: platformStats.onchainRaisedUSD,
       offchainRaisedUSD: platformStats.offchainRaisedUSD,

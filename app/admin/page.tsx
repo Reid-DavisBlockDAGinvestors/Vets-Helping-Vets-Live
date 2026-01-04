@@ -349,6 +349,16 @@ export default function AdminPage() {
               ${summary?.fundsRaised?.toLocaleString?.() || 0}
             </div>
             <div className="text-xs md:text-sm text-green-400/70 mt-1">Total Raised</div>
+            {(summary?.mainnetRaised > 0 || summary?.testnetRaised > 0) && (
+              <div className="flex gap-2 mt-1 text-[10px]">
+                {summary?.mainnetRaised > 0 && (
+                  <span className="text-green-300">💎 ${summary.mainnetRaised.toLocaleString()}</span>
+                )}
+                {summary?.testnetRaised > 0 && (
+                  <span className="text-orange-300">🧪 ~${summary.testnetRaised.toLocaleString()}</span>
+                )}
+              </div>
+            )}
           </div>
           <button
             onClick={openPurchasesModal}

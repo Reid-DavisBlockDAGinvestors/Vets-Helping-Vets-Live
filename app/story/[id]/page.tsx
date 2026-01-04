@@ -5,6 +5,7 @@ import YouTubeEmbed from '@/components/YouTubeEmbed'
 import { ipfsToHttp } from '@/lib/ipfs'
 import { getCategoryById } from '@/lib/categories'
 import { logger } from '@/lib/logger'
+import { isMainnet, formatChainAmount, getChainBadge, getFundsLabel } from '@/lib/chains/classification'
 
 // Chain-aware explorer URLs
 const CHAIN_EXPLORERS: Record<number, string> = {
@@ -426,14 +427,16 @@ export default async function StoryViewer({ params }: { params: { id: string } }
               </div>
             </div>
             <div className="md:text-right">
-              <div className="text-2xl font-bold text-white">${raised.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+              <div className={`text-2xl font-bold ${isMainnet(submission?.chain_id) ? 'text-green-400' : 'text-orange-400'}`}>
+                {formatChainAmount(raised, submission?.chain_id)}
+              </div>
               <div className="text-sm text-white/50">
-                {goalUsd ? `raised of $${Number(goalUsd).toLocaleString()} goal` : 'raised'}
+                {goalUsd ? `${getFundsLabel(submission?.chain_id)} of $${Number(goalUsd).toLocaleString()} goal` : getFundsLabel(submission?.chain_id)}
               </div>
               {raised > 0 && (
                 <div className="flex gap-3 justify-end mt-1 text-xs">
-                  <span className="text-emerald-400">NFT: ${nftSalesUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                  <span className="text-purple-400">Gifts: ${giftsUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                  <span className="text-emerald-400">NFT: {formatChainAmount(nftSalesUSD, submission?.chain_id)}</span>
+                  <span className="text-purple-400">Gifts: {formatChainAmount(giftsUSD, submission?.chain_id)}</span>
                 </div>
               )}
             </div>
@@ -441,13 +444,13 @@ export default async function StoryViewer({ params }: { params: { id: string } }
           
           {/* Progress Bar */}
           <div className="mt-4">
-            <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+            <div className={`h-2 rounded-full overflow-hidden ${isMainnet(submission?.chain_id) ? 'bg-green-500/20' : 'bg-orange-500/20'}`}>
               <div 
-                className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-500"
+                className={`h-full rounded-full transition-all duration-500 ${isMainnet(submission?.chain_id) ? 'bg-gradient-to-r from-green-500 to-emerald-400' : 'bg-gradient-to-r from-orange-400 to-yellow-500'}`}
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <div className="flex justify-between mt-2 text-sm text-white/60">
+            <div className={`flex justify-between mt-2 text-sm ${isMainnet(submission?.chain_id) ? 'text-green-400/70' : 'text-orange-400/70'}`}>
               <span>{pct}% complete</span>
               <span>{editionsMinted} / {maxEditions || '∞'} NFTs sold</span>
             </div>

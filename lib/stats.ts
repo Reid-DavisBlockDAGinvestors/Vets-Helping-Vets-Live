@@ -10,12 +10,21 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { logger } from './logger'
+import { isMainnet } from './chains/classification'
 
 export interface PlatformStats {
   // Aggregated totals
   totalRaisedUSD: number
   totalNFTsMinted: number
   totalCampaigns: number
+  
+  // Breakdown by chain type (mainnet = real funds, testnet = test funds)
+  mainnetRaisedUSD: number
+  mainnetNFTsMinted: number
+  mainnetCampaigns: number
+  testnetRaisedUSD: number
+  testnetNFTsMinted: number
+  testnetCampaigns: number
   
   // Breakdown by source
   onchainRaisedUSD: number
@@ -57,10 +66,16 @@ export async function calculatePlatformStats(supabase?: SupabaseClient): Promise
 
   logger.debug('[Stats] Calculating platform stats from DATABASE (source of truth)...')
 
-  // 1. Get total raised from purchases table (PRIMARY SOURCE OF TRUTH)
+  // 1. Get purchases with chain info from joined submission
   const { data: purchases, error: purchaseError } = await client
     .from('purchases')
-    .select('amount_usd, tip_usd, quantity')
+    .select(`
+      amount_usd, 
+      tip_usd, 
+      quantity,
+      campaign_id,
+      submissions!inner(chain_id)
+    `)
 
   if (purchaseError) {
     console.error('[Stats] Error fetching purchases:', purchaseError.message)
@@ -68,29 +83,54 @@ export async function calculatePlatformStats(supabase?: SupabaseClient): Promise
 
   let totalRaisedUSD = 0
   let totalNFTsMinted = 0
+  let mainnetRaisedUSD = 0
+  let mainnetNFTsMinted = 0
+  let testnetRaisedUSD = 0
+  let testnetNFTsMinted = 0
   
   for (const p of purchases || []) {
-    totalRaisedUSD += (p.amount_usd || 0) + (p.tip_usd || 0)
-    totalNFTsMinted += p.quantity || 1
+    const amount = (p.amount_usd || 0) + (p.tip_usd || 0)
+    const qty = p.quantity || 1
+    const chainId = (p as any).submissions?.chain_id
+    
+    totalRaisedUSD += amount
+    totalNFTsMinted += qty
+    
+    if (isMainnet(chainId)) {
+      mainnetRaisedUSD += amount
+      mainnetNFTsMinted += qty
+    } else {
+      testnetRaisedUSD += amount
+      testnetNFTsMinted += qty
+    }
   }
 
-  // 2. Get campaign count from submissions
+  // 2. Get campaign count from submissions with chain breakdown
   const { data: campaigns, error: campaignError } = await client
     .from('submissions')
-    .select('id')
+    .select('id, chain_id')
     .eq('status', 'minted')
 
   const totalCampaigns = campaigns?.length || 0
+  const mainnetCampaigns = campaigns?.filter(c => isMainnet(c.chain_id)).length || 0
+  const testnetCampaigns = totalCampaigns - mainnetCampaigns
 
   logger.debug(`[Stats] TOTALS: $${totalRaisedUSD.toFixed(2)} raised, ${totalNFTsMinted} NFTs, ${totalCampaigns} campaigns`)
+  logger.debug(`[Stats] MAINNET: $${mainnetRaisedUSD.toFixed(2)}, TESTNET: $${testnetRaisedUSD.toFixed(2)}`)
 
   return {
     totalRaisedUSD: Math.round(totalRaisedUSD * 100) / 100,
     totalNFTsMinted,
     totalCampaigns,
-    onchainRaisedUSD: Math.round(totalRaisedUSD * 100) / 100, // All from purchases = on-chain
+    mainnetRaisedUSD: Math.round(mainnetRaisedUSD * 100) / 100,
+    mainnetNFTsMinted,
+    mainnetCampaigns,
+    testnetRaisedUSD: Math.round(testnetRaisedUSD * 100) / 100,
+    testnetNFTsMinted,
+    testnetCampaigns,
+    onchainRaisedUSD: Math.round(totalRaisedUSD * 100) / 100,
     offchainRaisedUSD: 0,
-    v5RaisedUSD: 0, // Not tracking by version anymore
+    v5RaisedUSD: 0,
     v6RaisedUSD: 0,
     v5NFTsMinted: 0,
     v6NFTsMinted: 0,
