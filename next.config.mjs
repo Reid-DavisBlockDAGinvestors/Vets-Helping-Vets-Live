@@ -2,6 +2,27 @@
 const nextConfig = {
   // Enable standalone output for Docker production builds
   output: 'standalone',
+  
+  // Webpack config to handle optional dependencies in wallet packages
+  webpack: (config, { isServer }) => {
+    // Handle optional Solana dependencies from @reown/appkit-adapter-wagmi
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      '@solana/kit': false,
+      'porto/internal': false,
+    }
+    
+    // Ignore optional peer dependencies
+    config.externals = config.externals || []
+    if (!isServer) {
+      config.externals.push({
+        '@solana/kit': 'commonjs @solana/kit',
+        'porto/internal': 'commonjs porto/internal',
+      })
+    }
+    
+    return config
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**' }

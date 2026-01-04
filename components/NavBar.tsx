@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useWallet } from '@/hooks/useWallet'
+import { useWalletV2 } from '@/hooks/useWalletV2'
+import { useAppKit } from '@reown/appkit/react'
 import { supabase } from '@/lib/supabase'
 import UserAccountPortal from './UserAccountPortalV2'
 import ThemeToggle from './ThemeToggle'
@@ -39,18 +40,23 @@ export default function NavBar() {
     isConnecting, 
     isOnBlockDAG, 
     isOnSepolia,
+    isOnEthereum,
     isOnSupportedChain,
     error,
     connect,
     connectAuto,
-    connectWalletConnect,
-    openInMetaMaskBrowser,
     disconnect, 
     switchToBlockDAG,
     switchToSepolia,
+    switchToEthereum,
+    openAccountModal,
+    openNetworkModal,
     hasInjectedWallet,
     isMobile
-  } = useWallet()
+  } = useWalletV2()
+  
+  // AppKit modal control
+  const { open: openAppKit } = useAppKit()
 
   // Network info helper
   const getNetworkName = (id: number | null) => {
@@ -64,7 +70,7 @@ export default function NavBar() {
     }
     return networks[id] || `Chain ${id}`
   }
-  const networkName = getNetworkName(chainId)
+  const networkName = getNetworkName(typeof chainId === 'number' ? chainId : null)
 
   // Track client-side mounting for portal
   useEffect(() => {
@@ -120,21 +126,10 @@ export default function NavBar() {
     return () => { document.body.style.overflow = '' }
   }, [mobileMenuOpen])
 
-  const handleConnect = async () => {
-    // On mobile without injected wallet, directly open MetaMask app
-    if (isMobile && !hasInjectedWallet) {
-      openInMetaMaskBrowser()
-      return
-    }
-    
-    // On desktop without wallet, show options modal
-    if (!hasInjectedWallet) {
-      setWalletModalOpen(true)
-      return
-    }
-    
-    // Has injected wallet, connect normally
-    await connectAuto()
+  const handleConnect = () => {
+    // Use AppKit modal for all wallet connections
+    // AppKit handles mobile deep links, QR codes, and 300+ wallets automatically
+    openAppKit({ view: 'Connect' })
   }
 
   
@@ -417,7 +412,7 @@ export default function NavBar() {
         {!isConnected && (
           <div className="mx-4 mt-4 pb-4">
             <button
-              onClick={() => { connectAuto(); setMobileMenuOpen(false); }}
+              onClick={() => { openAppKit({ view: 'Connect' }); setMobileMenuOpen(false); }}
               disabled={isConnecting}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-patriotic-red hover:bg-red-600 text-white rounded-xl text-base font-medium transition-all"
             >
@@ -427,7 +422,7 @@ export default function NavBar() {
               Connect Wallet
             </button>
             <p className="text-xs text-white/40 text-center mt-2">
-              Use MetaMask or any Web3 wallet
+              300+ wallets supported via WalletConnect
             </p>
           </div>
         )}
@@ -465,56 +460,26 @@ export default function NavBar() {
         </div>
 
         <div className="space-y-3">
-          {/* Option 1: MetaMask Browser */}
+          {/* All wallet options now handled by AppKit modal */}
           <button
             onClick={() => {
               setWalletModalOpen(false)
-              openInMetaMaskBrowser()
+              openAppKit({ view: 'Connect' })
             }}
-            className="w-full flex items-center gap-4 p-4 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-xl transition-colors"
-          >
-            <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
-              <span className="text-2xl">🦊</span>
-            </div>
-            <div className="text-left">
-              <div className="font-semibold text-white">Open in MetaMask</div>
-              <div className="text-xs text-white/50">Use MetaMask's built-in browser</div>
-            </div>
-          </button>
-
-          {/* Option 2: Install MetaMask */}
-          <button
-            onClick={() => {
-              setWalletModalOpen(false)
-              window.open('https://metamask.io/download/', '_blank')
-            }}
-            className="w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors"
-          >
-            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
-              <span className="text-2xl">📲</span>
-            </div>
-            <div className="text-left">
-              <div className="font-semibold text-white">Install MetaMask</div>
-              <div className="text-xs text-white/50">Download the MetaMask app</div>
-            </div>
-          </button>
-
-          {/* WalletConnect - Stay in browser */}
-          <button
-            onClick={() => {
-              setWalletModalOpen(false)
-              connectWalletConnect()
-            }}
-            className="w-full flex items-center gap-4 p-4 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-xl transition-colors"
+            className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-blue-500/30 rounded-xl transition-colors"
           >
             <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
               <span className="text-2xl">🔗</span>
             </div>
             <div className="text-left">
-              <div className="font-semibold text-white">WalletConnect</div>
-              <div className="text-xs text-white/50">Stay in your browser ✨</div>
+              <div className="font-semibold text-white">Connect Wallet</div>
+              <div className="text-xs text-white/50">300+ wallets supported</div>
             </div>
           </button>
+
+          <p className="text-xs text-white/50 text-center mt-2">
+            MetaMask, Trust Wallet, Coinbase, Rainbow, and more
+          </p>
         </div>
 
         <p className="text-center text-xs text-white/40 mt-4">

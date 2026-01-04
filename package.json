@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
+    "@reown/appkit": "^1.8.15",
+    "@reown/appkit-adapter-ethers": "^1.8.15",
     "@stripe/react-stripe-js": "2.7.3",
     "@stripe/stripe-js": "4.6.0",
     "@supabase/supabase-js": "2.81.1",
@@ -45,6 +47,7 @@
     "stripe": "14.25.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "3.4.10",
+    "viem": "^2.43.5",
     "web3.storage": "^4.5.5"
   },
   "devDependencies": {

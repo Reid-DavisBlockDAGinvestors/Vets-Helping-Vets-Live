@@ -12,6 +12,7 @@ import SkipLink from '@/components/SkipLink'
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
 import SessionExpiryWarning from '@/components/SessionExpiryWarning'
 import { SKIP_TARGETS } from '@/lib/accessibility'
+import { Web3Provider } from '@/lib/web3'
 
 import type { Metadata, Viewport } from 'next'
 
@@ -60,20 +61,22 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="min-h-screen flex flex-col bg-patriotic-blue dark:bg-patriotic-blue light:bg-gray-50 text-patriotic-white dark:text-patriotic-white light:text-gray-900 transition-colors font-sans">
-        <ThemeProvider>
-          <SkipLink />
-          <NavBar />
-          <main id={SKIP_TARGETS.MAIN_CONTENT} className="flex-1">
-            <ErrorBoundary>
-              {children}
-            </ErrorBoundary>
-          </main>
-          <Footer />
-          <BugReportButton />
-          <Toaster />
-          <ServiceWorkerRegistration />
-          <SessionExpiryWarning />
-        </ThemeProvider>
+        <Web3Provider>
+          <ThemeProvider>
+            <SkipLink />
+            <NavBar />
+            <main id={SKIP_TARGETS.MAIN_CONTENT} className="flex-1">
+              <ErrorBoundary>
+                {children}
+              </ErrorBoundary>
+            </main>
+            <Footer />
+            <BugReportButton />
+            <Toaster />
+            <ServiceWorkerRegistration />
+            <SessionExpiryWarning />
+          </ThemeProvider>
+        </Web3Provider>
       </body>
     </html>
   )
