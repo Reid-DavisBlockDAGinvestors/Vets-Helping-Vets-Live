@@ -118,47 +118,19 @@ interface HomeStats {
   testnetRaised: number
 }
 
-// Get stats from ALL minted campaigns in database (not just visible ones)
-async function getAllCampaignStats(): Promise<HomeStats> {
-  const supabase = getFreshSupabase()
-  
-  // Get ALL minted submissions (not filtered by visible)
-  const { data: allSubs, error } = await supabase
-    .from('submissions')
-    .select('sold_count, goal, num_copies, chain_id, tips_distributed, status, visible_on_marketplace')
-    .eq('status', 'minted')
-  
-  if (error || !allSubs) {
-    logger.error('[getAllCampaignStats] Database error:', error?.message)
-    return { raised: 0, campaigns: 0, nfts: 0, mainnetRaised: 0, testnetRaised: 0 }
-  }
-  
-  // Filter to only visible campaigns for stats
-  const visibleSubs = allSubs.filter((s: any) => 
-    s.visible_on_marketplace === true || s.visible_on_marketplace === 'true'
-  )
-  
+// Calculate stats from campaigns array
+function calculateStatsFromCampaigns(campaigns: ExtendedNFTItem[]): HomeStats {
   let raised = 0
   let mainnetRaised = 0
   let testnetRaised = 0
   let nfts = 0
   
-  for (const s of visibleSubs) {
-    const goal = Number(s.goal || 0)
-    const numCopies = Number(s.num_copies || 100)
-    const soldCount = Number(s.sold_count || 0)
-    const chainId = s.chain_id || 1043
-    const isTestnet = ![1, 137, 8453, 42161, 10].includes(chainId)
-    
-    const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
-    const nftSalesUSD = soldCount * pricePerCopy
-    const giftsUSD = Number(s.tips_distributed || 0)
-    const totalRaised = nftSalesUSD + giftsUSD
-    
+  for (const c of campaigns) {
+    const totalRaised = (c.raised || 0)
     raised += totalRaised
-    nfts += soldCount
+    nfts += c.sold || 0
     
-    if (isTestnet) {
+    if (c.isTestnet) {
       testnetRaised += totalRaised
     } else {
       mainnetRaised += totalRaised
@@ -167,10 +139,74 @@ async function getAllCampaignStats(): Promise<HomeStats> {
   
   return {
     raised: Math.round(raised * 100) / 100,
-    campaigns: visibleSubs.length,
+    campaigns: campaigns.length,
     nfts,
     mainnetRaised: Math.round(mainnetRaised * 100) / 100,
     testnetRaised: Math.round(testnetRaised * 100) / 100
+  }
+}
+
+// Load ALL visible campaigns for stats (no limit)
+async function loadAllCampaignsForStats(): Promise<ExtendedNFTItem[]> {
+  try {
+    const supabase = getFreshSupabase()
+    
+    const { data: allSubs, error } = await supabase
+      .from('submissions')
+      .select('*')
+      .eq('status', 'minted')
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      logger.error('[loadAllCampaignsForStats] Database error:', error.message)
+      return []
+    }
+    
+    // Filter visible in JavaScript
+    const visible = (allSubs || []).filter((s: any) => 
+      s.visible_on_marketplace === true || s.visible_on_marketplace === 'true'
+    )
+    
+    // Map to ExtendedNFTItem format
+    return visible.map((s: any) => {
+      const goal = Number(s.goal || 0)
+      const numCopies = Number(s.num_copies || 100)
+      const chainId = s.chain_id || 1043
+      const isTestnet = ![1, 137, 8453, 42161, 10].includes(chainId)
+      
+      const soldCount = Number(s.sold_count || 0)
+      const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
+      const nftSalesUSD = soldCount * pricePerCopy
+      const giftsUSD = Number(s.tips_distributed || 0)
+      const totalRaised = nftSalesUSD + giftsUSD
+      
+      return {
+        id: s.id,
+        campaignId: s.campaign_id,
+        slug: s.slug || null,
+        short_code: s.short_code || null,
+        title: s.title || 'Untitled Campaign',
+        image: s.image_uri || '',
+        causeType: s.category || 'general',
+        progress: goal > 0 ? Math.min(100, Math.round((totalRaised / goal) * 100)) : 0,
+        goal,
+        raised: totalRaised,
+        nftSalesUSD,
+        giftsUSD,
+        sold: soldCount,
+        total: numCopies,
+        snippet: s.story?.slice(0, 150) || '',
+        chainId,
+        chainName: s.chain_name || (isTestnet ? 'BlockDAG' : 'Ethereum Mainnet'),
+        isTestnet,
+        contractAddress: s.contract_address,
+        videoUrl: s.video_url || null,
+        isFeatured: false
+      }
+    })
+  } catch (e) {
+    console.error('[loadAllCampaignsForStats] Error:', e)
+    return []
   }
 }
 
@@ -182,12 +218,12 @@ const FEATURES = [
 ]
 
 export default async function HomePage() {
-  // Fetch campaigns for display (uses synced database values)
+  // Fetch campaigns for display (limited to 24)
   const all = await loadOnchain(24)
   
-  // Get stats from ALL visible campaigns in database (not just the 24 displayed)
-  // This includes gifts_usd and calculates accurate totals
-  const stats = await getAllCampaignStats()
+  // Load ALL visible campaigns for accurate stats (not limited)
+  const allCampaigns = await loadAllCampaignsForStats()
+  const stats = calculateStatsFromCampaigns(allCampaigns)
   
   // Featured campaign: prioritize mainnet campaigns, then first available
   // Sort to put mainnet campaigns first
