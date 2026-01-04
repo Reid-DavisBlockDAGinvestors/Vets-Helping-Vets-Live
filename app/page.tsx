@@ -3,9 +3,6 @@ import NFTCard, { NFTItem } from '@/components/NFTCard'
 import { logger } from '@/lib/logger'
 import { createClient } from '@supabase/supabase-js'
 import { getPlatformStats } from '@/lib/platformStats'
-import { ethers } from 'ethers'
-import { V8_ABI, V6_ABI, V5_ABI } from '@/lib/contracts'
-import { getProviderForChain, ChainId } from '@/lib/chains'
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic'
@@ -29,15 +26,9 @@ interface ExtendedNFTItem extends NFTItem {
   isFeatured?: boolean
 }
 
-// USD conversion rates
+// USD conversion rates (used for campaign raised calculations)
 const ETH_USD = Number(process.env.ETH_USD_RATE || '3100')
 const BDAG_USD = Number(process.env.BDAG_USD_RATE || '0.05')
-
-// Get ABI for chain
-function getAbiForChain(chainId: number): any[] {
-  if (chainId === 1 || chainId === 11155111) return V8_ABI
-  return V6_ABI
-}
 
 async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
   try {
@@ -70,61 +61,19 @@ async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
       return []
     }
     
-    // Map to NFTItem format - fetch on-chain data for mainnet campaigns
-    const mapped: ExtendedNFTItem[] = await Promise.all(visible.map(async (s: any) => {
+    // Map to NFTItem format - use synced database values for speed/reliability
+    // Database sold_count is synced with on-chain via sync-sold-counts.ts script
+    const mapped: ExtendedNFTItem[] = visible.map((s: any) => {
       const goal = Number(s.goal || 0)
       const numCopies = Number(s.num_copies || 100)
       const chainId = s.chain_id || 1043
       const isTestnet = ![1, 137, 8453, 42161, 10].includes(chainId)
       const usdRate = isTestnet ? BDAG_USD : ETH_USD
       
-      // Default values from database
-      let soldCount = Number(s.sold_count || 0)
-      let grossRaisedUSD = 0
-      
-      // For campaigns with contract_address and campaign_id, try to get on-chain data
-      if (s.contract_address && s.campaign_id !== null && s.campaign_id !== undefined) {
-        try {
-          const provider = getProviderForChain(chainId as ChainId)
-          const abi = getAbiForChain(chainId)
-          const contract = new ethers.Contract(s.contract_address, abi, provider)
-          
-          const campaignData = await contract.getCampaign(BigInt(s.campaign_id))
-          
-          // Parse based on ABI version
-          let grossRaisedWei: bigint
-          let editionsMinted: number
-          
-          if (chainId === 1 || chainId === 11155111) {
-            // V8 struct format
-            grossRaisedWei = BigInt(campaignData.grossRaised ?? campaignData[5] ?? 0n)
-            editionsMinted = Number(campaignData.editionsMinted ?? campaignData[8] ?? 0)
-          } else {
-            // V6/V5 format
-            grossRaisedWei = BigInt(campaignData[3] ?? 0n)
-            editionsMinted = Number(campaignData[5] ?? 0)
-          }
-          
-          const grossRaisedNative = Number(grossRaisedWei) / 1e18
-          grossRaisedUSD = grossRaisedNative * usdRate
-          
-          // Use on-chain sold count if higher than database
-          if (editionsMinted > soldCount) {
-            soldCount = editionsMinted
-          }
-          
-          logger.debug(`[loadOnchain] On-chain data for ${s.title}: sold=${editionsMinted}, raised=$${grossRaisedUSD.toFixed(2)}`)
-        } catch (e: any) {
-          // Fall back to database calculation
-          logger.warn(`[loadOnchain] On-chain fetch failed for ${s.title}: ${e.message}`)
-          const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
-          grossRaisedUSD = soldCount * pricePerCopy
-        }
-      } else {
-        // No contract data, use database calculation
-        const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
-        grossRaisedUSD = soldCount * pricePerCopy
-      }
+      // Use synced database values (sold_count synced with on-chain)
+      const soldCount = Number(s.sold_count || 0)
+      const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
+      const grossRaisedUSD = soldCount * pricePerCopy
       
       const pct = goal > 0 ? Math.min(100, Math.round((grossRaisedUSD / goal) * 100)) : 0
       
@@ -151,9 +100,9 @@ async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
         videoUrl: s.video_url || null,
         isFeatured: false
       }
-    }))
+    })
 
-    logger.debug(`[loadOnchain] Mapped ${mapped.length} items with on-chain data`)
+    logger.debug(`[loadOnchain] Mapped ${mapped.length} items`)
     return mapped
   } catch (e) {
     console.error('[loadOnchain] Error:', e)
