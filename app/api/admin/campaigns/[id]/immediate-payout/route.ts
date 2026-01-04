@@ -188,7 +188,7 @@ export async function POST(
     }
 
     // Log the action
-    await supabaseAdmin.from('admin_audit_log').insert({
+    const { error: auditError } = await supabaseAdmin.from('admin_audit_log').insert({
       admin_id: user.id,
       action: 'set_immediate_payout',
       target_type: 'campaign',
@@ -201,7 +201,10 @@ export async function POST(
         txHash: tx.hash,
         blockNumber: receipt.blockNumber
       }
-    }).catch(e => logger.warn('[ImmediatePayout] Failed to log audit:', e))
+    })
+    if (auditError) {
+      logger.warn('[ImmediatePayout] Failed to log audit:', auditError.message)
+    }
 
     return NextResponse.json({
       success: true,
