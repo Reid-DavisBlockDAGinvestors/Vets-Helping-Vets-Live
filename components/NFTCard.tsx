@@ -140,10 +140,14 @@ export default function NFTCard({ item }: { item: NFTItem }) {
             
             {/* Right Side Badges */}
             <div className="flex flex-col gap-1.5 items-end">
-              {/* Testnet Badge */}
-              {item.isTestnet && (
+              {/* Chain Badge - Mainnet gets diamond, Testnet gets flask */}
+              {item.isTestnet ? (
                 <span className="rounded-full px-2.5 py-1 text-xs font-semibold backdrop-blur-sm bg-yellow-500/40 text-yellow-200 border border-yellow-500/40">
                   🧪 {item.chainName || 'Testnet'}
+                </span>
+              ) : (
+                <span className="rounded-full px-2.5 py-1 text-xs font-semibold backdrop-blur-sm bg-green-500/40 text-green-200 border border-green-500/40">
+                  💎 {item.chainName || 'Ethereum Mainnet'}
                 </span>
               )}
               {/* Category Badge */}

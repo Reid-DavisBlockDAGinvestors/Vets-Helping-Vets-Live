@@ -1,15 +1,23 @@
 import Link from 'next/link'
-import { ethers } from 'ethers'
 import NFTCard, { NFTItem } from '@/components/NFTCard'
-import { getProvider, PatriotPledgeV5ABI } from '@/lib/onchain'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { logger } from '@/lib/logger'
+import { createClient } from '@supabase/supabase-js'
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
+const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '3100')
+
+// Create fresh Supabase client for each request (avoids caching issues)
+function getFreshSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    { auth: { persistSession: false } }
+  )
+}
 
 // Extended NFT item with video support
 interface ExtendedNFTItem extends NFTItem {
@@ -17,27 +25,32 @@ interface ExtendedNFTItem extends NFTItem {
   isFeatured?: boolean
 }
 
-async function loadOnchain(limit = 12): Promise<ExtendedNFTItem[]> {
+async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
   try {
-    // Query directly from Supabase with sold_count and goal for calculating raised
-    const { data: submissions, error } = await supabaseAdmin
+    const supabase = getFreshSupabase()
+    
+    // Get all submissions with minted status
+    const { data: allSubs, error } = await supabase
       .from('submissions')
-      .select('id, campaign_id, slug, short_code, title, story, image_uri, goal, status, category, num_copies, price_per_copy, contract_address, chain_id, chain_name, video_url, visible_on_marketplace, sold_count')
-      .in('status', ['minted', 'approved'])
+      .select('*')
       .order('created_at', { ascending: false })
-      .limit(limit * 2)
     
     if (error) {
       logger.error('[loadOnchain] Database error:', error.message)
       return []
     }
     
+    // Filter by status in code
+    const mintedSubs = (allSubs || []).filter((s: any) => 
+      s.status === 'minted' || s.status === 'pending_onchain'
+    )
+    
     // Filter visible in JavaScript (handles boolean and string 'true')
-    const visible = (submissions || []).filter((s: any) => 
+    const visible = mintedSubs.filter((s: any) => 
       s.visible_on_marketplace === true || s.visible_on_marketplace === 'true'
     ).slice(0, limit)
     
-    logger.debug(`[loadOnchain] Found ${visible.length} visible submissions`)
+    logger.debug(`[loadOnchain] Total: ${allSubs?.length}, minted: ${mintedSubs.length}, visible: ${visible.length}`)
     
     if (visible.length === 0) {
       return []
@@ -49,10 +62,13 @@ async function loadOnchain(limit = 12): Promise<ExtendedNFTItem[]> {
       const numCopies = Number(s.num_copies || 100)
       const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
       const soldCount = Number(s.sold_count || 0)
+      const chainId = s.chain_id || 1043
+      const isEthChain = chainId === 1 || chainId === 11155111
+      const isTestnet = s.is_testnet !== false && ![1, 137, 8453, 42161, 10].includes(chainId)
+      
+      // Calculate raised from sold_count (database) or use on-chain data if available
       const raised = soldCount * pricePerCopy
       const pct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0
-      const chainId = s.chain_id || 1043
-      const isTestnet = ![1, 137, 8453, 42161, 10].includes(chainId)
       
       return {
         id: s.id,
@@ -71,8 +87,9 @@ async function loadOnchain(limit = 12): Promise<ExtendedNFTItem[]> {
         total: numCopies,
         snippet: s.story?.slice(0, 150) || '',
         chainId,
-        chainName: s.chain_name || (isTestnet ? 'BlockDAG' : 'Ethereum'),
+        chainName: s.chain_name || (isTestnet ? 'BlockDAG' : 'Ethereum Mainnet'),
         isTestnet,
+        contractAddress: s.contract_address,
         videoUrl: s.video_url || null,
         isFeatured: false
       }
