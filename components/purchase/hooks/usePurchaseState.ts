@@ -40,16 +40,17 @@ export function usePurchaseState({ pricePerNft, remainingCopies }: UsePurchaseSt
   // Amount calculations
   const amounts = useMemo<AmountCalculation>(() => {
     const nftSubtotal = hasNftPrice ? pricePerNft * quantity : 0
-    const totalAmount = hasNftPrice ? nftSubtotal + tipAmount : customAmount
+    const giftAmount = tipAmount // Use tipAmount state but expose as giftAmount
+    const totalAmount = hasNftPrice ? nftSubtotal + giftAmount : customAmount
     const bdagAmount = totalAmount / BDAG_USD_PRICE
-    const bdagTipAmount = tipAmount > 0 ? tipAmount / BDAG_USD_PRICE : 0
+    const bdagGiftAmount = giftAmount > 0 ? giftAmount / BDAG_USD_PRICE : 0
 
     return {
       nftSubtotal,
-      tipAmount,
+      giftAmount,
       totalAmount,
       bdagAmount,
-      bdagTipAmount,
+      bdagGiftAmount,
     }
   }, [hasNftPrice, pricePerNft, quantity, tipAmount, customAmount])
 
