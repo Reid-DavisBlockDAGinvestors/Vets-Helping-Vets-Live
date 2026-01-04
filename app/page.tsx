@@ -19,54 +19,64 @@ interface ExtendedNFTItem extends NFTItem {
 
 async function loadOnchain(limit = 12): Promise<ExtendedNFTItem[]> {
   try {
-    // Fetch from marketplace API which already has all the logic
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'https://patriotpledgenfts.netlify.app'
-    const apiUrl = `${baseUrl}/api/marketplace/fundraisers?limit=${limit}`
+    // Query directly from Supabase with sold_count and goal for calculating raised
+    const { data: submissions, error } = await supabaseAdmin
+      .from('submissions')
+      .select('id, campaign_id, slug, short_code, title, story, image_uri, goal, status, category, num_copies, price_per_copy, contract_address, chain_id, chain_name, video_url, visible_on_marketplace, sold_count')
+      .in('status', ['minted', 'approved'])
+      .order('created_at', { ascending: false })
+      .limit(limit * 2)
     
-    logger.debug(`[loadOnchain] Fetching from ${apiUrl}`)
+    if (error) {
+      logger.error('[loadOnchain] Database error:', error.message)
+      return []
+    }
     
-    const res = await fetch(apiUrl, { 
-      next: { revalidate: 60 },
-      headers: { 'Accept': 'application/json' }
+    // Filter visible in JavaScript (handles boolean and string 'true')
+    const visible = (submissions || []).filter((s: any) => 
+      s.visible_on_marketplace === true || s.visible_on_marketplace === 'true'
+    ).slice(0, limit)
+    
+    logger.debug(`[loadOnchain] Found ${visible.length} visible submissions`)
+    
+    if (visible.length === 0) {
+      return []
+    }
+    
+    // Map to NFTItem format using database values
+    const mapped: ExtendedNFTItem[] = visible.map((s: any) => {
+      const goal = Number(s.goal || 0)
+      const numCopies = Number(s.num_copies || 100)
+      const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
+      const soldCount = Number(s.sold_count || 0)
+      const raised = soldCount * pricePerCopy
+      const pct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0
+      const chainId = s.chain_id || 1043
+      const isTestnet = ![1, 137, 8453, 42161, 10].includes(chainId)
+      
+      return {
+        id: s.id,
+        campaignId: s.campaign_id,
+        slug: s.slug || null,
+        short_code: s.short_code || null,
+        title: s.title || 'Untitled Campaign',
+        image: s.image_uri || '',
+        causeType: s.category || 'general',
+        progress: pct,
+        goal,
+        raised,
+        nftSalesUSD: raised,
+        giftsUSD: 0,
+        sold: soldCount,
+        total: numCopies,
+        snippet: s.story?.slice(0, 150) || '',
+        chainId,
+        chainName: s.chain_name || (isTestnet ? 'BlockDAG' : 'Ethereum'),
+        isTestnet,
+        videoUrl: s.video_url || null,
+        isFeatured: false
+      }
     })
-    
-    if (!res.ok) {
-      logger.error(`[loadOnchain] API error: ${res.status}`)
-      return []
-    }
-    
-    const data = await res.json()
-    const items = data.items || []
-    
-    logger.debug(`[loadOnchain] Got ${items.length} items from API`)
-    
-    if (items.length === 0) {
-      return []
-    }
-
-    // Map API response to NFTItem format (API already has on-chain data)
-    const mapped: ExtendedNFTItem[] = items.map((item: any) => ({
-      id: item.id,
-      campaignId: item.campaignId,
-      slug: item.slug || null,
-      short_code: item.short_code || null,
-      title: item.title || 'Untitled Campaign',
-      image: item.image || '',
-      causeType: item.category || 'general',
-      progress: item.progress || 0,
-      goal: item.goal || 0,
-      raised: item.raised || 0,
-      nftSalesUSD: item.nftSalesUSD || 0,
-      giftsUSD: item.giftsUSD || 0,
-      sold: item.editionsMinted || 0,
-      total: item.maxEditions || 100,
-      snippet: item.story?.slice(0, 150) || '',
-      chainId: item.chain_id || 1043,
-      chainName: item.chain_name || 'BlockDAG',
-      isTestnet: item.is_testnet !== false,
-      videoUrl: null, // API doesn't return video_url yet
-      isFeatured: false
-    }))
 
     logger.debug(`[loadOnchain] Mapped ${mapped.length} items`)
     return mapped
