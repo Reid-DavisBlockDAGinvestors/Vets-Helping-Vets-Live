@@ -2,7 +2,6 @@ import Link from 'next/link'
 import NFTCard, { NFTItem } from '@/components/NFTCard'
 import { logger } from '@/lib/logger'
 import { createClient } from '@supabase/supabase-js'
-import { getPlatformStats } from '@/lib/platformStats'
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic'
@@ -152,27 +151,12 @@ const FEATURES = [
 ]
 
 export default async function HomePage() {
-  // Fetch campaigns for display
+  // Fetch campaigns for display (uses synced database values)
   const all = await loadOnchain(24)
   
-  // Get accurate platform stats from ALL contracts on ALL chains
-  let platformStats
-  try {
-    platformStats = await getPlatformStats()
-  } catch (e) {
-    logger.error('[HomePage] Failed to get platform stats:', e)
-    platformStats = null
-  }
-  
-  // Use accurate platform stats, fallback to calculated stats from visible campaigns
-  const fallbackStats = calculateStatsFromCampaigns(all)
-  const stats = platformStats ? {
-    raised: platformStats.totalRaisedUSD,
-    campaigns: platformStats.totalCampaigns,
-    nfts: platformStats.totalNFTsMinted,
-    mainnetRaised: platformStats.mainnetRaisedUSD,
-    testnetRaised: platformStats.testnetRaisedUSD
-  } : fallbackStats
+  // Calculate stats from database (sold_count is synced with on-chain via script)
+  // This is faster and more reliable than RPC calls which can timeout
+  const stats = calculateStatsFromCampaigns(all)
   
   // Featured campaign: prioritize mainnet campaigns, then first available
   // Sort to put mainnet campaigns first
