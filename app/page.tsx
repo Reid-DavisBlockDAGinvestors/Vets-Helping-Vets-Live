@@ -2,6 +2,7 @@ import Link from 'next/link'
 import NFTCard, { NFTItem } from '@/components/NFTCard'
 import { logger } from '@/lib/logger'
 import { createClient } from '@supabase/supabase-js'
+import { getPlatformStats } from '@/lib/platformStats'
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic'
@@ -145,8 +146,27 @@ const FEATURES = [
 ]
 
 export default async function HomePage() {
+  // Fetch campaigns for display
   const all = await loadOnchain(24)
-  const stats = calculateStatsFromCampaigns(all)
+  
+  // Get accurate platform stats from ALL contracts on ALL chains
+  let platformStats
+  try {
+    platformStats = await getPlatformStats()
+  } catch (e) {
+    logger.error('[HomePage] Failed to get platform stats:', e)
+    platformStats = null
+  }
+  
+  // Use accurate platform stats, fallback to calculated stats from visible campaigns
+  const fallbackStats = calculateStatsFromCampaigns(all)
+  const stats = platformStats ? {
+    raised: platformStats.totalRaisedUSD,
+    campaigns: platformStats.totalCampaigns,
+    nfts: platformStats.totalNFTsMinted,
+    mainnetRaised: platformStats.mainnetRaisedUSD,
+    testnetRaised: platformStats.testnetRaisedUSD
+  } : fallbackStats
   
   // Featured campaign: prioritize mainnet campaigns, then first available
   // Sort to put mainnet campaigns first
@@ -173,34 +193,45 @@ export default async function HomePage() {
     return `$${n.toFixed(0)}`
   }
   
-  // Stats with mainnet/testnet distinction
+  // Stats with mainnet/testnet distinction - ACCURATE from all contracts
   const hasMainnet = stats.mainnetRaised > 0
   const STATS = [
     { 
-      value: formatCurrency(stats.raised), 
-      label: hasMainnet ? 'Total Raised' : 'Test Value',
-      sublabel: hasMainnet ? `💎 ${formatCurrency(stats.mainnetRaised)} live` : '🧪 Testnet',
-      isMainnet: hasMainnet
+      value: formatCurrency(stats.mainnetRaised), 
+      label: 'Live Funds',
+      sublabel: '💎 Ethereum Mainnet',
+      isMainnet: true,
+      highlight: true
     },
-    { value: String(stats.campaigns), label: 'Campaigns', sublabel: null, isMainnet: null },
-    { value: String(stats.nfts), label: 'NFTs Minted', sublabel: null, isMainnet: null },
-    { value: '100%', label: 'Transparent', sublabel: null, isMainnet: null },
+    { 
+      value: formatCurrency(stats.testnetRaised), 
+      label: 'Test Value',
+      sublabel: '🧪 BlockDAG + Sepolia',
+      isMainnet: false,
+      highlight: false
+    },
+    { value: String(stats.campaigns), label: 'Campaigns', sublabel: 'All chains', isMainnet: null, highlight: false },
+    { value: String(stats.nfts), label: 'NFTs Minted', sublabel: 'All chains', isMainnet: null, highlight: false },
   ]
 
   return (
     <div className="min-h-screen">
-      {/* Stats Bar - TOP */}
-      <section className="border-b border-white/10 bg-gradient-to-r from-green-900/20 via-blue-900/20 to-purple-900/20">
+      {/* Stats Bar - TOP - Shows accurate data from ALL contracts */}
+      <section className="border-b border-white/10 bg-gradient-to-r from-green-900/30 via-blue-900/20 to-purple-900/20">
         <div className="container py-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {STATS.map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className={`text-2xl sm:text-3xl md:text-4xl font-bold ${stat.isMainnet === true ? 'text-green-400' : stat.isMainnet === false ? 'text-orange-400' : 'bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent'}`}>
+              <div key={i} className={`text-center p-3 rounded-xl ${stat.highlight ? 'bg-green-500/10 border border-green-500/20' : ''}`}>
+                <div className={`text-2xl sm:text-3xl md:text-4xl font-bold ${
+                  stat.isMainnet === true ? 'text-green-400' : 
+                  stat.isMainnet === false ? 'text-orange-400' : 
+                  'bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent'
+                }`}>
                   {stat.value}
                 </div>
-                <div className="text-xs sm:text-sm text-white/50 mt-1">{stat.label}</div>
+                <div className="text-xs sm:text-sm text-white/60 mt-1 font-medium">{stat.label}</div>
                 {stat.sublabel && (
-                  <div className={`text-xs mt-0.5 ${stat.isMainnet ? 'text-green-400/70' : 'text-orange-400/70'}`}>
+                  <div className={`text-xs mt-0.5 ${stat.isMainnet === true ? 'text-green-400/80' : stat.isMainnet === false ? 'text-orange-400/70' : 'text-white/40'}`}>
                     {stat.sublabel}
                   </div>
                 )}
