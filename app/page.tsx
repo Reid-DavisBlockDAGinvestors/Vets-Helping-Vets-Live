@@ -20,25 +20,27 @@ interface ExtendedNFTItem extends NFTItem {
 async function loadOnchain(limit = 12): Promise<ExtendedNFTItem[]> {
   try {
     // First, get campaigns from database with full metadata
-    // Filter by visible_on_marketplace = true (same as marketplace API)
-    const { data: submissions, error: dbError } = await supabaseAdmin
+    const { data: allSubmissions, error: dbError } = await supabaseAdmin
       .from('submissions')
       .select('id, campaign_id, slug, short_code, title, story, image_uri, goal, status, category, creator_name, num_copies, price_per_copy, contract_address, chain_id, chain_name, video_url, visible_on_marketplace')
       .in('status', ['minted', 'approved'])
-      .eq('visible_on_marketplace', true)
       .order('created_at', { ascending: false })
-      .limit(limit)
+      .limit(limit * 2) // Fetch extra to filter
     
     if (dbError) {
       logger.error('[loadOnchain] Database error:', dbError.message)
-      // Return empty on DB error rather than crashing
       return []
     }
+    
+    // Filter visible in JavaScript (handles boolean and string 'true')
+    const submissions = (allSubmissions || []).filter((s: any) => 
+      s.visible_on_marketplace === true || s.visible_on_marketplace === 'true'
+    ).slice(0, limit)
 
-    logger.debug(`[loadOnchain] Found ${submissions?.length || 0} submissions from DB`)
+    logger.debug(`[loadOnchain] Found ${allSubmissions?.length || 0} total, ${submissions.length} visible`)
 
-    if (!submissions || submissions.length === 0) {
-      logger.debug('[loadOnchain] No submissions found, returning empty')
+    if (submissions.length === 0) {
+      logger.debug('[loadOnchain] No visible submissions found')
       return []
     }
 
