@@ -250,10 +250,10 @@ export async function GET(req: NextRequest) {
         updateCount,
         lastUpdated,
         hasRecentUpdate: lastUpdated ? (Date.now() - new Date(lastUpdated).getTime()) < 7 * 24 * 60 * 60 * 1000 : false, // Updated within 7 days
-        // Chain info for testnet/mainnet distinction
+        // Chain info for testnet/mainnet distinction - derive from chain_id (more reliable than DB flag)
         chain_id: sub.chain_id || 1043,
-        chain_name: sub.chain_name || 'BlockDAG',
-        is_testnet: sub.is_testnet ?? true, // Default true for safety
+        chain_name: sub.chain_name || (chainId === 1 ? 'Ethereum Mainnet' : chainId === 11155111 ? 'Sepolia' : 'BlockDAG'),
+        is_testnet: ![1, 137, 8453, 42161, 10].includes(chainId), // Mainnet chains: ETH, Polygon, Base, Arbitrum, Optimism
         contract_version: sub.contract_version || 'v6',
       }
     }))
