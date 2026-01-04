@@ -67,14 +67,15 @@ async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
       const numCopies = Number(s.num_copies || 100)
       const chainId = s.chain_id || 1043
       const isTestnet = ![1, 137, 8453, 42161, 10].includes(chainId)
-      const usdRate = isTestnet ? BDAG_USD : ETH_USD
       
       // Use synced database values (sold_count synced with on-chain)
       const soldCount = Number(s.sold_count || 0)
       const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
-      const grossRaisedUSD = soldCount * pricePerCopy
+      const nftSalesUSD = soldCount * pricePerCopy
+      const giftsUSD = Number(s.gifts_usd || 0)
+      const totalRaised = nftSalesUSD + giftsUSD
       
-      const pct = goal > 0 ? Math.min(100, Math.round((grossRaisedUSD / goal) * 100)) : 0
+      const pct = goal > 0 ? Math.min(100, Math.round((totalRaised / goal) * 100)) : 0
       
       return {
         id: s.id,
@@ -86,9 +87,9 @@ async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
         causeType: s.category || 'general',
         progress: pct,
         goal,
-        raised: grossRaisedUSD,
-        nftSalesUSD: grossRaisedUSD,
-        giftsUSD: 0,
+        raised: totalRaised,
+        nftSalesUSD,
+        giftsUSD,
         sold: soldCount,
         total: numCopies,
         snippet: s.story?.slice(0, 150) || '',
@@ -117,26 +118,56 @@ interface HomeStats {
   testnetRaised: number
 }
 
-// Calculate stats directly from campaigns (uses on-chain data)
-function calculateStatsFromCampaigns(campaigns: ExtendedNFTItem[]): HomeStats {
+// Get stats from ALL minted campaigns in database (not just visible ones)
+async function getAllCampaignStats(): Promise<HomeStats> {
+  const supabase = getFreshSupabase()
+  
+  // Get ALL minted submissions (not filtered by visible)
+  const { data: allSubs, error } = await supabase
+    .from('submissions')
+    .select('sold_count, goal, num_copies, chain_id, gifts_usd, status, visible_on_marketplace')
+    .or('status.eq.minted,status.eq.pending_onchain')
+  
+  if (error || !allSubs) {
+    logger.error('[getAllCampaignStats] Database error:', error?.message)
+    return { raised: 0, campaigns: 0, nfts: 0, mainnetRaised: 0, testnetRaised: 0 }
+  }
+  
+  // Filter to only visible campaigns for stats
+  const visibleSubs = allSubs.filter((s: any) => 
+    s.visible_on_marketplace === true || s.visible_on_marketplace === 'true'
+  )
+  
   let raised = 0
   let mainnetRaised = 0
   let testnetRaised = 0
   let nfts = 0
   
-  for (const c of campaigns) {
-    raised += c.raised || 0
-    nfts += c.sold || 0
-    if (c.isTestnet) {
-      testnetRaised += c.raised || 0
+  for (const s of visibleSubs) {
+    const goal = Number(s.goal || 0)
+    const numCopies = Number(s.num_copies || 100)
+    const soldCount = Number(s.sold_count || 0)
+    const chainId = s.chain_id || 1043
+    const isTestnet = ![1, 137, 8453, 42161, 10].includes(chainId)
+    
+    const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
+    const nftSalesUSD = soldCount * pricePerCopy
+    const giftsUSD = Number(s.gifts_usd || 0)
+    const totalRaised = nftSalesUSD + giftsUSD
+    
+    raised += totalRaised
+    nfts += soldCount
+    
+    if (isTestnet) {
+      testnetRaised += totalRaised
     } else {
-      mainnetRaised += c.raised || 0
+      mainnetRaised += totalRaised
     }
   }
   
   return {
     raised: Math.round(raised * 100) / 100,
-    campaigns: campaigns.length,
+    campaigns: visibleSubs.length,
     nfts,
     mainnetRaised: Math.round(mainnetRaised * 100) / 100,
     testnetRaised: Math.round(testnetRaised * 100) / 100
@@ -154,9 +185,9 @@ export default async function HomePage() {
   // Fetch campaigns for display (uses synced database values)
   const all = await loadOnchain(24)
   
-  // Calculate stats from database (sold_count is synced with on-chain via script)
-  // This is faster and more reliable than RPC calls which can timeout
-  const stats = calculateStatsFromCampaigns(all)
+  // Get stats from ALL visible campaigns in database (not just the 24 displayed)
+  // This includes gifts_usd and calculates accurate totals
+  const stats = await getAllCampaignStats()
   
   // Featured campaign: prioritize mainnet campaigns, then first available
   // Sort to put mainnet campaigns first
