@@ -3,6 +3,9 @@ import NFTCard, { NFTItem } from '@/components/NFTCard'
 import { logger } from '@/lib/logger'
 import { createClient } from '@supabase/supabase-js'
 import { getPlatformStats } from '@/lib/platformStats'
+import { ethers } from 'ethers'
+import { V8_ABI, V6_ABI, V5_ABI } from '@/lib/contracts'
+import { getProviderForChain, ChainId } from '@/lib/chains'
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic'
@@ -24,6 +27,16 @@ function getFreshSupabase() {
 interface ExtendedNFTItem extends NFTItem {
   videoUrl?: string | null
   isFeatured?: boolean
+}
+
+// USD conversion rates
+const ETH_USD = Number(process.env.ETH_USD_RATE || '3100')
+const BDAG_USD = Number(process.env.BDAG_USD_RATE || '0.05')
+
+// Get ABI for chain
+function getAbiForChain(chainId: number): any[] {
+  if (chainId === 1 || chainId === 11155111) return V8_ABI
+  return V6_ABI
 }
 
 async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
@@ -57,19 +70,63 @@ async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
       return []
     }
     
-    // Map to NFTItem format using database values
-    const mapped: ExtendedNFTItem[] = visible.map((s: any) => {
+    // Map to NFTItem format - fetch on-chain data for mainnet campaigns
+    const mapped: ExtendedNFTItem[] = await Promise.all(visible.map(async (s: any) => {
       const goal = Number(s.goal || 0)
       const numCopies = Number(s.num_copies || 100)
-      const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
-      const soldCount = Number(s.sold_count || 0)
       const chainId = s.chain_id || 1043
-      const isEthChain = chainId === 1 || chainId === 11155111
-      const isTestnet = s.is_testnet !== false && ![1, 137, 8453, 42161, 10].includes(chainId)
+      const isTestnet = ![1, 137, 8453, 42161, 10].includes(chainId)
+      const usdRate = isTestnet ? BDAG_USD : ETH_USD
       
-      // Calculate raised from sold_count (database) or use on-chain data if available
-      const raised = soldCount * pricePerCopy
-      const pct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0
+      // Default values from database
+      let soldCount = Number(s.sold_count || 0)
+      let grossRaisedUSD = 0
+      
+      // For campaigns with contract_address and campaign_id, try to get on-chain data
+      if (s.contract_address && s.campaign_id !== null && s.campaign_id !== undefined) {
+        try {
+          const provider = getProviderForChain(chainId as ChainId)
+          const abi = getAbiForChain(chainId)
+          const contract = new ethers.Contract(s.contract_address, abi, provider)
+          
+          const campaignData = await contract.getCampaign(BigInt(s.campaign_id))
+          
+          // Parse based on ABI version
+          let grossRaisedWei: bigint
+          let editionsMinted: number
+          
+          if (chainId === 1 || chainId === 11155111) {
+            // V8 struct format
+            grossRaisedWei = BigInt(campaignData.grossRaised ?? campaignData[5] ?? 0n)
+            editionsMinted = Number(campaignData.editionsMinted ?? campaignData[8] ?? 0)
+          } else {
+            // V6/V5 format
+            grossRaisedWei = BigInt(campaignData[3] ?? 0n)
+            editionsMinted = Number(campaignData[5] ?? 0)
+          }
+          
+          const grossRaisedNative = Number(grossRaisedWei) / 1e18
+          grossRaisedUSD = grossRaisedNative * usdRate
+          
+          // Use on-chain sold count if higher than database
+          if (editionsMinted > soldCount) {
+            soldCount = editionsMinted
+          }
+          
+          logger.debug(`[loadOnchain] On-chain data for ${s.title}: sold=${editionsMinted}, raised=$${grossRaisedUSD.toFixed(2)}`)
+        } catch (e: any) {
+          // Fall back to database calculation
+          logger.warn(`[loadOnchain] On-chain fetch failed for ${s.title}: ${e.message}`)
+          const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
+          grossRaisedUSD = soldCount * pricePerCopy
+        }
+      } else {
+        // No contract data, use database calculation
+        const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
+        grossRaisedUSD = soldCount * pricePerCopy
+      }
+      
+      const pct = goal > 0 ? Math.min(100, Math.round((grossRaisedUSD / goal) * 100)) : 0
       
       return {
         id: s.id,
@@ -81,8 +138,8 @@ async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
         causeType: s.category || 'general',
         progress: pct,
         goal,
-        raised,
-        nftSalesUSD: raised,
+        raised: grossRaisedUSD,
+        nftSalesUSD: grossRaisedUSD,
         giftsUSD: 0,
         sold: soldCount,
         total: numCopies,
@@ -94,9 +151,9 @@ async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
         videoUrl: s.video_url || null,
         isFeatured: false
       }
-    })
+    }))
 
-    logger.debug(`[loadOnchain] Mapped ${mapped.length} items`)
+    logger.debug(`[loadOnchain] Mapped ${mapped.length} items with on-chain data`)
     return mapped
   } catch (e) {
     console.error('[loadOnchain] Error:', e)
@@ -219,6 +276,23 @@ export default async function HomePage() {
       {/* Stats Bar - TOP - Shows accurate data from ALL contracts */}
       <section className="border-b border-white/10 bg-gradient-to-r from-green-900/30 via-blue-900/20 to-purple-900/20">
         <div className="container py-6">
+          {/* Verified Contract Badge */}
+          <div className="flex justify-center mb-4">
+            <a 
+              href="https://etherscan.io/address/0xd6aEE73e3bB3c3fF149eB1198bc2069d2E37eB7e#code" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/30 text-sm text-green-400 hover:bg-green-500/20 transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+              <span className="font-medium">V8 Contract Verified on Etherscan</span>
+              <svg className="w-3.5 h-3.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {STATS.map((stat, i) => (
               <div key={i} className={`text-center p-3 rounded-xl ${stat.highlight ? 'bg-green-500/10 border border-green-500/20' : ''}`}>
@@ -296,7 +370,7 @@ export default async function HomePage() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-8">
-            {/* Left: Campaign Card */}
+            {/* Left: Campaign Card - Full details like marketplace */}
             <Link href={`/story/${featuredCampaign.id}`} className="group block">
               <div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:border-white/20 transition-all">
                 <div className="relative h-64 md:h-80 overflow-hidden">
@@ -313,26 +387,44 @@ export default async function HomePage() {
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   
-                  {/* Chain Badge */}
-                  <div className="absolute top-4 right-4">
-                    <span className={`rounded-full px-3 py-1.5 text-sm font-semibold backdrop-blur-sm border ${
-                      featuredCampaign.isTestnet 
-                        ? 'bg-orange-500/40 text-orange-200 border-orange-500/40' 
-                        : 'bg-green-500/40 text-green-200 border-green-500/40'
-                    }`}>
-                      {featuredCampaign.isTestnet ? '🧪' : '💎'} {featuredCampaign.chainName || (featuredCampaign.isTestnet ? 'Testnet' : 'Ethereum')}
+                  {/* Top badges row */}
+                  <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+                    {/* Sold count */}
+                    <span className="rounded-full px-3 py-1.5 text-sm font-semibold backdrop-blur-sm bg-black/40 text-white border border-white/20">
+                      {featuredCampaign.sold}/{featuredCampaign.total} sold
                     </span>
+                    
+                    {/* Chain + Category badges */}
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-3 py-1.5 text-sm font-semibold backdrop-blur-sm border ${
+                        featuredCampaign.isTestnet 
+                          ? 'bg-orange-500/40 text-orange-200 border-orange-500/40' 
+                          : 'bg-green-500/40 text-green-200 border-green-500/40'
+                      }`}>
+                        {featuredCampaign.isTestnet ? '🧪' : '💎'} {featuredCampaign.chainName || (featuredCampaign.isTestnet ? 'Testnet' : 'Ethereum Mainnet')}
+                      </span>
+                      <span className="rounded-full px-3 py-1.5 text-sm font-semibold backdrop-blur-sm bg-blue-500/40 text-blue-200 border border-blue-500/40">
+                        🤝 Community
+                      </span>
+                    </div>
                   </div>
                   
-                  {/* Progress */}
+                  {/* Progress with detailed amounts */}
                   <div className="absolute bottom-4 left-4 right-4">
-                    <div className="flex justify-between text-white text-sm mb-2">
-                      <span className={`font-bold text-lg ${featuredCampaign.isTestnet ? 'text-orange-400' : 'text-green-400'}`}>
-                        {featuredCampaign.isTestnet ? '~' : ''}${featuredCampaign.raised.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      </span>
-                      <span className="text-white/70">{featuredCampaign.progress}%</span>
+                    <div className="flex justify-between items-end text-white text-sm mb-2">
+                      <div>
+                        <span className={`font-bold text-2xl ${featuredCampaign.isTestnet ? 'text-orange-400' : 'text-green-400'}`}>
+                          {featuredCampaign.isTestnet ? '~' : ''}${featuredCampaign.raised.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </span>
+                        <div className="text-xs text-white/60 mt-1">
+                          <span>NFT: ${(featuredCampaign.nftSalesUSD || featuredCampaign.raised).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                          <span className="mx-1">·</span>
+                          <span>Gifts: ${(featuredCampaign.giftsUSD || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                        </div>
+                      </div>
+                      <span className="text-white/70 font-semibold">{featuredCampaign.progress}%</span>
                     </div>
-                    <div className={`h-2 rounded-full overflow-hidden ${featuredCampaign.isTestnet ? 'bg-orange-500/20' : 'bg-green-500/20'}`}>
+                    <div className={`h-2.5 rounded-full overflow-hidden ${featuredCampaign.isTestnet ? 'bg-orange-500/20' : 'bg-green-500/20'}`}>
                       <div 
                         className={`h-full rounded-full ${featuredCampaign.isTestnet ? 'bg-gradient-to-r from-orange-400 to-yellow-500' : 'bg-gradient-to-r from-green-400 to-emerald-500'}`}
                         style={{ width: `${Math.min(100, featuredCampaign.progress)}%` }}
