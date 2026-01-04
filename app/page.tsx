@@ -19,123 +19,56 @@ interface ExtendedNFTItem extends NFTItem {
 
 async function loadOnchain(limit = 12): Promise<ExtendedNFTItem[]> {
   try {
-    // First, get campaigns from database with full metadata
-    const { data: allSubmissions, error: dbError } = await supabaseAdmin
-      .from('submissions')
-      .select('id, campaign_id, slug, short_code, title, story, image_uri, goal, status, category, creator_name, num_copies, price_per_copy, contract_address, chain_id, chain_name, video_url, visible_on_marketplace')
-      .in('status', ['minted', 'approved'])
-      .order('created_at', { ascending: false })
-      .limit(limit * 2) // Fetch extra to filter
+    // Fetch from marketplace API which already has all the logic
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'https://patriotpledgenfts.netlify.app'
+    const apiUrl = `${baseUrl}/api/marketplace/fundraisers?limit=${limit}`
     
-    if (dbError) {
-      logger.error('[loadOnchain] Database error:', dbError.message)
+    logger.debug(`[loadOnchain] Fetching from ${apiUrl}`)
+    
+    const res = await fetch(apiUrl, { 
+      next: { revalidate: 60 },
+      headers: { 'Accept': 'application/json' }
+    })
+    
+    if (!res.ok) {
+      logger.error(`[loadOnchain] API error: ${res.status}`)
       return []
     }
     
-    // Filter visible in JavaScript (handles boolean and string 'true')
-    const submissions = (allSubmissions || []).filter((s: any) => 
-      s.visible_on_marketplace === true || s.visible_on_marketplace === 'true'
-    ).slice(0, limit)
-
-    logger.debug(`[loadOnchain] Found ${allSubmissions?.length || 0} total, ${submissions.length} visible`)
-
-    if (submissions.length === 0) {
-      logger.debug('[loadOnchain] No visible submissions found')
+    const data = await res.json()
+    const items = data.items || []
+    
+    logger.debug(`[loadOnchain] Got ${items.length} items from API`)
+    
+    if (items.length === 0) {
       return []
     }
 
-    // Get on-chain data for raised amounts - use each submission's contract_address and chain
-    const { V5_ABI, V6_ABI, V8_ABI } = await import('@/lib/contracts')
-    const chains = await import('@/lib/chains')
-    const getProviderForChain = chains.getProviderForChain
-    const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
-    const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '3100')
-    
-    // Cache contracts by address+chain
-    const contractCache: Record<string, ethers.Contract> = {}
-    function getContractForSubmission(subContractAddr: string | null, chainId: number): ethers.Contract | null {
-      const addr = (subContractAddr || V5_CONTRACT).toLowerCase()
-      if (!addr) return null
-      const key = `${addr}-${chainId}`
-      if (!contractCache[key]) {
-        const provider = getProviderForChain(chainId as any)
-        const isV5 = addr.toLowerCase() === V5_CONTRACT.toLowerCase()
-        const isEthChain = chainId === 1 || chainId === 11155111
-        // Use V8 for Ethereum chains, V5/V6 for BlockDAG
-        const abi = isEthChain ? V8_ABI : (isV5 ? V5_ABI : V6_ABI)
-        contractCache[key] = new ethers.Contract(addr, abi, provider)
-      }
-      return contractCache[key]
-    }
-
-    const mapped: NFTItem[] = await Promise.all(submissions.map(async (s: any) => {
-      let raised = 0
-      let nftSalesUSD = 0
-      let tipsUSD = 0
-      let editionsMinted = 0
-      let maxEditions = 0
-      const goal = Number(s.goal || 0)
-      const numCopies = Number(s.num_copies || 100)
-      const pricePerCopy = Number(s.price_per_copy || (goal > 0 && numCopies > 0 ? goal / numCopies : 0))
-
-      // Get raised amount from blockchain using submission's specific contract and chain
-      const chainId = s.chain_id || 1043
-      const isEthChain = chainId === 1 || chainId === 11155111
-      const usdRate = isEthChain ? ETH_USD_RATE : BDAG_USD_RATE
-      const contract = getContractForSubmission(s.contract_address, chainId)
-      
-      if (s.campaign_id != null && contract) {
-        try {
-          const campaign = await contract.getCampaign(s.campaign_id)
-          // V8 returns struct with named fields, V5/V6 return array
-          const grossRaisedWei = BigInt(campaign.grossRaised ?? campaign[3] ?? 0n)
-          const grossRaisedNative = Number(grossRaisedWei) / 1e18
-          raised = grossRaisedNative * usdRate
-          
-          // V8: editionsMinted is index 8, V5/V6: index 5
-          editionsMinted = Number(campaign.editionsMinted ?? campaign[8] ?? campaign[5] ?? 0)
-          maxEditions = Number(campaign.maxEditions ?? campaign[9] ?? campaign[6] ?? 0)
-          
-          // Calculate NFT sales and tips
-          nftSalesUSD = editionsMinted * pricePerCopy
-          tipsUSD = Math.max(0, raised - nftSalesUSD)
-        } catch (e) {
-          // Campaign may not exist on chain yet - use database values
-          logger.debug(`[loadOnchain] Chain fetch failed for campaign ${s.campaign_id} on chain ${chainId}`)
-        }
-      }
-
-      const pct = goal > 0 ? Math.round((raised / goal) * 100) : 0
-      // Use mapLegacyCategory for consistent category display
-      const { mapLegacyCategory } = await import('@/lib/categories')
-      const cause = mapLegacyCategory(s.category || 'other')
-
-      return {
-        id: s.id,
-        campaignId: s.campaign_id || undefined,
-        slug: s.slug || null,
-        short_code: s.short_code || null,
-        title: s.title || 'Untitled Campaign',
-        image: s.image_uri || '',
-        causeType: cause as 'veteran' | 'general',
-        progress: pct,
-        goal,
-        raised,
-        nftSalesUSD,
-        giftsUSD: tipsUSD,
-        sold: editionsMinted,
-        total: maxEditions || numCopies,
-        snippet: s.story?.slice(0, 150) || '',
-        chainId: s.chain_id || 1043,
-        chainName: s.chain_name || 'BlockDAG',
-        isTestnet: ![1, 137, 8453, 42161, 10].includes(s.chain_id || 1043),
-        videoUrl: s.video_url || null,
-        isFeatured: false // Will be set when migration is run
-      }
+    // Map API response to NFTItem format (API already has on-chain data)
+    const mapped: ExtendedNFTItem[] = items.map((item: any) => ({
+      id: item.id,
+      campaignId: item.campaignId,
+      slug: item.slug || null,
+      short_code: item.short_code || null,
+      title: item.title || 'Untitled Campaign',
+      image: item.image || '',
+      causeType: item.category || 'general',
+      progress: item.progress || 0,
+      goal: item.goal || 0,
+      raised: item.raised || 0,
+      nftSalesUSD: item.nftSalesUSD || 0,
+      giftsUSD: item.giftsUSD || 0,
+      sold: item.editionsMinted || 0,
+      total: item.maxEditions || 100,
+      snippet: item.story?.slice(0, 150) || '',
+      chainId: item.chain_id || 1043,
+      chainName: item.chain_name || 'BlockDAG',
+      isTestnet: item.is_testnet !== false,
+      videoUrl: null, // API doesn't return video_url yet
+      isFeatured: false
     }))
 
     logger.debug(`[loadOnchain] Mapped ${mapped.length} items`)
-
     return mapped
   } catch (e) {
     console.error('[loadOnchain] Error:', e)
