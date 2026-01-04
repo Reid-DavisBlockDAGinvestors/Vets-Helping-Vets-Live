@@ -19,16 +19,18 @@ interface ExtendedNFTItem extends NFTItem {
 
 async function loadOnchain(limit = 12): Promise<ExtendedNFTItem[]> {
   try {
-    // First, get campaigns from database with full metadata - prioritize featured, then minted
+    // First, get campaigns from database with full metadata
+    // Note: is_featured/featured_order may not exist yet - query base columns first
     const { data: submissions, error: dbError } = await supabaseAdmin
       .from('submissions')
-      .select('id, campaign_id, slug, short_code, title, story, image_uri, goal, status, category, creator_name, num_copies, price_per_copy, contract_address, chain_id, chain_name, video_url, is_featured, featured_order')
+      .select('id, campaign_id, slug, short_code, title, story, image_uri, goal, status, category, creator_name, num_copies, price_per_copy, contract_address, chain_id, chain_name, video_url')
       .in('status', ['minted', 'approved'])
-      .order('is_featured', { ascending: false, nullsFirst: false })
-      .order('featured_order', { ascending: true })
-      .order('status', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(limit)
+    
+    if (dbError) {
+      logger.error('[loadOnchain] Database error:', dbError.message)
+    }
 
     logger.debug(`[loadOnchain] Found ${submissions?.length || 0} submissions from DB`)
 
@@ -37,21 +39,28 @@ async function loadOnchain(limit = 12): Promise<ExtendedNFTItem[]> {
       return []
     }
 
-    // Get on-chain data for raised amounts - use each submission's contract_address
-    const { V5_ABI, V6_ABI } = await import('@/lib/contracts')
+    // Get on-chain data for raised amounts - use each submission's contract_address and chain
+    const { V5_ABI, V6_ABI, V8_ABI } = await import('@/lib/contracts')
+    const chains = await import('@/lib/chains')
+    const getProviderForChain = chains.getProviderForChain
     const V5_CONTRACT = '0x96bB4d907CC6F90E5677df7ad48Cf3ad12915890'
-    const provider = getProvider()
+    const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '3100')
     
-    // Cache contracts by address
+    // Cache contracts by address+chain
     const contractCache: Record<string, ethers.Contract> = {}
-    function getContractForSubmission(subContractAddr: string | null): ethers.Contract | null {
+    function getContractForSubmission(subContractAddr: string | null, chainId: number): ethers.Contract | null {
       const addr = (subContractAddr || V5_CONTRACT).toLowerCase()
       if (!addr) return null
-      if (!contractCache[addr]) {
+      const key = `${addr}-${chainId}`
+      if (!contractCache[key]) {
+        const provider = getProviderForChain(chainId as any)
         const isV5 = addr.toLowerCase() === V5_CONTRACT.toLowerCase()
-        contractCache[addr] = new ethers.Contract(addr, isV5 ? V5_ABI : V6_ABI, provider)
+        const isEthChain = chainId === 1 || chainId === 11155111
+        // Use V8 for Ethereum chains, V5/V6 for BlockDAG
+        const abi = isEthChain ? V8_ABI : (isV5 ? V5_ABI : V6_ABI)
+        contractCache[key] = new ethers.Contract(addr, abi, provider)
       }
-      return contractCache[addr]
+      return contractCache[key]
     }
 
     const mapped: NFTItem[] = await Promise.all(submissions.map(async (s: any) => {
@@ -64,23 +73,30 @@ async function loadOnchain(limit = 12): Promise<ExtendedNFTItem[]> {
       const numCopies = Number(s.num_copies || 100)
       const pricePerCopy = Number(s.price_per_copy || (goal > 0 && numCopies > 0 ? goal / numCopies : 0))
 
-      // Get raised amount from blockchain using submission's specific contract
-      const contract = getContractForSubmission(s.contract_address)
-      if (s.campaign_id && contract) {
+      // Get raised amount from blockchain using submission's specific contract and chain
+      const chainId = s.chain_id || 1043
+      const isEthChain = chainId === 1 || chainId === 11155111
+      const usdRate = isEthChain ? ETH_USD_RATE : BDAG_USD_RATE
+      const contract = getContractForSubmission(s.contract_address, chainId)
+      
+      if (s.campaign_id != null && contract) {
         try {
           const campaign = await contract.getCampaign(s.campaign_id)
+          // V8 returns struct with named fields, V5/V6 return array
           const grossRaisedWei = BigInt(campaign.grossRaised ?? campaign[3] ?? 0n)
-          const grossRaisedBDAG = Number(grossRaisedWei) / 1e18
-          raised = grossRaisedBDAG * BDAG_USD_RATE
+          const grossRaisedNative = Number(grossRaisedWei) / 1e18
+          raised = grossRaisedNative * usdRate
           
-          editionsMinted = Number(campaign.editionsMinted ?? campaign[5] ?? 0)
-          maxEditions = Number(campaign.maxEditions ?? campaign[6] ?? 0)
+          // V8: editionsMinted is index 8, V5/V6: index 5
+          editionsMinted = Number(campaign.editionsMinted ?? campaign[8] ?? campaign[5] ?? 0)
+          maxEditions = Number(campaign.maxEditions ?? campaign[9] ?? campaign[6] ?? 0)
           
           // Calculate NFT sales and tips
           nftSalesUSD = editionsMinted * pricePerCopy
           tipsUSD = Math.max(0, raised - nftSalesUSD)
         } catch (e) {
-          // Campaign may not exist on chain yet
+          // Campaign may not exist on chain yet - use database values
+          logger.debug(`[loadOnchain] Chain fetch failed for campaign ${s.campaign_id} on chain ${chainId}`)
         }
       }
 
@@ -109,7 +125,7 @@ async function loadOnchain(limit = 12): Promise<ExtendedNFTItem[]> {
         chainName: s.chain_name || 'BlockDAG',
         isTestnet: ![1, 137, 8453, 42161, 10].includes(s.chain_id || 1043),
         videoUrl: s.video_url || null,
-        isFeatured: s.is_featured || false
+        isFeatured: false // Will be set when migration is run
       }
     }))
 
@@ -130,27 +146,29 @@ interface HomeStats {
   testnetRaised: number
 }
 
-async function loadStats(): Promise<HomeStats> {
-  try {
-    // UNIFIED STATS: Use the same calculation as /api/analytics/summary
-    // Both use lib/stats.ts calculatePlatformStats() for consistency
-    const { calculatePlatformStats } = await import('@/lib/stats')
-    
-    const stats = await calculatePlatformStats()
-    
-    logger.debug(`[HomePage Stats] Unified stats: $${stats.totalRaisedUSD}, ${stats.totalNFTsMinted} NFTs, ${stats.totalCampaigns} campaigns`)
-    logger.debug(`[HomePage Stats] Mainnet: $${stats.mainnetRaisedUSD}, Testnet: $${stats.testnetRaisedUSD}`)
-
-    return {
-      raised: stats.totalRaisedUSD,
-      campaigns: stats.totalCampaigns,
-      nfts: stats.totalNFTsMinted,
-      mainnetRaised: stats.mainnetRaisedUSD,
-      testnetRaised: stats.testnetRaisedUSD
+// Calculate stats directly from campaigns (uses on-chain data)
+function calculateStatsFromCampaigns(campaigns: ExtendedNFTItem[]): HomeStats {
+  let raised = 0
+  let mainnetRaised = 0
+  let testnetRaised = 0
+  let nfts = 0
+  
+  for (const c of campaigns) {
+    raised += c.raised || 0
+    nfts += c.sold || 0
+    if (c.isTestnet) {
+      testnetRaised += c.raised || 0
+    } else {
+      mainnetRaised += c.raised || 0
     }
-  } catch (e: any) {
-    console.error('[HomePage Stats] Error:', e?.message)
-    return { raised: 0, campaigns: 0, nfts: 0, mainnetRaised: 0, testnetRaised: 0 }
+  }
+  
+  return {
+    raised: Math.round(raised * 100) / 100,
+    campaigns: campaigns.length,
+    nfts,
+    mainnetRaised: Math.round(mainnetRaised * 100) / 100,
+    testnetRaised: Math.round(testnetRaised * 100) / 100
   }
 }
 
@@ -162,12 +180,18 @@ const FEATURES = [
 ]
 
 export default async function HomePage() {
-  const [all, stats] = await Promise.all([loadOnchain(24), loadStats()])
+  const all = await loadOnchain(24)
+  const stats = calculateStatsFromCampaigns(all)
   
-  // Featured campaign: admin-selected or first mainnet campaign
-  const featuredCampaign = all.find(i => (i as ExtendedNFTItem).isFeatured) || 
-    all.find(i => !i.isTestnet) || 
-    all[0]
+  // Featured campaign: prioritize mainnet campaigns, then first available
+  // Sort to put mainnet campaigns first
+  const sortedCampaigns = [...all].sort((a, b) => {
+    // Mainnet first (isTestnet=false comes before isTestnet=true)
+    if (a.isTestnet !== b.isTestnet) return a.isTestnet ? 1 : -1
+    // Then by raised amount
+    return (b.raised || 0) - (a.raised || 0)
+  })
+  const featuredCampaign = sortedCampaigns[0]
   
   // Success stories: campaigns that reached their goal
   const successStories = all.filter(i => i.goal > 0 && i.raised >= i.goal).slice(0, 3)
