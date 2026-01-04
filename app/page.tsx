@@ -72,7 +72,7 @@ async function loadOnchain(limit = 24): Promise<ExtendedNFTItem[]> {
       const soldCount = Number(s.sold_count || 0)
       const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
       const nftSalesUSD = soldCount * pricePerCopy
-      const giftsUSD = Number(s.gifts_usd || 0)
+      const giftsUSD = Number(s.tips_distributed || 0)
       const totalRaised = nftSalesUSD + giftsUSD
       
       const pct = goal > 0 ? Math.min(100, Math.round((totalRaised / goal) * 100)) : 0
@@ -125,7 +125,7 @@ async function getAllCampaignStats(): Promise<HomeStats> {
   // Get ALL minted submissions (not filtered by visible)
   const { data: allSubs, error } = await supabase
     .from('submissions')
-    .select('sold_count, goal, num_copies, chain_id, gifts_usd, status, visible_on_marketplace')
+    .select('sold_count, goal, num_copies, chain_id, tips_distributed, status, visible_on_marketplace')
     .or('status.eq.minted,status.eq.pending_onchain')
   
   if (error || !allSubs) {
@@ -152,7 +152,7 @@ async function getAllCampaignStats(): Promise<HomeStats> {
     
     const pricePerCopy = goal > 0 && numCopies > 0 ? goal / numCopies : 0
     const nftSalesUSD = soldCount * pricePerCopy
-    const giftsUSD = Number(s.gifts_usd || 0)
+    const giftsUSD = Number(s.tips_distributed || 0)
     const totalRaised = nftSalesUSD + giftsUSD
     
     raised += totalRaised
