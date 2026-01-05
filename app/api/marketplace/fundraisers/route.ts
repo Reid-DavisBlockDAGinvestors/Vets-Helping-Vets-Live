@@ -184,14 +184,18 @@ export async function GET(req: NextRequest) {
         const grossRaisedNative = Number(grossRaisedWei) / 1e18
         const chainRaisedUSD = grossRaisedNative * usdRate
         
-        // Only use chain data if it shows MORE sales (chain is authoritative for actual mints)
-        if (chainEditions > editionsMinted) {
+        // Always use on-chain grossRaised as source of truth (includes tips/gifts)
+        // Use higher edition count between DB and chain
+        if (chainEditions >= editionsMinted) {
           editionsMinted = chainEditions
+        }
+        // Always use on-chain grossRaised when available (more accurate than calculated)
+        if (chainRaisedUSD > 0) {
           grossRaisedUSD = chainRaisedUSD
         }
         if (chainMax > 0) maxEditions = chainMax
         
-        logger.debug(`[fundraisers] Campaign ${campaignId} (chain ${chainId}, v=${contractVersion}): DB sold=${sub.sold_count}, chain=${chainEditions}, max=${chainMax}`)
+        logger.debug(`[fundraisers] Campaign ${campaignId} (chain ${chainId}, v=${contractVersion}): DB sold=${sub.sold_count}, chain=${chainEditions}, chainRaised=${chainRaisedUSD.toFixed(2)}, max=${chainMax}`)
       } catch (err: any) {
         // On-chain fetch failed - use database values (already set above)
         logger.debug(`[fundraisers] Using DB data for campaign ${campaignId} (chain ${chainId} unavailable)`)
