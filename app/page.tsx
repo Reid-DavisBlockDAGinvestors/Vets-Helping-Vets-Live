@@ -450,10 +450,10 @@ export default async function HomePage() {
                         <span className={`font-bold text-2xl ${featuredCampaign.isTestnet ? 'text-orange-400' : 'text-green-400'}`}>
                           {featuredCampaign.isTestnet ? '~' : ''}${featuredCampaign.raised.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </span>
-                        <div className="text-xs text-white/60 mt-1">
-                          <span>NFT: ${(featuredCampaign.nftSalesUSD || featuredCampaign.raised).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                          <span className="mx-1">·</span>
-                          <span>Gifts: ${(featuredCampaign.giftsUSD || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                        <div className="flex gap-2 text-xs mt-1">
+                          <span className="text-emerald-300 font-medium">NFT: ${(featuredCampaign.nftSalesUSD || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                          <span className="text-white/40">·</span>
+                          <span className="text-purple-300 font-medium">Gifts: ${(featuredCampaign.giftsUSD || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                         </div>
                       </div>
                       <span className="text-white/70 font-semibold">{featuredCampaign.progress}%</span>
