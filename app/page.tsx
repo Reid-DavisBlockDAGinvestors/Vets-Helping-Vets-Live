@@ -2,6 +2,9 @@ import Link from 'next/link'
 import NFTCard, { NFTItem } from '@/components/NFTCard'
 import { logger } from '@/lib/logger'
 import { createClient } from '@supabase/supabase-js'
+import { ethers } from 'ethers'
+import { V8_ABI } from '@/lib/contracts'
+import { getProviderForChain, ChainId } from '@/lib/chains'
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic'
@@ -50,6 +53,25 @@ async function getTipsPerCampaign(): Promise<Map<number, number>> {
   
   logger.debug(`[getTipsPerCampaign] Found tips for ${tipsMap.size} campaigns`)
   return tipsMap
+}
+
+// Fetch on-chain data for mainnet campaigns (more accurate than DB for live trading)
+async function getOnchainCampaignData(campaignId: number, contractAddress: string, chainId: number): Promise<{ grossRaised: number; editionsMinted: number } | null> {
+  try {
+    const provider = getProviderForChain(chainId as ChainId)
+    const contract = new ethers.Contract(contractAddress, V8_ABI, provider)
+    const campaign = await contract.getCampaign(BigInt(campaignId))
+    
+    const grossRaisedWei = BigInt(campaign.grossRaised ?? 0n)
+    const grossRaisedETH = Number(grossRaisedWei) / 1e18
+    const grossRaisedUSD = grossRaisedETH * ETH_USD_RATE
+    const editionsMinted = Number(campaign.editionsMinted ?? 0)
+    
+    return { grossRaised: grossRaisedUSD, editionsMinted }
+  } catch (e) {
+    logger.debug('[getOnchainCampaignData] Failed to fetch on-chain data:', e)
+    return null
+  }
 }
 
 async function loadOnchain(limit = 24, tipsMap?: Map<number, number>): Promise<ExtendedNFTItem[]> {
@@ -257,7 +279,7 @@ export default async function HomePage() {
   
   // Load ALL visible campaigns for accurate stats (not limited)
   const allCampaigns = await loadAllCampaignsForStats(tipsMap)
-  const stats = calculateStatsFromCampaigns(allCampaigns)
+  let stats = calculateStatsFromCampaigns(allCampaigns)
   
   // Featured campaign: prioritize mainnet campaigns, then first available
   // Sort to put mainnet campaigns first
@@ -267,7 +289,50 @@ export default async function HomePage() {
     // Then by raised amount
     return (b.raised || 0) - (a.raised || 0)
   })
-  const featuredCampaign = sortedCampaigns[0]
+  let featuredCampaign = sortedCampaigns[0]
+  
+  // For mainnet featured campaign, fetch accurate on-chain data
+  if (featuredCampaign && !featuredCampaign.isTestnet && featuredCampaign.contractAddress) {
+    const onchainData = await getOnchainCampaignData(
+      featuredCampaign.campaignId || 0,
+      featuredCampaign.contractAddress,
+      featuredCampaign.chainId || 1
+    )
+    if (onchainData) {
+      const total = featuredCampaign.total || 1000
+      const pricePerCopy = featuredCampaign.goal > 0 && total > 0 
+        ? featuredCampaign.goal / total 
+        : 20
+      const nftSalesUSD = onchainData.editionsMinted * pricePerCopy
+      const giftsUSD = Math.max(0, onchainData.grossRaised - nftSalesUSD)
+      
+      // Update featured campaign with accurate on-chain data
+      featuredCampaign = {
+        ...featuredCampaign,
+        sold: onchainData.editionsMinted,
+        raised: onchainData.grossRaised,
+        nftSalesUSD,
+        giftsUSD,
+        progress: featuredCampaign.goal > 0 
+          ? Math.min(100, Math.round((onchainData.grossRaised / featuredCampaign.goal) * 100))
+          : 0
+      }
+      
+      // Also update mainnet stats with accurate on-chain data
+      stats = {
+        ...stats,
+        mainnetRaised: onchainData.grossRaised,
+        raised: stats.testnetRaised + onchainData.grossRaised
+      }
+      
+      logger.debug('[HomePage] Updated featured campaign with on-chain data:', {
+        editionsMinted: onchainData.editionsMinted,
+        grossRaised: onchainData.grossRaised,
+        nftSalesUSD,
+        giftsUSD
+      })
+    }
+  }
   
   // Success stories: campaigns that reached their goal
   const successStories = all.filter(i => i.goal > 0 && i.raised >= i.goal).slice(0, 3)
