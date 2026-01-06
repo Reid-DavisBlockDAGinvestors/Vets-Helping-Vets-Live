@@ -234,10 +234,23 @@ export async function POST(req: NextRequest) {
 
     // Send notification to campaign CREATOR that they received a donation
     if (sub?.creator_email) {
-      // Calculate total raised (current sold_count * price per NFT)
+      // Calculate total raised more accurately
       const newSoldCount = (sub.sold_count || 0) + qty
-      const pricePerNFT = sub.goal && newSoldCount > 0 ? sub.goal / 100 : amountUSD || 0 // Estimate
-      const totalRaised = newSoldCount * pricePerNFT
+      
+      // Get num_copies for accurate price calculation
+      const { data: subDetails } = await supabaseAdmin
+        .from('submissions')
+        .select('num_copies')
+        .eq('id', sub.id)
+        .single()
+      
+      const numCopies = subDetails?.num_copies || 100
+      const pricePerNFT = sub.goal && numCopies > 0 ? sub.goal / numCopies : amountUSD || 0
+      const nftSalesTotal = newSoldCount * pricePerNFT
+      
+      // Include tips from this purchase in total
+      const thisPurchaseTip = tipUSD || 0
+      const totalRaised = nftSalesTotal + thisPurchaseTip
       
       try {
         await sendCreatorPurchaseNotification({
