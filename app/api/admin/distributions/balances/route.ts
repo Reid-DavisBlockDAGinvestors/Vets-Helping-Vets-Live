@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { CHAIN_CONFIGS, type ChainId } from '@/lib/chains'
+import { CHAIN_CONFIGS, type ChainId, getProviderForChain } from '@/lib/chains'
+import { ethers } from 'ethers'
+import { V8_ABI } from '@/lib/contracts'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '3100')
 
 /**
  * GET /api/admin/distributions/balances
@@ -80,28 +83,68 @@ export async function GET(request: NextRequest) {
     // Get purchase aggregates for each submission
     const balances = await Promise.all((submissions || []).map(async (s) => {
       // Get purchase totals - join on on-chain campaign_id (INTEGER)
-      // Try different column names since schema may vary
       const { data: purchaseData } = await supabase
         .from('purchases')
         .select('*')
         .eq('campaign_id', s.campaign_id)
 
-      // Calculate totals from whatever columns exist
-      const grossRaisedUsd = purchaseData?.reduce((sum, p) => {
+      // Get submission details for contract info
+      const { data: submissionDetails } = await supabase
+        .from('submissions')
+        .select('contract_address, goal, num_copies')
+        .eq('id', s.id)
+        .single()
+
+      // Calculate totals from purchases table (fallback)
+      let grossRaisedUsd = purchaseData?.reduce((sum, p) => {
         return sum + (p.amount_usd || p.price_usd || 0)
       }, 0) || 0
       
-      const grossRaisedNative = purchaseData?.reduce((sum, p) => {
+      let grossRaisedNative = purchaseData?.reduce((sum, p) => {
         return sum + (p.amount_native || p.amount_bdag || p.price_bdag || 0)
       }, 0) || 0
       
-      const tipsReceivedUsd = purchaseData?.reduce((sum, p) => {
+      let tipsReceivedUsd = purchaseData?.reduce((sum, p) => {
         return sum + (p.tip_usd || 0)
       }, 0) || 0
       
-      const tipsReceivedNative = purchaseData?.reduce((sum, p) => {
+      let tipsReceivedNative = purchaseData?.reduce((sum, p) => {
         return sum + (p.tip_eth || p.tip_bdag || p.tip_native || 0)
       }, 0) || 0
+
+      // For mainnet campaigns, fetch on-chain data for accuracy
+      const submissionChainId = (s.chain_id || 1043) as ChainId
+      const isMainnet = submissionChainId === 1
+      
+      if (isMainnet && submissionDetails?.contract_address && s.campaign_id != null) {
+        try {
+          const provider = getProviderForChain(submissionChainId)
+          const contract = new ethers.Contract(submissionDetails.contract_address, V8_ABI, provider)
+          const campaign = await contract.getCampaign(BigInt(s.campaign_id))
+          
+          const onchainGrossWei = BigInt(campaign.grossRaised ?? 0n)
+          const onchainGrossETH = Number(onchainGrossWei) / 1e18
+          const onchainGrossUSD = onchainGrossETH * ETH_USD_RATE
+          
+          const editionsMinted = Number(campaign.editionsMinted ?? 0)
+          const pricePerCopy = submissionDetails.goal && submissionDetails.num_copies 
+            ? Number(submissionDetails.goal) / Number(submissionDetails.num_copies)
+            : 20
+          const nftSalesUSD = editionsMinted * pricePerCopy
+          const onchainTipsUSD = Math.max(0, onchainGrossUSD - nftSalesUSD)
+          
+          // Use on-chain data if available (more accurate)
+          if (onchainGrossUSD > 0) {
+            grossRaisedUsd = onchainGrossUSD
+            grossRaisedNative = onchainGrossETH
+            tipsReceivedUsd = onchainTipsUSD
+            tipsReceivedNative = onchainTipsUSD / ETH_USD_RATE
+          }
+        } catch (e) {
+          // On-chain fetch failed, use purchase data
+          console.log(`[distributions/balances] On-chain fetch failed for campaign ${s.campaign_id}:`, e)
+        }
+      }
 
       // Get tip split config (may not exist yet)
       let tipSplitConfig = null
