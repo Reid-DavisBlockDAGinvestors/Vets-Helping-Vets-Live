@@ -228,7 +228,8 @@ export default function AdminCampaignHubV2() {
         creator_email: formData.creator_email,
         creator_wallet: formData.creator_wallet,
         nft_price: formData.nft_price,
-        nft_editions: formData.nft_editions
+        nft_editions: formData.nft_editions,
+        video_url: formData.video_url
       })
       setEditTarget(null)
     } catch (e: any) {

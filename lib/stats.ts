@@ -111,6 +111,14 @@ export async function calculatePlatformStats(supabase?: SupabaseClient): Promise
   const allCampaigns = campaigns || []
   const mainnetCampaignsList = allCampaigns.filter(c => isMainnet(c.chain_id))
   const testnetCampaignsList = allCampaigns.filter(c => !isMainnet(c.chain_id))
+  
+  // Build a map of campaign_id -> chain_id for testnet lookups
+  const campaignChainMap = new Map<number, number>()
+  for (const c of allCampaigns) {
+    if (c.campaign_id != null) {
+      campaignChainMap.set(c.campaign_id, c.chain_id)
+    }
+  }
 
   let mainnetRaisedUSD = 0
   let mainnetNFTsMinted = 0
@@ -133,25 +141,19 @@ export async function calculatePlatformStats(supabase?: SupabaseClient): Promise
     }
   }
 
-  // 3. For TESTNET campaigns: use DB purchases table
-  const { data: testnetPurchases, error: purchaseError } = await client
+  // 3. For TESTNET campaigns: use DB purchases table (no foreign key join needed)
+  const { data: allPurchases, error: purchaseError } = await client
     .from('purchases')
-    .select(`
-      amount_usd, 
-      tip_usd, 
-      quantity,
-      campaign_id,
-      submissions!inner(chain_id)
-    `)
+    .select('amount_usd, tip_usd, quantity, campaign_id')
 
   if (purchaseError) {
     logger.error('[Stats] Error fetching purchases:', purchaseError.message)
   }
 
-  for (const p of testnetPurchases || []) {
-    const chainId = (p as any).submissions?.chain_id
+  for (const p of allPurchases || []) {
+    const chainId = campaignChainMap.get(p.campaign_id)
     // Only count testnet purchases (mainnet uses on-chain data)
-    if (!isMainnet(chainId)) {
+    if (chainId && !isMainnet(chainId)) {
       const amount = (p.amount_usd || 0) + (p.tip_usd || 0)
       const qty = p.quantity || 1
       testnetRaisedUSD += amount

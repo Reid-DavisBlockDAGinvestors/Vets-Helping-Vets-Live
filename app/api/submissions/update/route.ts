@@ -65,6 +65,11 @@ export async function PATCH(request: NextRequest) {
         }
       }
     }
+    
+    // Debug logging for video_url
+    console.log('[submissions/update] Received updates:', JSON.stringify(updates, null, 2))
+    console.log('[submissions/update] video_url in updates:', updates.video_url)
+    console.log('[submissions/update] Final updateData:', JSON.stringify(updateData, null, 2))
 
     // Also handle mapped fields from EditFormData
     if (updates.nft_price !== undefined) {
@@ -85,8 +90,11 @@ export async function PATCH(request: NextRequest) {
 
     if (error) {
       console.error('Error updating submission:', error)
-      return NextResponse.json({ error: 'Failed to update submission' }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to update submission', details: error.message }, { status: 500 })
     }
+
+    console.log('[submissions/update] Successfully updated submission:', id)
+    console.log('[submissions/update] Saved video_url:', data?.video_url)
 
     return NextResponse.json({ 
       success: true, 
