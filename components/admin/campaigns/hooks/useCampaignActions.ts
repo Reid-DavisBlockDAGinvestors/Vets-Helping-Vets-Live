@@ -27,6 +27,8 @@ interface UseCampaignActionsReturn {
   closeCampaign: (campaign: Campaign, reason?: string) => Promise<{ success: boolean; error?: string }>
   deactivateCampaign: (campaign: Campaign, reason?: string) => Promise<{ success: boolean; error?: string }>
   reactivateCampaign: (campaign: Campaign, reason?: string) => Promise<{ success: boolean; error?: string }>
+  featuringId: string | null
+  toggleFeature: (campaign: Campaign) => Promise<{ success: boolean; is_featured?: boolean; error?: string }>
 }
 
 /**
@@ -43,6 +45,7 @@ export function useCampaignActions(): UseCampaignActionsReturn {
   const [closingId, setClosingId] = useState<string | null>(null)
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null)
   const [reactivatingId, setReactivatingId] = useState<string | null>(null)
+  const [featuringId, setFeaturingId] = useState<string | null>(null)
 
   const getToken = useCallback(async (): Promise<string | null> => {
     const { data: session } = await supabase.auth.getSession()
@@ -408,6 +411,34 @@ export function useCampaignActions(): UseCampaignActionsReturn {
     }
   }, [getToken])
 
+  const toggleFeature = useCallback(async (
+    campaign: Campaign
+  ): Promise<{ success: boolean; is_featured?: boolean; error?: string }> => {
+    setFeaturingId(campaign.id)
+
+    try {
+      const token = await getToken()
+      if (!token) throw new Error('Not authenticated')
+
+      const res = await fetch(`/api/admin/campaigns/${campaign.id}/feature`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': `Bearer ${token}`
+        }
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Feature toggle failed')
+
+      return { success: true, is_featured: data.is_featured }
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Feature toggle failed' }
+    } finally {
+      setFeaturingId(null)
+    }
+  }, [getToken])
+
   return {
     approvingId,
     rejectingId,
@@ -428,6 +459,8 @@ export function useCampaignActions(): UseCampaignActionsReturn {
     closeCampaign,
     deactivateCampaign,
     reactivateCampaign,
+    featuringId,
+    toggleFeature,
   }
 }
 

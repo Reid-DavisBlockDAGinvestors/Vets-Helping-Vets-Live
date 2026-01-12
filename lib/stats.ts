@@ -9,8 +9,11 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { ethers } from 'ethers'
 import { logger } from './logger'
 import { isMainnet } from './chains/classification'
+import { getProviderForChain, ChainId } from './chains'
+import { V8_ABI } from './contracts'
 
 export interface PlatformStats {
   // Aggregated totals
@@ -53,9 +56,38 @@ export interface CampaignStats {
   closed: boolean
 }
 
+// ETH USD rate for mainnet calculations
+const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '3100')
+
 /**
- * Calculate platform-wide statistics from DATABASE (source of truth)
- * This ensures accurate data regardless of blockchain RPC availability.
+ * Fetch on-chain data for a mainnet campaign
+ */
+async function getOnchainCampaignData(
+  campaignId: number, 
+  contractAddress: string, 
+  chainId: number
+): Promise<{ grossRaisedUSD: number; editionsMinted: number } | null> {
+  try {
+    const provider = getProviderForChain(chainId as ChainId)
+    const contract = new ethers.Contract(contractAddress, V8_ABI, provider)
+    const campaign = await contract.getCampaign(BigInt(campaignId))
+    
+    const grossRaisedWei = BigInt(campaign.grossRaised ?? 0n)
+    const grossRaisedETH = Number(grossRaisedWei) / 1e18
+    const grossRaisedUSD = grossRaisedETH * ETH_USD_RATE
+    const editionsMinted = Number(campaign.editionsMinted ?? 0)
+    
+    return { grossRaisedUSD, editionsMinted }
+  } catch (e) {
+    logger.debug('[Stats] Failed to fetch on-chain data:', e)
+    return null
+  }
+}
+
+/**
+ * Calculate platform-wide statistics from DATABASE + ON-CHAIN (for mainnet)
+ * Mainnet campaigns use on-chain data (more accurate than DB)
+ * Testnet campaigns use purchases table
  */
 export async function calculatePlatformStats(supabase?: SupabaseClient): Promise<PlatformStats> {
   const client = supabase || createClient(
@@ -64,10 +96,45 @@ export async function calculatePlatformStats(supabase?: SupabaseClient): Promise
     { auth: { persistSession: false } }
   )
 
-  logger.debug('[Stats] Calculating platform stats from DATABASE (source of truth)...')
+  logger.debug('[Stats] Calculating platform stats (on-chain for mainnet, DB for testnet)...')
 
-  // 1. Get purchases with chain info from joined submission
-  const { data: purchases, error: purchaseError } = await client
+  // 1. Get all minted campaigns with contract info
+  const { data: campaigns, error: campaignError } = await client
+    .from('submissions')
+    .select('id, chain_id, contract_address, campaign_id, goal, num_copies, sold_count')
+    .eq('status', 'minted')
+
+  if (campaignError) {
+    logger.error('[Stats] Error fetching campaigns:', campaignError.message)
+  }
+
+  const allCampaigns = campaigns || []
+  const mainnetCampaignsList = allCampaigns.filter(c => isMainnet(c.chain_id))
+  const testnetCampaignsList = allCampaigns.filter(c => !isMainnet(c.chain_id))
+
+  let mainnetRaisedUSD = 0
+  let mainnetNFTsMinted = 0
+  let testnetRaisedUSD = 0
+  let testnetNFTsMinted = 0
+
+  // 2. For MAINNET campaigns: fetch on-chain data (source of truth for real funds)
+  for (const c of mainnetCampaignsList) {
+    if (c.campaign_id != null && c.contract_address) {
+      const onchainData = await getOnchainCampaignData(
+        c.campaign_id,
+        c.contract_address,
+        c.chain_id
+      )
+      if (onchainData) {
+        mainnetRaisedUSD += onchainData.grossRaisedUSD
+        mainnetNFTsMinted += onchainData.editionsMinted
+        logger.debug(`[Stats] Mainnet campaign ${c.campaign_id}: $${onchainData.grossRaisedUSD.toFixed(2)}, ${onchainData.editionsMinted} NFTs`)
+      }
+    }
+  }
+
+  // 3. For TESTNET campaigns: use DB purchases table
+  const { data: testnetPurchases, error: purchaseError } = await client
     .from('purchases')
     .select(`
       amount_usd, 
@@ -78,45 +145,29 @@ export async function calculatePlatformStats(supabase?: SupabaseClient): Promise
     `)
 
   if (purchaseError) {
-    console.error('[Stats] Error fetching purchases:', purchaseError.message)
+    logger.error('[Stats] Error fetching purchases:', purchaseError.message)
   }
 
-  let totalRaisedUSD = 0
-  let totalNFTsMinted = 0
-  let mainnetRaisedUSD = 0
-  let mainnetNFTsMinted = 0
-  let testnetRaisedUSD = 0
-  let testnetNFTsMinted = 0
-  
-  for (const p of purchases || []) {
-    const amount = (p.amount_usd || 0) + (p.tip_usd || 0)
-    const qty = p.quantity || 1
+  for (const p of testnetPurchases || []) {
     const chainId = (p as any).submissions?.chain_id
-    
-    totalRaisedUSD += amount
-    totalNFTsMinted += qty
-    
-    if (isMainnet(chainId)) {
-      mainnetRaisedUSD += amount
-      mainnetNFTsMinted += qty
-    } else {
+    // Only count testnet purchases (mainnet uses on-chain data)
+    if (!isMainnet(chainId)) {
+      const amount = (p.amount_usd || 0) + (p.tip_usd || 0)
+      const qty = p.quantity || 1
       testnetRaisedUSD += amount
       testnetNFTsMinted += qty
     }
   }
 
-  // 2. Get campaign count from submissions with chain breakdown
-  const { data: campaigns, error: campaignError } = await client
-    .from('submissions')
-    .select('id, chain_id')
-    .eq('status', 'minted')
-
-  const totalCampaigns = campaigns?.length || 0
-  const mainnetCampaigns = campaigns?.filter(c => isMainnet(c.chain_id)).length || 0
-  const testnetCampaigns = totalCampaigns - mainnetCampaigns
+  const totalRaisedUSD = mainnetRaisedUSD + testnetRaisedUSD
+  const totalNFTsMinted = mainnetNFTsMinted + testnetNFTsMinted
+  const totalCampaigns = allCampaigns.length
+  const mainnetCampaigns = mainnetCampaignsList.length
+  const testnetCampaigns = testnetCampaignsList.length
 
   logger.debug(`[Stats] TOTALS: $${totalRaisedUSD.toFixed(2)} raised, ${totalNFTsMinted} NFTs, ${totalCampaigns} campaigns`)
-  logger.debug(`[Stats] MAINNET: $${mainnetRaisedUSD.toFixed(2)}, TESTNET: $${testnetRaisedUSD.toFixed(2)}`)
+  logger.debug(`[Stats] MAINNET (on-chain): $${mainnetRaisedUSD.toFixed(2)}, ${mainnetNFTsMinted} NFTs`)
+  logger.debug(`[Stats] TESTNET (db): $${testnetRaisedUSD.toFixed(2)}, ${testnetNFTsMinted} NFTs`)
 
   return {
     totalRaisedUSD: Math.round(totalRaisedUSD * 100) / 100,
@@ -128,7 +179,7 @@ export async function calculatePlatformStats(supabase?: SupabaseClient): Promise
     testnetRaisedUSD: Math.round(testnetRaisedUSD * 100) / 100,
     testnetNFTsMinted,
     testnetCampaigns,
-    onchainRaisedUSD: Math.round(totalRaisedUSD * 100) / 100,
+    onchainRaisedUSD: Math.round(mainnetRaisedUSD * 100) / 100,
     offchainRaisedUSD: 0,
     v5RaisedUSD: 0,
     v6RaisedUSD: 0,

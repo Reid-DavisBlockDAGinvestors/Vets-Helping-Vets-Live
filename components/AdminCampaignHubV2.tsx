@@ -56,11 +56,13 @@ export default function AdminCampaignHubV2() {
     deletingId,
     verifyingId,
     fixingId,
+    featuringId,
     approveCampaign,
     rejectCampaign,
     deleteCampaign,
     verifyTransaction,
-    fixCampaign
+    fixCampaign,
+    toggleFeature
   } = useCampaignActions()
 
   // UI State
@@ -178,6 +180,18 @@ export default function AdminCampaignHubV2() {
     }
   }, [fixCampaign, updateCampaignLocally])
 
+  // Handle toggle feature
+  const handleToggleFeature = useCallback(async (campaign: Campaign) => {
+    const result = await toggleFeature(campaign)
+    if (result.success) {
+      updateCampaignLocally(campaign.id, {
+        is_featured: result.is_featured ?? false
+      })
+    } else {
+      alert(result.error || 'Feature toggle failed')
+    }
+  }, [toggleFeature, updateCampaignLocally])
+
   // Handle edit campaign
   const handleEdit = useCallback(async (formData: EditFormData) => {
     if (!editTarget) return
@@ -262,10 +276,12 @@ export default function AdminCampaignHubV2() {
         onDelete={setDeleteTarget}
         onVerify={handleVerify}
         onFix={handleFix}
+        onToggleFeature={handleToggleFeature}
         onViewDocument={viewDocument}
         approvingId={approvingId}
         verifyingId={verifyingId}
         fixingId={fixingId}
+        featuringId={featuringId}
       />
 
       {/* Modals */}

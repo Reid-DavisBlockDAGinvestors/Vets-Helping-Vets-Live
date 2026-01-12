@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { ethers } from 'ethers'
 import { V8_ABI } from '@/lib/contracts'
 import { getProviderForChain, ChainId } from '@/lib/chains'
+import { calculatePlatformStats } from '@/lib/stats'
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic'
@@ -147,7 +148,7 @@ async function loadOnchain(limit = 24, tipsMap?: Map<number, number>): Promise<E
         isTestnet,
         contractAddress: s.contract_address,
         videoUrl: s.video_url || null,
-        isFeatured: false
+        isFeatured: s.is_featured || false
       }
     })
 
@@ -254,7 +255,7 @@ async function loadAllCampaignsForStats(tipsMap?: Map<number, number>): Promise<
         isTestnet,
         contractAddress: s.contract_address,
         videoUrl: s.video_url || null,
-        isFeatured: false
+        isFeatured: s.is_featured || false
       }
     })
   } catch (e) {
@@ -279,12 +280,23 @@ export default async function HomePage() {
   
   // Load ALL visible campaigns for accurate stats (not limited)
   const allCampaigns = await loadAllCampaignsForStats(tipsMap)
-  let stats = calculateStatsFromCampaigns(allCampaigns)
   
-  // Featured campaign: prioritize mainnet campaigns, then first available
-  // Sort to put mainnet campaigns first
+  // Use unified stats calculation that fetches on-chain data for mainnet campaigns
+  const platformStats = await calculatePlatformStats()
+  let stats: HomeStats = {
+    raised: platformStats.totalRaisedUSD,
+    campaigns: platformStats.totalCampaigns,
+    nfts: platformStats.totalNFTsMinted,
+    mainnetRaised: platformStats.mainnetRaisedUSD,
+    testnetRaised: platformStats.testnetRaisedUSD
+  }
+  
+  // Featured campaign: prioritize explicitly featured campaigns, then mainnet, then by raised amount
+  // Sort to put featured campaigns first, then mainnet, then by raised amount
   const sortedCampaigns = [...all].sort((a, b) => {
-    // Mainnet first (isTestnet=false comes before isTestnet=true)
+    // Explicitly featured campaigns first
+    if (a.isFeatured !== b.isFeatured) return a.isFeatured ? -1 : 1
+    // Mainnet next (isTestnet=false comes before isTestnet=true)
     if (a.isTestnet !== b.isTestnet) return a.isTestnet ? 1 : -1
     // Then by raised amount
     return (b.raised || 0) - (a.raised || 0)
@@ -318,12 +330,7 @@ export default async function HomePage() {
           : 0
       }
       
-      // Also update mainnet stats with accurate on-chain data
-      stats = {
-        ...stats,
-        mainnetRaised: onchainData.grossRaised,
-        raised: stats.testnetRaised + onchainData.grossRaised
-      }
+      // Note: Stats already use unified calculatePlatformStats which fetches on-chain data for all mainnet campaigns
       
       logger.debug('[HomePage] Updated featured campaign with on-chain data:', {
         editionsMinted: onchainData.editionsMinted,

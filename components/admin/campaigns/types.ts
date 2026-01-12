@@ -95,6 +95,8 @@ export interface Campaign {
   immediate_payout_enabled: boolean | null
   total_distributed: number | null
   last_distribution_at: string | null
+  is_featured: boolean | null
+  featured_order: number | null
 }
 
 /**

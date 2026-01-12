@@ -59,12 +59,14 @@ interface CampaignCardProps {
   onClose?: () => void
   onDeactivate?: () => void
   onReactivate?: () => void
+  onToggleFeature?: () => void
   isApproving?: boolean
   isVerifying?: boolean
   isFixing?: boolean
   isClosing?: boolean
   isDeactivating?: boolean
   isReactivating?: boolean
+  isFeaturing?: boolean
   onViewDocument?: (path: string) => void
 }
 
@@ -81,12 +83,14 @@ export function CampaignCard({
   onClose,
   onDeactivate,
   onReactivate,
+  onToggleFeature,
   isApproving,
   isVerifying,
   isFixing,
   isClosing,
   isDeactivating,
   isReactivating,
+  isFeaturing,
   onViewDocument
 }: CampaignCardProps) {
   const [showUpdates, setShowUpdates] = useState(false)
@@ -132,6 +136,11 @@ export function CampaignCard({
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold text-white truncate">{campaign.title}</h3>
               <StatusBadge status={campaign.status} />
+              {campaign.is_featured && (
+                <span className="px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 text-xs font-medium" data-testid="featured-badge">
+                  ⭐ Featured
+                </span>
+              )}
               {category && (
                 <span className="px-2 py-0.5 rounded-full bg-white/10 text-xs text-white/70">
                   {category.emoji} {category.label}
@@ -401,6 +410,23 @@ export function CampaignCard({
               >
                 🔗 View TX
               </a>
+            )}
+
+            {/* Feature Toggle - only for minted campaigns */}
+            {campaign.status === 'minted' && onToggleFeature && (
+              <button
+                onClick={onToggleFeature}
+                disabled={isFeaturing}
+                className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 ${
+                  campaign.is_featured 
+                    ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30' 
+                    : 'bg-white/10 text-white/70 hover:bg-white/20'
+                }`}
+                data-testid="toggle-feature-btn"
+                title={campaign.is_featured ? 'Remove from featured' : 'Feature on homepage'}
+              >
+                {isFeaturing ? '⏳...' : campaign.is_featured ? '⭐ Unfeature' : '☆ Feature'}
+              </button>
             )}
 
             {/* Campaign Lifecycle Controls - only for minted campaigns */}

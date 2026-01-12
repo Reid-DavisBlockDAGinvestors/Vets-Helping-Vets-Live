@@ -13,10 +13,12 @@ interface CampaignListProps {
   onDelete: (campaign: Campaign) => void
   onVerify?: (campaign: Campaign) => void
   onFix?: (campaign: Campaign) => void
+  onToggleFeature?: (campaign: Campaign) => void
   onViewDocument?: (path: string) => void
   approvingId: string | null
   verifyingId: string | null
   fixingId: string | null
+  featuringId?: string | null
 }
 
 export function CampaignList({
@@ -29,10 +31,12 @@ export function CampaignList({
   onDelete,
   onVerify,
   onFix,
+  onToggleFeature,
   onViewDocument,
   approvingId,
   verifyingId,
-  fixingId
+  fixingId,
+  featuringId
 }: CampaignListProps) {
   if (campaigns.length === 0) {
     return (
@@ -58,10 +62,12 @@ export function CampaignList({
           onDelete={() => onDelete(campaign)}
           onVerify={onVerify ? () => onVerify(campaign) : undefined}
           onFix={onFix ? () => onFix(campaign) : undefined}
+          onToggleFeature={onToggleFeature ? () => onToggleFeature(campaign) : undefined}
           onViewDocument={onViewDocument}
           isApproving={approvingId === campaign.id}
           isVerifying={verifyingId === campaign.id}
           isFixing={fixingId === campaign.id}
+          isFeaturing={featuringId === campaign.id}
         />
       ))}
     </div>
