@@ -48,7 +48,8 @@ export async function PATCH(request: NextRequest) {
       'creator_name', 'creator_email', 'creator_phone', 'creator_wallet',
       'creator_address', 'verification_status',
       'price_per_copy', 'num_copies',
-      'chain_id', 'chain_name', 'contract_version', 'is_testnet'
+      'chain_id', 'chain_name', 'contract_version', 'is_testnet',
+      'video_url'
     ]
 
     const updateData: Record<string, any> = {}
