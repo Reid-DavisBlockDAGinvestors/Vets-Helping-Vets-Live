@@ -11,13 +11,14 @@ interface YouTubeEmbedProps {
  * - https://youtu.be/VIDEO_ID
  * - https://www.youtube.com/embed/VIDEO_ID
  * - https://youtube.com/shorts/VIDEO_ID
+ * - https://www.youtube.com/live/VIDEO_ID (live streams)
  */
 function extractYouTubeId(url: string): string | null {
   if (!url) return null
   
   // Try various YouTube URL patterns
   const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/,
     /^([a-zA-Z0-9_-]{11})$/ // Just the video ID
   ]
   

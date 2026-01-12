@@ -14,6 +14,30 @@ export const revalidate = 0
 const BDAG_USD_RATE = Number(process.env.BDAG_USD_RATE || process.env.NEXT_PUBLIC_BDAG_USD_RATE || '0.05')
 const ETH_USD_RATE = Number(process.env.ETH_USD_RATE || '3100')
 
+// Convert any YouTube URL format to embed URL
+function convertToYouTubeEmbed(url: string): string {
+  if (!url) return ''
+  
+  // Extract video ID from various formats
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
+    /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+    /(?:youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/,
+  ]
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern)
+    if (match && match[1]) {
+      return `https://www.youtube.com/embed/${match[1]}?rel=0`
+    }
+  }
+  
+  // If already an embed URL or unrecognized, return as-is
+  return url
+}
+
 // Create fresh Supabase client for each request (avoids caching issues)
 function getFreshSupabase() {
   return createClient(
@@ -576,7 +600,7 @@ export default async function HomePage() {
                 <div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5">
                   <div className="aspect-video">
                     <iframe
-                      src={(featuredCampaign as ExtendedNFTItem).videoUrl?.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                      src={convertToYouTubeEmbed((featuredCampaign as ExtendedNFTItem).videoUrl || '')}
                       title={`${featuredCampaign.title} Video`}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen
