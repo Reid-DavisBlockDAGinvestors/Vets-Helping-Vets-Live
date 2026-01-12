@@ -153,6 +153,14 @@ async function loadOnchain(limit = 24, tipsMap?: Map<number, number>): Promise<E
     })
 
     logger.debug(`[loadOnchain] Mapped ${mapped.length} items`)
+    
+    // Debug: Log video URLs for all campaigns
+    for (const m of mapped) {
+      if (m.videoUrl) {
+        logger.debug(`[loadOnchain] Campaign "${m.title}" has videoUrl: ${m.videoUrl}`)
+      }
+    }
+    
     return mapped
   } catch (e) {
     console.error('[loadOnchain] Error:', e)
@@ -302,6 +310,11 @@ export default async function HomePage() {
     return (b.raised || 0) - (a.raised || 0)
   })
   let featuredCampaign = sortedCampaigns[0]
+  
+  // Debug: Log featured campaign video URL
+  if (featuredCampaign) {
+    logger.debug(`[HomePage] Featured campaign: "${featuredCampaign.title}", videoUrl: ${(featuredCampaign as ExtendedNFTItem).videoUrl || 'NONE'}`)
+  }
   
   // For mainnet featured campaign, fetch accurate on-chain data
   if (featuredCampaign && !featuredCampaign.isTestnet && featuredCampaign.contractAddress) {
