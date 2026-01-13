@@ -252,23 +252,33 @@ export async function POST(req: NextRequest) {
 
     // Send notification to campaign CREATOR that they received a donation
     if (sub?.creator_email) {
-      // Calculate total raised more accurately
-      const newSoldCount = (sub.sold_count || 0) + qty
-      
-      // Get num_copies for accurate price calculation
-      const { data: subDetails } = await supabaseAdmin
+      // Calculate total raised ACCURATELY from database
+      // Query FRESH sold_count and num_copies to ensure accuracy
+      const { data: freshSub } = await supabaseAdmin
         .from('submissions')
-        .select('num_copies')
+        .select('sold_count, num_copies, goal')
         .eq('id', sub.id)
         .single()
       
-      const numCopies = subDetails?.num_copies || 100
-      const pricePerNFT = sub.goal && numCopies > 0 ? sub.goal / numCopies : amountUSD || 0
-      const nftSalesTotal = newSoldCount * pricePerNFT
+      const currentSoldCount = freshSub?.sold_count || sub.sold_count || 0
+      const numCopies = freshSub?.num_copies || 100
+      const goal = freshSub?.goal || sub.goal || 0
       
-      // Include tips from this purchase in total
-      const thisPurchaseTip = effectiveTipUSD || 0
-      const totalRaised = nftSalesTotal + thisPurchaseTip
+      // sold_count was already updated earlier in this request, so use it directly
+      const pricePerNFT = goal && numCopies > 0 ? goal / numCopies : amountUSD || 0
+      const nftSalesTotal = currentSoldCount * pricePerNFT
+      
+      // Query ACTUAL accumulated tips from all purchases for this campaign
+      const { data: tipData } = await supabaseAdmin
+        .from('purchases')
+        .select('tip_usd')
+        .eq('campaign_id', effectiveId)
+      
+      // Sum all tips - the current purchase tip is already in DB from earlier insert
+      const accumulatedTips = (tipData || []).reduce((sum, p) => sum + (p.tip_usd || 0), 0)
+      
+      const totalRaised = nftSalesTotal + accumulatedTips
+      logger.debug(`[purchase/record] Creator email totals: soldCount=${currentSoldCount}, pricePerNFT=$${pricePerNFT.toFixed(2)}, nftSales=$${nftSalesTotal.toFixed(2)}, accumulatedTips=$${accumulatedTips.toFixed(2)}, totalRaised=$${totalRaised.toFixed(2)}`)
       
       try {
         await sendCreatorPurchaseNotification({
@@ -283,7 +293,7 @@ export async function POST(req: NextRequest) {
           amountBDAG: amountBDAG || 0, // Legacy support
           amountUSD: amountUSD,
           tokenId: emailTokenId,
-          editionNumber: typeof editionMinted === 'number' ? editionMinted : newSoldCount,
+          editionNumber: typeof editionMinted === 'number' ? editionMinted : currentSoldCount,
           totalRaised: totalRaised,
           goalAmount: sub.goal || undefined,
           txHash,
