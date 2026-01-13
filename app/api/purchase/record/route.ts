@@ -27,11 +27,14 @@ export async function POST(req: NextRequest) {
       campaignId, // V5: campaigns use campaignId
       txHash, 
       amountUSD, 
-      tipUSD, 
+      tipUSD,
+      giftUSD, // Renamed from tipUSD in frontend
       amountBDAG,
       amountCrypto, // Multi-chain: generic crypto amount
-      tipBDAG, 
+      tipBDAG,
+      giftBDAG, // Renamed from tipBDAG in frontend
       tipCrypto, // Multi-chain: generic tip amount
+      giftCrypto, // Renamed from tipCrypto in frontend
       walletAddress,
       quantity,
       editionMinted, // Token ID of the minted edition (or true for legacy)
@@ -45,9 +48,13 @@ export async function POST(req: NextRequest) {
       donorName // Optional display name (can stay anonymous)
     } = body
     
+    // Support both old (tip) and new (gift) field names
+    const effectiveTipUSD = tipUSD ?? giftUSD ?? 0
+    const effectiveTipBDAG = tipBDAG ?? giftBDAG ?? 0
+    
     // Multi-chain support: use amountCrypto if provided, fallback to amountBDAG
     const effectiveCryptoAmount = amountCrypto ?? amountBDAG ?? 0
-    const effectiveTipAmount = tipCrypto ?? tipBDAG ?? 0
+    const effectiveTipAmount = tipCrypto ?? giftCrypto ?? effectiveTipBDAG ?? 0
 
     // Derive chain info from chainId
     const effectiveChainId = (chainId || 1043) as ChainId
@@ -80,8 +87,8 @@ export async function POST(req: NextRequest) {
         amount_bdag: amountBDAG,
         amount_usd: amountUSD,
         metadata: {
-          tipUSD,
-          tipBDAG,
+          tipUSD: effectiveTipUSD,
+          tipBDAG: effectiveTipBDAG,
           quantity: quantity ?? 1,
           editionMinted,
           mintedTokenIds: mintedTokenIds || [],
@@ -105,7 +112,7 @@ export async function POST(req: NextRequest) {
           amount_bdag: effectiveChainId === 1043 ? effectiveCryptoAmount : null,
           amount_usd: amountUSD || null,
           tip_bdag: effectiveChainId === 1043 ? effectiveTipAmount : 0,
-          tip_usd: tipUSD || 0,
+          tip_usd: effectiveTipUSD || 0,
           quantity: quantity || 1,
           email: buyerEmail || null,
           user_id: userId || null,
@@ -210,9 +217,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Send purchase receipt email if buyer provided email
+    logger.debug(`[purchase/record] Email check: buyerEmail=${buyerEmail}, sub=${!!sub}`)
     if (buyerEmail && sub) {
       try {
-        await sendPurchaseReceipt({
+        logger.debug(`[purchase/record] Attempting to send receipt email to ${buyerEmail}`)
+        const emailResult = await sendPurchaseReceipt({
           email: buyerEmail,
           campaignTitle: sub.title || 'Campaign',
           campaignId: sub.campaign_id || effectiveId,
@@ -226,10 +235,19 @@ export async function POST(req: NextRequest) {
           imageUrl: toHttpUrl(sub.image_uri) || undefined,
           chainId: chainId || 1043 // Default to BlockDAG if not specified
         })
-        logger.debug(`[purchase/record] Sent receipt email to ${buyerEmail} with tokenId=${emailTokenId}, chainId=${chainId}`)
+        logger.debug(`[purchase/record] Email result:`, emailResult)
+        if (emailResult?.skipped) {
+          logger.warn(`[purchase/record] Email SKIPPED - RESEND_API_KEY not configured!`)
+        } else if (emailResult?.error) {
+          logger.error(`[purchase/record] Email error: ${emailResult.error}`)
+        } else {
+          logger.debug(`[purchase/record] Sent receipt email to ${buyerEmail} with tokenId=${emailTokenId}, chainId=${chainId}`)
+        }
       } catch (emailErr) {
         logger.error('[purchase/record] Failed to send receipt email:', emailErr)
       }
+    } else {
+      logger.warn(`[purchase/record] Email NOT sent - buyerEmail=${buyerEmail ? 'YES' : 'NO'}, sub=${sub ? 'YES' : 'NO'}`)
     }
 
     // Send notification to campaign CREATOR that they received a donation
@@ -249,7 +267,7 @@ export async function POST(req: NextRequest) {
       const nftSalesTotal = newSoldCount * pricePerNFT
       
       // Include tips from this purchase in total
-      const thisPurchaseTip = tipUSD || 0
+      const thisPurchaseTip = effectiveTipUSD || 0
       const totalRaised = nftSalesTotal + thisPurchaseTip
       
       try {
