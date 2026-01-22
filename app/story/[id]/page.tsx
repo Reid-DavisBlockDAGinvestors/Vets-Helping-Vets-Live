@@ -7,6 +7,10 @@ import { getCategoryById } from '@/lib/categories'
 import { logger } from '@/lib/logger'
 import { isMainnet, formatChainAmount, getChainBadge, getFundsLabel } from '@/lib/chains/classification'
 
+// Force dynamic rendering - don't cache this page
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Chain-aware explorer URLs
 const CHAIN_EXPLORERS: Record<number, string> = {
   1043: 'https://awakening.bdagscan.com',

@@ -1,5 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { createClient } from '@supabase/supabase-js'
+
+// Force dynamic rendering - don't cache this route
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
+
+// Create fresh Supabase client for each request (avoids caching issues)
+function getFreshSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    { auth: { persistSession: false } }
+  )
+}
 
 // Check if string is a valid UUID format
 function isUUID(str: string): boolean {
@@ -11,9 +25,11 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
   try {
     const idParam = context.params.id
     
+    const supabase = getFreshSupabase()
+    
     // Case 1: UUID - direct lookup by submission ID (preferred, avoids cross-chain conflicts)
     if (isUUID(idParam)) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await supabase
         .from('submissions')
         .select('*')
         .eq('id', idParam)
@@ -27,7 +43,9 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
         return NextResponse.json({ error: 'SUBMISSION_NOT_FOUND' }, { status: 404 })
       }
       
-      return NextResponse.json({ item: data })
+      const response = NextResponse.json({ item: data })
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+      return response
     }
     
     // Case 2: Numeric ID - look up by campaign_id or token_id (legacy, may have cross-chain conflicts)
@@ -40,7 +58,7 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
 
     // V5: Look up by campaign_id first, then fall back to token_id for legacy
     // Include 'minted' and 'approved' statuses (pending_onchain is not a valid enum value)
-    const { data: rows, error } = await supabaseAdmin
+    const { data: rows, error } = await supabase
       .from('submissions')
       .select('*')
       .in('status', ['minted', 'approved'])
@@ -63,7 +81,9 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
       return NextResponse.json({ error: 'SUBMISSION_NOT_FOUND' }, { status: 404 })
     }
 
-    return NextResponse.json({ item: data })
+    const response = NextResponse.json({ item: data })
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+    return response
   } catch (e: any) {
     return NextResponse.json({ error: 'SUBMISSION_BY_TOKEN_ERROR', details: e?.message || String(e) }, { status: 500 })
   }
