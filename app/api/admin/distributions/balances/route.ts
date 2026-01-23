@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
         total_distributed: 0,
         tips_distributed: 0,
         last_distribution_at: null,
-        pending_distribution_native: grossRaisedNative,
+        pending_distribution_native: grossRaisedNative - tipsReceivedNative,
         pending_tips_native: tipsReceivedNative,
         native_currency: nativeCurrency,
         distribution_count: distributionCount,
