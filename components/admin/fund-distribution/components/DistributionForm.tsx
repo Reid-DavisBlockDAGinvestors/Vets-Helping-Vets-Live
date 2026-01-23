@@ -17,8 +17,8 @@ export function DistributionForm({
   onCancel,
   isSubmitting
 }: DistributionFormProps) {
-  const isTipDistribution = type === 'tips'
-  const availableAmount = isTipDistribution 
+  const isGiftDistribution = type === 'gifts'
+  const availableAmount = isGiftDistribution 
     ? balance.pendingTipsNative 
     : balance.pendingDistributionNative
 
@@ -56,7 +56,7 @@ export function DistributionForm({
 
     setValidationError(null)
 
-    if (isTipDistribution) {
+    if (isGiftDistribution) {
       onSubmit({ campaignId: balance.campaignId, tipSplit })
     } else {
       onSubmit({
@@ -68,7 +68,7 @@ export function DistributionForm({
   }
 
   // Calculate split amounts for preview
-  const splitAmounts = isTipDistribution 
+  const splitAmounts = isGiftDistribution 
     ? calculateTipSplitAmounts(amount, tipSplit)
     : null
 
@@ -77,7 +77,7 @@ export function DistributionForm({
       {/* Amount Section */}
       <div>
         <label className="block text-sm text-white/70 mb-2">
-          {isTipDistribution ? 'Tips to Distribute' : 'Funds to Distribute'}
+          {isGiftDistribution ? 'Tips to Distribute' : 'Funds to Distribute'}
         </label>
         <div className="flex items-center gap-2">
           <input
@@ -108,7 +108,7 @@ export function DistributionForm({
       </div>
 
       {/* Tip Split Section (only for tips) */}
-      {isTipDistribution && (
+      {isGiftDistribution && (
         <div className="bg-white/5 rounded-lg p-4">
           <h4 className="text-sm font-medium text-white mb-3">Tip Split Configuration</h4>
           <TipSplitSlider
@@ -123,7 +123,7 @@ export function DistributionForm({
       <div className="bg-white/5 rounded-lg p-4 space-y-2">
         <h4 className="text-sm font-medium text-white mb-2">Distribution Preview</h4>
         
-        {isTipDistribution && splitAmounts ? (
+        {isGiftDistribution && splitAmounts ? (
           <>
             <div className="flex justify-between text-sm">
               <span className="text-blue-400">→ Submitter ({tipSplit.submitterPercent}%):</span>
@@ -160,7 +160,7 @@ export function DistributionForm({
       {/* Wallet Addresses */}
       <div className="text-xs text-white/50 space-y-1">
         <p>Submitter: {balance.submitterWallet || 'Not set ⚠️'}</p>
-        {isTipDistribution && tipSplit.nonprofitPercent > 0 && (
+        {isGiftDistribution && tipSplit.nonprofitPercent > 0 && (
           <p>Nonprofit: {balance.nonprofitWallet || 'Not set ⚠️'}</p>
         )}
       </div>

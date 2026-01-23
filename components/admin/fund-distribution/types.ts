@@ -6,7 +6,7 @@
 
 // ============ Core Data Types ============
 
-export type DistributionType = 'funds' | 'tips' | 'refund' | 'combined'
+export type DistributionType = 'funds' | 'gifts' | 'refund' | 'combined'
 export type DistributionStatus = 'pending' | 'processing' | 'confirmed' | 'failed'
 export type NativeCurrency = 'BDAG' | 'ETH' | 'MATIC'
 
@@ -154,18 +154,20 @@ export interface DistributionResult {
 export interface CampaignBalanceCardProps {
   balance: CampaignBalance
   onDistributeFunds: (campaignId: string) => void
-  onDistributeTips: (campaignId: string) => void
+  onDistributeGifts: (campaignId: string) => void
+  onDistributeAll: (campaignId: string) => void
   onViewHistory: (campaignId: string) => void
-  onEditTipSplit: (campaignId: string) => void
+  onEditGiftSplit: (campaignId: string) => void
 }
 
 export interface CampaignBalanceListProps {
   balances: CampaignBalance[]
   isLoading: boolean
   onDistributeFunds: (campaignId: string) => void
-  onDistributeTips: (campaignId: string) => void
+  onDistributeGifts: (campaignId: string) => void
+  onDistributeAll: (campaignId: string) => void
   onViewHistory: (campaignId: string) => void
-  onEditTipSplit: (campaignId: string) => void
+  onEditGiftSplit: (campaignId: string) => void
 }
 
 export interface TipSplitSliderProps {
@@ -176,7 +178,7 @@ export interface TipSplitSliderProps {
 
 export interface DistributionFormProps {
   balance: CampaignBalance
-  type: 'funds' | 'tips'
+  type: 'funds' | 'gifts' | 'combined'
   onSubmit: (params: DistributionParams | TipDistributionParams) => void
   onCancel: () => void
   isSubmitting: boolean

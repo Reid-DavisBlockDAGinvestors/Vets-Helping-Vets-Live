@@ -10,12 +10,14 @@ import { formatCurrency, formatNativeAmount, shortenAddress } from '../utils/for
 export function CampaignBalanceCard({
   balance,
   onDistributeFunds,
-  onDistributeTips,
+  onDistributeGifts,
+  onDistributeAll,
   onViewHistory,
-  onEditTipSplit
+  onEditGiftSplit
 }: CampaignBalanceCardProps) {
   const hasPendingFunds = balance.pendingDistributionNative > 0
-  const hasPendingTips = balance.pendingTipsNative > 0
+  const hasPendingGifts = balance.pendingTipsNative > 0
+  const hasBothPending = hasPendingFunds && hasPendingGifts
 
   return (
     <div 
@@ -64,7 +66,7 @@ export function CampaignBalanceCard({
         </div>
 
         <div className="flex justify-between text-sm">
-          <span className="text-white/60">Tips Received:</span>
+          <span className="text-white/60">Gifts Received:</span>
           <span className="text-white">
             {formatNativeAmount(balance.tipsReceivedNative, balance.nativeCurrency)}
             <span className="text-white/40 ml-1">({formatCurrency(balance.tipsReceivedUsd)})</span>
@@ -96,21 +98,21 @@ export function CampaignBalanceCard({
         </div>
 
         <div className="flex justify-between text-sm">
-          <span className="text-white/60">Pending Tips:</span>
-          <span className={hasPendingTips ? 'text-purple-400 font-medium' : 'text-white/40'} data-testid="pending-tips">
+          <span className="text-white/60">Pending Gifts:</span>
+          <span className={hasPendingGifts ? 'text-purple-400 font-medium' : 'text-white/40'} data-testid="pending-gifts">
             {formatNativeAmount(balance.pendingTipsNative, balance.nativeCurrency)}
           </span>
         </div>
       </div>
 
-      {/* Tip Split */}
+      {/* Gift Split */}
       <div className="mb-4 p-2 bg-white/5 rounded-lg">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-white/50">Tip Split:</span>
+          <span className="text-white/50">Gift Split:</span>
           <button
-            onClick={() => onEditTipSplit(balance.campaignId)}
+            onClick={() => onEditGiftSplit(balance.campaignId)}
             className="text-blue-400 hover:text-blue-300"
-            data-testid="edit-tip-split-btn"
+            data-testid="edit-gift-split-btn"
           >
             Edit
           </button>
@@ -167,13 +169,23 @@ export function CampaignBalanceCard({
           </button>
         )}
         <button
-          onClick={() => onDistributeTips(balance.campaignId)}
-          disabled={!hasPendingTips}
+          onClick={() => onDistributeGifts(balance.campaignId)}
+          disabled={!hasPendingGifts}
           className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-600 hover:bg-purple-500 disabled:bg-white/10 disabled:text-white/30 text-white transition-colors"
-          data-testid="distribute-tips-btn"
+          data-testid="distribute-gifts-btn"
         >
-          💜 Distribute Tips
+          🎁 Distribute Gifts
         </button>
+        {/* Distribute All button - only show when both funds and gifts are pending */}
+        {!balance.immediatePayoutEnabled && hasBothPending && (
+          <button
+            onClick={() => onDistributeAll(balance.campaignId)}
+            className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-gradient-to-r from-green-600 to-purple-600 hover:from-green-500 hover:to-purple-500 text-white transition-colors"
+            data-testid="distribute-all-btn"
+          >
+            🚀 Distribute All
+          </button>
+        )}
         <button
           onClick={() => onViewHistory(balance.campaignId)}
           className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"

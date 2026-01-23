@@ -15,7 +15,7 @@ import type { BalanceFilters, CampaignBalance } from '../types'
 export function FundDistributionPanel() {
   const [filters, setFilters] = useState<BalanceFilters>({})
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null)
-  const [activeModal, setActiveModal] = useState<'funds' | 'tips' | 'history' | 'tipSplit' | null>(null)
+  const [activeModal, setActiveModal] = useState<'funds' | 'gifts' | 'combined' | 'history' | 'giftSplit' | null>(null)
   const [isExecuting, setIsExecuting] = useState(false)
   const [distributionResult, setDistributionResult] = useState<{ success: boolean; message: string } | null>(null)
 
@@ -25,7 +25,7 @@ export function FundDistributionPanel() {
   const testnetBalances = balances.filter(b => b.isTestnet)
   const mainnetBalances = balances.filter(b => !b.isTestnet)
   const totalPendingFunds = balances.reduce((sum, b) => sum + b.pendingDistributionNative, 0)
-  const totalPendingTips = balances.reduce((sum, b) => sum + b.pendingTipsNative, 0)
+  const totalPendingGifts = balances.reduce((sum, b) => sum + b.pendingTipsNative, 0)
 
   // Handlers
   const handleDistributeFunds = useCallback((campaignId: string) => {
@@ -33,9 +33,14 @@ export function FundDistributionPanel() {
     setActiveModal('funds')
   }, [])
 
-  const handleDistributeTips = useCallback((campaignId: string) => {
+  const handleDistributeGifts = useCallback((campaignId: string) => {
     setSelectedCampaign(campaignId)
-    setActiveModal('tips')
+    setActiveModal('gifts')
+  }, [])
+
+  const handleDistributeAll = useCallback((campaignId: string) => {
+    setSelectedCampaign(campaignId)
+    setActiveModal('combined')
   }, [])
 
   const handleViewHistory = useCallback((campaignId: string) => {
@@ -43,9 +48,9 @@ export function FundDistributionPanel() {
     setActiveModal('history')
   }, [])
 
-  const handleEditTipSplit = useCallback((campaignId: string) => {
+  const handleEditGiftSplit = useCallback((campaignId: string) => {
     setSelectedCampaign(campaignId)
-    setActiveModal('tipSplit')
+    setActiveModal('giftSplit')
   }, [])
 
   const closeModal = useCallback(() => {
@@ -55,7 +60,7 @@ export function FundDistributionPanel() {
   }, [])
 
   // Execute distribution API call
-  const executeDistribution = useCallback(async (type: 'funds' | 'tips') => {
+  const executeDistribution = useCallback(async (type: 'funds' | 'gifts' | 'combined') => {
     if (!selectedCampaign) return
 
     setIsExecuting(true)
@@ -67,31 +72,92 @@ export function FundDistributionPanel() {
       if (!token) throw new Error('Not authenticated')
 
       const selectedBalance = balances.find(b => b.campaignId === selectedCampaign)
-      const amount = type === 'funds' 
-        ? selectedBalance?.pendingDistributionNative 
-        : selectedBalance?.pendingTipsNative
-
-      const response = await fetch('/api/admin/distributions/execute', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          type,
-          campaignId: selectedCampaign,
-          amount,
-          tipSplit: type === 'tips' ? { submitterPercent: 100, nonprofitPercent: 0 } : undefined
-        })
-      })
-
-      const data = await response.json()
       
-      if (!response.ok) {
-        throw new Error(data.error || 'Distribution failed')
-      }
+      if (type === 'combined') {
+        // Execute both funds and gifts distribution sequentially
+        const fundsAmount = selectedBalance?.pendingDistributionNative || 0
+        const giftsAmount = selectedBalance?.pendingTipsNative || 0
+        
+        let fundsSuccess = true
+        let giftsSuccess = true
+        let fundsMessage = ''
+        let giftsMessage = ''
+        
+        // Distribute funds first
+        if (fundsAmount > 0) {
+          const fundsResponse = await fetch('/api/admin/distributions/execute', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              type: 'funds',
+              campaignId: selectedCampaign,
+              amount: fundsAmount
+            })
+          })
+          const fundsData = await fundsResponse.json()
+          fundsSuccess = fundsResponse.ok
+          fundsMessage = fundsData.message || fundsData.error || ''
+        }
+        
+        // Then distribute gifts
+        if (giftsAmount > 0) {
+          const giftsResponse = await fetch('/api/admin/distributions/execute', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              type: 'tips', // API still uses 'tips' internally
+              campaignId: selectedCampaign,
+              tipSplit: { submitterPercent: selectedBalance?.tipSplitSubmitterPct || 100, nonprofitPercent: selectedBalance?.tipSplitNonprofitPct || 0 }
+            })
+          })
+          const giftsData = await giftsResponse.json()
+          giftsSuccess = giftsResponse.ok
+          giftsMessage = giftsData.message || giftsData.error || ''
+        }
+        
+        if (fundsSuccess && giftsSuccess) {
+          setDistributionResult({ success: true, message: '✅ Both funds and gifts distributed successfully!' })
+        } else {
+          setDistributionResult({ 
+            success: false, 
+            message: `Funds: ${fundsSuccess ? '✅' : '❌ ' + fundsMessage} | Gifts: ${giftsSuccess ? '✅' : '❌ ' + giftsMessage}` 
+          })
+        }
+      } else {
+        // Single distribution (funds or gifts)
+        const amount = type === 'funds' 
+          ? selectedBalance?.pendingDistributionNative 
+          : selectedBalance?.pendingTipsNative
 
-      setDistributionResult({ success: true, message: data.message })
+        const response = await fetch('/api/admin/distributions/execute', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            type: type === 'gifts' ? 'tips' : type, // API still uses 'tips' internally
+            campaignId: selectedCampaign,
+            amount,
+            tipSplit: type === 'gifts' ? { submitterPercent: selectedBalance?.tipSplitSubmitterPct || 100, nonprofitPercent: selectedBalance?.tipSplitNonprofitPct || 0 } : undefined
+          })
+        })
+
+        const data = await response.json()
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Distribution failed')
+        }
+
+        setDistributionResult({ success: true, message: data.message })
+      }
+      
       refresh() // Refresh balances after successful distribution
     } catch (err: any) {
       setDistributionResult({ success: false, message: err.message || 'Distribution failed' })
@@ -163,7 +229,7 @@ export function FundDistributionPanel() {
             onChange={(e) => setFilters(f => ({ ...f, hasPendingTips: e.target.checked || undefined }))}
             className="rounded border-white/20 bg-white/5"
           />
-          Has Pending Tips
+          Has Pending Gifts
         </label>
       </div>
 
@@ -178,8 +244,8 @@ export function FundDistributionPanel() {
           <p className="text-xl font-bold text-amber-400">{totalPendingFunds.toFixed(4)}</p>
         </div>
         <div className="bg-slate-800/50 rounded-lg p-4 border border-white/10">
-          <p className="text-xs text-white/50">Pending Tips</p>
-          <p className="text-xl font-bold text-purple-400">{totalPendingTips.toFixed(4)}</p>
+          <p className="text-xs text-white/50">Pending Gifts</p>
+          <p className="text-xl font-bold text-purple-400">{totalPendingGifts.toFixed(4)}</p>
         </div>
         <div className="bg-slate-800/50 rounded-lg p-4 border border-white/10">
           <p className="text-xs text-white/50">Testnet / Mainnet</p>
@@ -219,15 +285,16 @@ export function FundDistributionPanel() {
             key={balance.campaignId}
             balance={balance}
             onDistributeFunds={handleDistributeFunds}
-            onDistributeTips={handleDistributeTips}
+            onDistributeGifts={handleDistributeGifts}
+            onDistributeAll={handleDistributeAll}
             onViewHistory={handleViewHistory}
-            onEditTipSplit={handleEditTipSplit}
+            onEditGiftSplit={handleEditGiftSplit}
           />
         ))}
       </div>
 
-      {/* Tip Split Modal */}
-      {activeModal === 'tipSplit' && selectedCampaign && (
+      {/* Gift Split Modal */}
+      {activeModal === 'giftSplit' && selectedCampaign && (
         <TipSplitModal
           isOpen={true}
           balance={balances.find(b => b.campaignId === selectedCampaign) as CampaignBalance}
@@ -247,12 +314,13 @@ export function FundDistributionPanel() {
       )}
 
       {/* Distribution execution modal */}
-      {activeModal && ['funds', 'tips'].includes(activeModal) && selectedCampaign && (
+      {activeModal && ['funds', 'gifts', 'combined'].includes(activeModal) && selectedCampaign && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-2xl max-w-lg w-full p-6 border border-white/10">
             <h3 className="text-lg font-bold text-white mb-4">
               {activeModal === 'funds' && '💸 Distribute Funds'}
-              {activeModal === 'tips' && '💜 Distribute Tips'}
+              {activeModal === 'gifts' && '🎁 Distribute Gifts'}
+              {activeModal === 'combined' && '🚀 Distribute All (Funds + Gifts)'}
             </h3>
             
             {/* Show campaign details */}
@@ -260,9 +328,8 @@ export function FundDistributionPanel() {
               const campaign = balances.find(b => b.campaignId === selectedCampaign)
               if (!campaign) return <p className="text-white/60">Campaign not found</p>
               
-              const amount = activeModal === 'funds' 
-                ? campaign.pendingDistributionNative 
-                : campaign.pendingTipsNative
+              const fundsAmount = campaign.pendingDistributionNative
+              const giftsAmount = campaign.pendingTipsNative
               const currency = campaign.nativeCurrency
               
               return (
@@ -271,10 +338,35 @@ export function FundDistributionPanel() {
                     <p className="text-white/60 text-sm">Campaign</p>
                     <p className="text-white font-medium">{campaign.title}</p>
                   </div>
-                  <div className="bg-white/5 rounded-lg p-4">
-                    <p className="text-white/60 text-sm">Amount to Distribute</p>
-                    <p className="text-white font-medium text-lg">{amount.toFixed(4)} {currency}</p>
-                  </div>
+                  
+                  {activeModal === 'combined' ? (
+                    <>
+                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                        <p className="text-green-400 text-sm font-medium">💸 Funds to Distribute</p>
+                        <p className="text-white font-medium text-lg">{fundsAmount.toFixed(4)} {currency}</p>
+                      </div>
+                      <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                        <p className="text-purple-400 text-sm font-medium">🎁 Gifts to Distribute</p>
+                        <p className="text-white font-medium text-lg">{giftsAmount.toFixed(4)} {currency}</p>
+                        <p className="text-white/50 text-xs mt-1">Split: {campaign.tipSplitSubmitterPct}% Submitter / {campaign.tipSplitNonprofitPct}% Nonprofit</p>
+                      </div>
+                      <div className="bg-gradient-to-r from-green-500/10 to-purple-500/10 border border-white/20 rounded-lg p-4">
+                        <p className="text-white/70 text-sm font-medium">Total to Distribute</p>
+                        <p className="text-white font-bold text-xl">{(fundsAmount + giftsAmount).toFixed(4)} {currency}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <p className="text-white/60 text-sm">Amount to Distribute</p>
+                      <p className="text-white font-medium text-lg">
+                        {(activeModal === 'funds' ? fundsAmount : giftsAmount).toFixed(4)} {currency}
+                      </p>
+                      {activeModal === 'gifts' && (
+                        <p className="text-white/50 text-xs mt-1">Split: {campaign.tipSplitSubmitterPct}% Submitter / {campaign.tipSplitNonprofitPct}% Nonprofit</p>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="bg-white/5 rounded-lg p-4">
                     <p className="text-white/60 text-sm">Recipient (Submitter)</p>
                     <p className="text-white font-mono text-sm">{campaign.submitterWallet || 'Not set'}</p>
@@ -282,8 +374,8 @@ export function FundDistributionPanel() {
                   <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                     <p className="text-blue-400 text-sm">
                       🔗 <strong>On-Chain Distribution:</strong> This will call the contract's withdraw function 
-                      to transfer funds directly from the contract to the submitter wallet. A transaction will be 
-                      submitted and confirmed on the blockchain.
+                      to transfer funds directly from the contract to the submitter wallet. 
+                      {activeModal === 'combined' && ' Two transactions will be submitted sequentially.'}
                     </p>
                   </div>
                 </div>
@@ -310,11 +402,15 @@ export function FundDistributionPanel() {
               </button>
               {!distributionResult?.success && (
                 <button
-                  onClick={() => executeDistribution(activeModal as 'funds' | 'tips')}
+                  onClick={() => executeDistribution(activeModal as 'funds' | 'gifts' | 'combined')}
                   disabled={isExecuting}
-                  className="flex-1 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white disabled:opacity-50"
+                  className={`flex-1 px-4 py-2 rounded-lg text-white disabled:opacity-50 ${
+                    activeModal === 'combined' 
+                      ? 'bg-gradient-to-r from-green-600 to-purple-600 hover:from-green-500 hover:to-purple-500'
+                      : 'bg-green-600 hover:bg-green-500'
+                  }`}
                 >
-                  {isExecuting ? '⏳ Processing...' : '✅ Confirm Distribution'}
+                  {isExecuting ? '⏳ Processing...' : activeModal === 'combined' ? '🚀 Distribute All' : '✅ Confirm Distribution'}
                 </button>
               )}
             </div>
