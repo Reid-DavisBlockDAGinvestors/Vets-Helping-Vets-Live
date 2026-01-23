@@ -129,19 +129,18 @@ export async function GET(request: NextRequest) {
           const onchainGrossETH = Number(onchainGrossWei) / 1e18
           const onchainGrossUSD = onchainGrossETH * ETH_USD_RATE
           
-          const editionsMinted = Number(campaign.editionsMinted ?? 0)
-          const pricePerCopy = submissionDetails.goal && submissionDetails.num_copies 
-            ? Number(submissionDetails.goal) / Number(submissionDetails.num_copies)
-            : 20
-          const nftSalesUSD = editionsMinted * pricePerCopy
-          const onchainTipsUSD = Math.max(0, onchainGrossUSD - nftSalesUSD)
+          // Use ACTUAL on-chain tipsReceived instead of estimating
+          // V8 contract stores tipsReceived directly in the Campaign struct
+          const onchainTipsWei = BigInt(campaign.tipsReceived ?? 0n)
+          const onchainTipsETH = Number(onchainTipsWei) / 1e18
+          const onchainTipsUSD = onchainTipsETH * ETH_USD_RATE
           
           // Use on-chain data if available (more accurate)
-          if (onchainGrossUSD > 0) {
+          if (onchainGrossETH > 0 || onchainTipsETH > 0) {
             grossRaisedUsd = onchainGrossUSD
             grossRaisedNative = onchainGrossETH
             tipsReceivedUsd = onchainTipsUSD
-            tipsReceivedNative = onchainTipsUSD / ETH_USD_RATE
+            tipsReceivedNative = onchainTipsETH
           }
           
           // Get immediatePayoutEnabled from on-chain

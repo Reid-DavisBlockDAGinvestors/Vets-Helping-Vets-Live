@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ethers } from 'ethers'
-import { getSignerForChain, getContractAddress, CHAIN_CONFIGS, type ChainId } from '@/lib/chains'
+import { getSignerForChain, getContractAddress, getProviderForChain, CHAIN_CONFIGS, type ChainId } from '@/lib/chains'
 import { V5_ABI, V6_ABI, V7_ABI, V8_ABI } from '@/lib/contracts'
 import { logger } from '@/lib/logger'
 import { sendDistributionNotifications } from '@/lib/email'
@@ -81,15 +81,41 @@ export async function POST(request: NextRequest) {
     let submitterPct = 100
     let nonprofitPct = 0
 
+    // For Ethereum mainnet, use on-chain data for accuracy
+    const campaignChainId = (campaign.chain_id || 1043) as ChainId
+    const isMainnet = campaignChainId === 1
+    
     if (type === 'tips' && tipSplit) {
-      // Get pending tips from campaign balance view or calculate
-      const { data: purchases } = await supabase
-        .from('purchases')
-        .select('tip_bdag, tip_eth')
-        .eq('campaign_id', campaign.campaign_id)
-
-      const totalTips = purchases?.reduce((sum, p) => 
-        sum + (p.tip_eth || p.tip_bdag || 0), 0) || 0
+      let totalTips = 0
+      
+      if (isMainnet && campaign.contract_address && campaign.campaign_id != null) {
+        // Use on-chain tipsReceived for Ethereum mainnet
+        try {
+          const provider = getProviderForChain(campaignChainId)
+          const version = campaign.contract_version || 'v8'
+          const abi = getAbiForVersion(version)
+          const contract = new ethers.Contract(campaign.contract_address, abi, provider)
+          const onchainCampaign = await contract.getCampaign(BigInt(campaign.campaign_id))
+          const onchainTipsWei = BigInt(onchainCampaign.tipsReceived ?? 0n)
+          totalTips = Number(onchainTipsWei) / 1e18
+          logger.info(`[Distribution] On-chain tips for campaign ${campaign.campaign_id}: ${totalTips} ETH`)
+        } catch (e) {
+          logger.error(`[Distribution] Failed to fetch on-chain tips:`, e)
+          // Fallback to purchases table
+          const { data: purchases } = await supabase
+            .from('purchases')
+            .select('tip_bdag, tip_eth')
+            .eq('campaign_id', campaign.campaign_id)
+          totalTips = purchases?.reduce((sum, p) => sum + (p.tip_eth || p.tip_bdag || 0), 0) || 0
+        }
+      } else {
+        // Use purchases table for non-mainnet
+        const { data: purchases } = await supabase
+          .from('purchases')
+          .select('tip_bdag, tip_eth')
+          .eq('campaign_id', campaign.campaign_id)
+        totalTips = purchases?.reduce((sum, p) => sum + (p.tip_eth || p.tip_bdag || 0), 0) || 0
+      }
       
       const tipsDistributed = Number(campaign.tips_distributed) || 0
       totalAmount = totalTips - tipsDistributed
