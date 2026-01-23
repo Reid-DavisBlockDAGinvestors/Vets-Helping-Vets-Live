@@ -315,8 +315,8 @@ export function FundDistributionPanel() {
 
       {/* Distribution execution modal */}
       {activeModal && ['funds', 'gifts', 'combined'].includes(activeModal) && selectedCampaign && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-2xl max-w-lg w-full p-6 border border-white/10">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-slate-800 rounded-2xl max-w-lg w-full p-6 border border-white/10 max-h-[90vh] overflow-y-auto my-auto">
             <h3 className="text-lg font-bold text-white mb-4">
               {activeModal === 'funds' && '💸 Distribute Funds'}
               {activeModal === 'gifts' && '🎁 Distribute Gifts'}
