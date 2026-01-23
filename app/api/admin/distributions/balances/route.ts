@@ -112,6 +112,9 @@ export async function GET(request: NextRequest) {
         return sum + (p.tip_eth || p.tip_bdag || p.tip_native || 0)
       }, 0) || 0
 
+      // Track immediate payout status
+      let immediatePayoutEnabled = false
+      
       // For mainnet campaigns, fetch on-chain data for accuracy
       const submissionChainId = (s.chain_id || 1043) as ChainId
       const isMainnet = submissionChainId === 1
@@ -140,6 +143,9 @@ export async function GET(request: NextRequest) {
             tipsReceivedUsd = onchainTipsUSD
             tipsReceivedNative = onchainTipsUSD / ETH_USD_RATE
           }
+          
+          // Get immediatePayoutEnabled from on-chain
+          immediatePayoutEnabled = campaign.immediatePayoutEnabled ?? false
         } catch (e) {
           // On-chain fetch failed, use purchase data
           console.log(`[distributions/balances] On-chain fetch failed for campaign ${s.campaign_id}:`, e)
@@ -188,7 +194,7 @@ export async function GET(request: NextRequest) {
         creator_wallet: s.creator_wallet,
         contract_version: s.contract_version || 'v6',
         campaign_id: s.campaign_id,
-        immediate_payout_enabled: false,
+        immediate_payout_enabled: immediatePayoutEnabled,
         tip_split_submitter_pct: tipSplitConfig?.submitter_percent ?? 100,
         tip_split_nonprofit_pct: tipSplitConfig?.nonprofit_percent ?? 0,
         gross_raised_usd: grossRaisedUsd,

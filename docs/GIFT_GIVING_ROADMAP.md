@@ -499,5 +499,109 @@ event GiftsDistributed(
 
 ---
 
-*Last Updated: January 3, 2026*
+## 🔖 V9 Enhancement: On-Chain Campaign Identifiers
+
+**Problem:** When viewing the Admin Distributions page (Mainnet), campaigns like "United for Justice", "NFT Fundraiser to hold Gerhand", and "A Mother's Fight to keep her family together" are indistinguishable on-chain. The current contract only stores:
+- Numeric `campaignId`
+- Generic `category`
+- `baseURI` (IPFS link)
+
+**Audit Challenge:** On-chain auditors cannot easily identify which campaign funds belong to without cross-referencing off-chain database.
+
+### Proposed Solution: Store Campaign Identifiers On-Chain
+
+#### New Campaign Struct Fields
+```solidity
+struct Campaign {
+    // ... existing fields ...
+    
+    // NEW: Human-readable identifiers for on-chain auditability
+    string name;           // "A Mother's Fight to Keep Her Family Together"
+    string shortCode;      // "MOTHERS-FIGHT-2026" (unique, uppercase)
+    bytes32 supabaseId;    // Hash of Supabase UUID for cross-reference
+}
+```
+
+#### Updated createCampaign Function
+```solidity
+function createCampaign(
+    string memory name,
+    string memory shortCode,
+    bytes32 supabaseIdHash,
+    string memory category,
+    string memory uri,
+    // ... rest of params
+) external onlyOwner returns (uint256) {
+    // Validate shortCode uniqueness
+    require(!shortCodeUsed[shortCode], "Short code already used");
+    shortCodeUsed[shortCode] = true;
+    
+    campaigns[campaignId] = Campaign({
+        name: name,
+        shortCode: shortCode,
+        supabaseId: supabaseIdHash,
+        // ... rest
+    });
+    
+    emit CampaignCreated(campaignId, name, shortCode, ...);
+}
+```
+
+#### New View Functions
+```solidity
+// Get campaign by short code
+function getCampaignByShortCode(string memory shortCode) external view returns (CampaignView memory);
+
+// Search campaigns (for auditors)
+function getCampaignName(uint256 campaignId) external view returns (string memory);
+```
+
+#### Updated Events for Auditability
+```solidity
+event CampaignCreated(
+    uint256 indexed campaignId,
+    string name,              // NEW
+    string shortCode,         // NEW
+    bytes32 supabaseIdHash,   // NEW
+    address indexed nonprofit,
+    address indexed submitter,
+    // ... rest
+);
+
+event EditionMinted(
+    uint256 indexed campaignId,
+    string campaignShortCode, // NEW: Include for easy filtering
+    uint256 indexed tokenId,
+    address indexed donor,
+    uint256 editionNumber,
+    uint256 amountPaid
+);
+```
+
+### Gas Considerations
+| Field | Approx Storage Cost |
+|-------|---------------------|
+| `name` (50 chars) | ~20,000 gas |
+| `shortCode` (20 chars) | ~10,000 gas |
+| `supabaseIdHash` (bytes32) | ~20,000 gas |
+| **Total additional** | ~50,000 gas per campaign |
+
+This is a one-time cost per campaign creation, acceptable for auditability.
+
+### Implementation Steps
+1. [ ] Add new fields to Campaign struct
+2. [ ] Add `shortCodeUsed` mapping for uniqueness
+3. [ ] Update `createCampaign()` signature
+4. [ ] Add getter functions
+5. [ ] Update events with identifying info
+6. [ ] Update `verify-campaign` API to generate and pass shortCode
+7. [ ] Update admin UI to show on-chain name in distribution list
+8. [ ] Add migration script for existing campaigns (update via admin)
+
+### Priority
+**🔴 HIGH** - Required for production auditability on Ethereum Mainnet
+
+---
+
+*Last Updated: January 22, 2026*
 *Author: PatriotPledge Development Team*

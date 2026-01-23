@@ -28,7 +28,7 @@ export function CampaignBalanceCard({
           <h3 className="text-white font-medium truncate" data-testid="campaign-title">
             {balance.title}
           </h3>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className="text-xs text-white/50">{balance.chainName}</span>
             {balance.isTestnet ? (
               <span className="px-1.5 py-0.5 text-xs bg-yellow-500/20 text-yellow-400 rounded" data-testid="testnet-badge">
@@ -40,6 +40,15 @@ export function CampaignBalanceCard({
               </span>
             )}
             <span className="text-xs text-white/40">{balance.contractVersion}</span>
+            {balance.immediatePayoutEnabled ? (
+              <span className="px-1.5 py-0.5 text-xs bg-cyan-500/20 text-cyan-400 rounded border border-cyan-500/30" data-testid="auto-distributed-badge">
+                ⚡ AUTO-DISTRIBUTED
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 text-xs bg-orange-500/20 text-orange-400 rounded border border-orange-500/30" data-testid="manual-distribution-badge">
+                🔒 HELD FOR DISTRIBUTION
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -72,10 +81,18 @@ export function CampaignBalanceCard({
         </div>
 
         <div className="flex justify-between text-sm">
-          <span className="text-white/60">Pending Funds:</span>
-          <span className={hasPendingFunds ? 'text-amber-400 font-medium' : 'text-white/40'} data-testid="pending-funds">
-            {formatNativeAmount(balance.pendingDistributionNative, balance.nativeCurrency)}
+          <span className="text-white/60">
+            {balance.immediatePayoutEnabled ? 'Auto-Distributed:' : 'Pending Funds:'}
           </span>
+          {balance.immediatePayoutEnabled ? (
+            <span className="text-cyan-400 font-medium" data-testid="auto-distributed-amount">
+              ✅ {formatNativeAmount(balance.grossRaisedNative, balance.nativeCurrency)}
+            </span>
+          ) : (
+            <span className={hasPendingFunds ? 'text-amber-400 font-medium' : 'text-white/40'} data-testid="pending-funds">
+              {formatNativeAmount(balance.pendingDistributionNative, balance.nativeCurrency)}
+            </span>
+          )}
         </div>
 
         <div className="flex justify-between text-sm">
@@ -121,18 +138,34 @@ export function CampaignBalanceCard({
         {balance.distributionCount > 0 && (
           <p className="mt-1">{balance.distributionCount} distribution(s)</p>
         )}
+        {balance.immediatePayoutEnabled && !balance.isTestnet && (
+          <p className="mt-1 text-cyan-400/70">
+            💡 View internal txs on Etherscan to see auto-distributions
+          </p>
+        )}
       </div>
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => onDistributeFunds(balance.campaignId)}
-          disabled={!hasPendingFunds}
-          className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 hover:bg-green-500 disabled:bg-white/10 disabled:text-white/30 text-white transition-colors"
-          data-testid="distribute-funds-btn"
-        >
-          💸 Distribute Funds
-        </button>
+        {balance.immediatePayoutEnabled ? (
+          <button
+            disabled={true}
+            className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-cyan-600/30 text-cyan-300 cursor-not-allowed"
+            data-testid="distribute-funds-btn"
+            title="Funds auto-distributed to submitter on purchase"
+          >
+            ⚡ Auto-Distributed
+          </button>
+        ) : (
+          <button
+            onClick={() => onDistributeFunds(balance.campaignId)}
+            disabled={!hasPendingFunds}
+            className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 hover:bg-green-500 disabled:bg-white/10 disabled:text-white/30 text-white transition-colors"
+            data-testid="distribute-funds-btn"
+          >
+            💸 Distribute Funds
+          </button>
+        )}
         <button
           onClick={() => onDistributeTips(balance.campaignId)}
           disabled={!hasPendingTips}

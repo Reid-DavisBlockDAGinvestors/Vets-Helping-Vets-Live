@@ -476,6 +476,18 @@ const CONTRACT_REGISTRY: Record<string, ContractConfig> = {
 }
 ```
 
+### V9 Contract Planned Features (HIGH PRIORITY)
+
+- [ ] **On-Chain Campaign Identifiers** - For auditability (Jan 22, 2026)
+  - Problem: Mainnet campaigns (United for Justice, A Mother's Fight, etc.) indistinguishable on-chain
+  - Add `name` field (campaign title) to Campaign struct
+  - Add `shortCode` field (e.g., "MOTHERS-FIGHT-2026") with uniqueness check
+  - Add `supabaseIdHash` (bytes32) for cross-reference to off-chain DB
+  - Update `CampaignCreated` event with identifying info
+  - Add `getCampaignByShortCode()` view function for auditors
+  - ~50,000 gas additional per campaign creation (acceptable)
+  - See: `docs/GIFT_GIVING_ROADMAP.md` for full spec
+
 ### V7 Contract Planned Features (Jan 1, 2026)
 - [ ] **Bug Bounty Pool** - On-chain bug bounty payments
   - `fundBugBounty()` - Add funds to pool
